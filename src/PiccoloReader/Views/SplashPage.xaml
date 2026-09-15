@@ -19,14 +19,26 @@
             WidthRequest="280"
             HeightRequest="280" />
 
-        <Label
+        <VerticalStackLayout
             Grid.Row="3"
-            Text="PiccoloReader"
-            FontFamily="Baloo2"
-            FontSize="34"
-            TextColor="{StaticResource Tertiary}"
+            Spacing="0"
             HorizontalOptions="Center"
-            Margin="0,0,0,24" />
+            Margin="0,0,0,24">
+            <Label
+                Text="Piccolo"
+                FontFamily="Pacifico"
+                FontSize="44"
+                TextColor="{StaticResource Tertiary}"
+                HorizontalOptions="Center" />
+            <Label
+                Text="Music Reader"
+                FontFamily="OpenSansSemibold"
+                FontSize="14"
+                CharacterSpacing="1"
+                TextColor="{StaticResource Tertiary}"
+                Opacity="0.7"
+                HorizontalOptions="Center" />
+        </VerticalStackLayout>
 
     </Grid>
 </ContentPage>
