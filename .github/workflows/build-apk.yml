@@ -3,12 +3,22 @@ name: Build APK
 on:
   push:
     branches: [main, master]
+    paths:
+      - 'src/PiccoloReader/**'
+      - '.github/workflows/build-apk.yml'
   workflow_dispatch: {}
 
 # Runs after a PR merges into main/master, so a downloadable APK is
 # always available for the latest main. Signing uses the default debug
 # keystore - this is for internal sideload testing only, not a Play
 # Store release pipeline.
+#
+# Scoped to src/PiccoloReader/** (the app head - Views, Platforms,
+# Resources) rather than the whole repo: changes confined to
+# PiccoloReader.Core (ViewModels, Services, data model) have nothing
+# to look at until a View actually uses them, so there's no reason to
+# spend CI minutes producing an APK for those merges. workflow_dispatch
+# still works regardless of what changed, for a manual build on demand.
 
 jobs:
   build:
