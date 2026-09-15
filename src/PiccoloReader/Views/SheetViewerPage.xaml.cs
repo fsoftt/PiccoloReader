@@ -1,3 +1,4 @@
+using PiccoloReader.Core.Services;
 using PiccoloReader.Core.ViewModels;
 
 namespace PiccoloReader.Views;
@@ -24,6 +25,8 @@ public partial class SheetViewerPage : ContentPage
     }
 
     public string SheetId { get; set; } = string.Empty;
+
+    public IReadOnlyList<MusicIconCategory> IconCategories => MusicIconCatalog.Categories;
 
     protected override async void OnAppearing()
     {
@@ -183,6 +186,19 @@ public partial class SheetViewerPage : ContentPage
         {
             _viewModel.PreviousPageCommand.Execute(null);
             ResetZoom();
+        }
+    }
+
+    private void OnToggleToolPanelClicked(object? sender, EventArgs e)
+    {
+        ToolPanel.IsVisible = !ToolPanel.IsVisible;
+    }
+
+    private async void OnIconPickerTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is string iconKey)
+        {
+            await _viewModel.PlaceIconCommand.ExecuteAsync(iconKey);
         }
     }
 }

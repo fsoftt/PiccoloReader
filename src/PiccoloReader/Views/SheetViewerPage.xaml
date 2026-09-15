@@ -4,10 +4,20 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:converters="clr-namespace:PiccoloReader.Converters"
+    x:Name="ThisPage"
     Title="{Binding Title}">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Clicked="OnToggleToolPanelClicked">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
+    </ContentPage.ToolbarItems>
 
     <ContentPage.Resources>
         <converters:ByteArrayToImageSourceConverter x:Key="ByteArrayToImageSource" />
+        <converters:CodepointToGlyphStringConverter x:Key="CodepointToGlyphString" />
     </ContentPage.Resources>
 
     <Grid BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
@@ -39,6 +49,58 @@
             IsVisible="{Binding IsLoading}"
             HorizontalOptions="Center"
             VerticalOptions="Center" />
+
+        <Border
+            x:Name="ToolPanel"
+            IsVisible="False"
+            WidthRequest="260"
+            HorizontalOptions="End"
+            VerticalOptions="Fill"
+            BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Primary}}"
+            StrokeThickness="0">
+            <ScrollView>
+                <VerticalStackLayout Padding="12" Spacing="4">
+                    <Label Text="Music Icons" FontAttributes="Bold" FontSize="16" Margin="0,0,0,8" />
+                    <CollectionView ItemsSource="{Binding Source={x:Reference ThisPage}, Path=IconCategories}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Spacing="4" Margin="0,0,0,12">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="14" />
+                                    <FlexLayout Wrap="Wrap" Direction="Row" BindableLayout.ItemsSource="{Binding Icons}">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border
+                                                    WidthRequest="52"
+                                                    HeightRequest="52"
+                                                    Margin="4"
+                                                    Padding="4"
+                                                    BackgroundColor="{StaticResource White}"
+                                                    StrokeThickness="1">
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer
+                                                            Tapped="OnIconPickerTapped"
+                                                            CommandParameter="{Binding Key}" />
+                                                    </Border.GestureRecognizers>
+                                                    <Image HorizontalOptions="Center" VerticalOptions="Center">
+                                                        <Image.Source>
+                                                            <FontImageSource
+                                                                Glyph="{Binding Codepoint, Converter={StaticResource CodepointToGlyphString}}"
+                                                                FontFamily="Bravura"
+                                                                Size="34"
+                                                                Color="{StaticResource Black}" />
+                                                        </Image.Source>
+                                                    </Image>
+                                                </Border>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </FlexLayout>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </ScrollView>
+        </Border>
 
     </Grid>
 </ContentPage>
