@@ -65,7 +65,16 @@ stub until that changes.
 | 2 | LibraryService.GetSheetAsync / UpdateSheetPageCountAsync | Merged | [#19](https://github.com/fsoftt/PiccoloReader/pull/19) |
 | 3 | SheetViewerViewModel | Merged | [#20](https://github.com/fsoftt/PiccoloReader/pull/20) |
 | 4 | SheetViewerPage (zoom/pan, tap/swipe page turning) | Merged | [#21](https://github.com/fsoftt/PiccoloReader/pull/21) |
-| 5 | Routing + tap-to-open wiring + end-to-end verification | PR open, CI passing | |
+| 5 | Routing + tap-to-open wiring + end-to-end verification | Merged | [#22](https://github.com/fsoftt/PiccoloReader/pull/22) |
+
+**Post-merge fixes/polish** (found via testing PR #22):
+
+| Item | Status | PR |
+|---|---|---|
+| Gesture fixes: pinch-zoom shake, swipe/pan gesture-arena conflict | Merged | [#23](https://github.com/fsoftt/PiccoloReader/pull/23) |
+| App icon + native splash: replace default .NET assets with Pacifico "P" mark | Merged | [#24](https://github.com/fsoftt/PiccoloReader/pull/24) |
+| Pinch-zoom fix #2: remove double scale multiplication (zoom-out) | Merged | [#25](https://github.com/fsoftt/PiccoloReader/pull/25) |
+| Resume from last-viewed page when reopening a sheet | Merged | [#26](https://github.com/fsoftt/PiccoloReader/pull/26) |
 
 ## Plan 3: Icon Annotations
 
