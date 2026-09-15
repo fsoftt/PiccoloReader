@@ -20,7 +20,7 @@ Plan: [`2026-09-14-project-scaffolding-library.md`](2026-09-14-project-scaffoldi
 | 1 | Solution scaffolding + CI | Merged | [#3](https://github.com/fsoftt/PiccoloReader/pull/3) |
 | 2 | SQLite data layer (Folder, Sheet, AppDatabase) | Merged | [#4](https://github.com/fsoftt/PiccoloReader/pull/4) |
 | 3 | LibraryService (folder/sheet CRUD) | Merged | [#5](https://github.com/fsoftt/PiccoloReader/pull/5) |
-| 4 | PdfImportService | PR open, awaiting CI | [#6](https://github.com/fsoftt/PiccoloReader/pull/6) |
+| 4 | PdfImportService | PR open, CI passing | [#6](https://github.com/fsoftt/PiccoloReader/pull/6) |
 | 5 | LibraryViewModel & FolderViewModel | Not started | |
 | 6 | DI wiring, navigation skeleton, Library page | Not started | |
 | 7 | Root sheets list, move-to-folder, delete prompt polish | Not started | |
