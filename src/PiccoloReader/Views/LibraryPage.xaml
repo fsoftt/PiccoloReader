@@ -3,30 +3,52 @@
     x:Class="PiccoloReader.Views.LibraryPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    x:Name="ThisPage"
     Title="Library">
 
-    <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="12">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Import" Clicked="OnImportPdfClicked" />
+        <ToolbarItem Text="Create Folder" Clicked="OnCreateFolderClicked" />
+        <ToolbarItem Text="Sort" Clicked="OnSortClicked" />
+    </ContentPage.ToolbarItems>
 
-        <HorizontalStackLayout Grid.Row="0" Spacing="8">
-            <Entry Placeholder="New folder name" Text="{Binding NewFolderName}" WidthRequest="220" />
-            <Button Text="Create Folder" Command="{Binding CreateFolderCommand}" />
-        </HorizontalStackLayout>
+    <Grid RowDefinitions="Auto,Auto" Padding="16" RowSpacing="12">
 
-        <Button Grid.Row="1" Text="Import PDF" Clicked="OnImportPdfClicked" />
-
-        <CollectionView Grid.Row="2" ItemsSource="{Binding Folders}">
+        <CollectionView Grid.Row="0" ItemsSource="{Binding Folders}">
             <CollectionView.Header>
                 <Label Text="Folders" FontAttributes="Bold" Margin="0,0,0,4" />
             </CollectionView.Header>
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <Grid Padding="4" ColumnDefinitions="*,Auto">
-                        <Label Text="{Binding Name}" VerticalOptions="Center">
-                            <Label.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnFolderTapped" CommandParameter="{Binding}" />
-                            </Label.GestureRecognizers>
-                        </Label>
-                        <Button Grid.Column="1" Text="Delete" Clicked="OnDeleteFolderClicked" CommandParameter="{Binding}" />
+                    <Grid x:Name="FolderItemRoot" Padding="4">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnFolderTapped" CommandParameter="{Binding}" />
+                        </Grid.GestureRecognizers>
+                        <Grid.Behaviors>
+                            <toolkit:TouchBehavior
+                                LongPressCommand="{Binding Source={x:Reference ThisPage}, Path=FolderLongPressCommand}"
+                                LongPressCommandParameter="{Binding Source={x:Reference FolderItemRoot}, Path=BindingContext}" />
+                        </Grid.Behaviors>
+                        <Label Text="{Binding Name}" VerticalOptions="Center" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding RootSheets}">
+            <CollectionView.Header>
+                <Label Text="Sheets" FontAttributes="Bold" Margin="0,8,0,4" />
+            </CollectionView.Header>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid x:Name="SheetItemRoot" Padding="4">
+                        <Grid.Behaviors>
+                            <toolkit:TouchBehavior
+                                LongPressCommand="{Binding Source={x:Reference ThisPage}, Path=SheetLongPressCommand}"
+                                LongPressCommandParameter="{Binding Source={x:Reference SheetItemRoot}, Path=BindingContext}" />
+                        </Grid.Behaviors>
+                        <Label Text="{Binding Title}" VerticalOptions="Center" />
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>

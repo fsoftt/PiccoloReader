@@ -41,10 +41,19 @@ this redefinition)
   `ICommand` (not an event) — bind it via `x:Reference` to a `Command`
   exposed on the page's code-behind, since the item's own `BindingContext`
   in a `DataTemplate` is the list item (`Folder`/`Sheet`), not the page.
-- Every long-press action goes through `DisplayActionSheet`, including the
-  folder delete choice (**Delete Sheets** / **Keep Sheets** / **Cancel**) —
-  this replaces the old two-button `DisplayAlertAsync` version of that
-  prompt, which could only offer two choices, not a true three-way one.
+- `LongPressCommandParameter="{Binding}"` inside `Grid.Behaviors` does
+  **not** reliably resolve to the DataTemplate item — confirmed by an
+  actual `NullReferenceException` crash on-device (the parameter came
+  through `null`, not the bound `Folder`). Give the item's root `Grid` an
+  `x:Name` and bind the parameter explicitly via `{Binding Source=
+  {x:Reference ThatName}, Path=BindingContext}` instead of relying on
+  ambient `BindingContext` inheritance through `Behaviors`.
+- `DisplayActionSheet` is obsolete in this MAUI version (like
+  `DisplayAlert` was) — use `DisplayActionSheetAsync` everywhere. Every
+  long-press action goes through it, including the folder delete choice
+  (**Delete Sheets** / **Keep Sheets** / **Cancel**) — this replaces the
+  old two-button `DisplayAlertAsync` version of that prompt, which could
+  only offer two choices, not a true three-way one.
 
 ---
 
@@ -438,14 +447,14 @@ Replace the entire contents of `src/PiccoloReader/Views/LibraryPage.xaml`:
             </CollectionView.Header>
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <Grid Padding="4">
+                    <Grid x:Name="FolderItemRoot" Padding="4">
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnFolderTapped" CommandParameter="{Binding}" />
                         </Grid.GestureRecognizers>
                         <Grid.Behaviors>
                             <toolkit:TouchBehavior
                                 LongPressCommand="{Binding Source={x:Reference ThisPage}, Path=FolderLongPressCommand}"
-                                LongPressCommandParameter="{Binding}" />
+                                LongPressCommandParameter="{Binding Source={x:Reference FolderItemRoot}, Path=BindingContext}" />
                         </Grid.Behaviors>
                         <Label Text="{Binding Name}" VerticalOptions="Center" />
                     </Grid>
@@ -459,11 +468,11 @@ Replace the entire contents of `src/PiccoloReader/Views/LibraryPage.xaml`:
             </CollectionView.Header>
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <Grid Padding="4">
+                    <Grid x:Name="SheetItemRoot" Padding="4">
                         <Grid.Behaviors>
                             <toolkit:TouchBehavior
                                 LongPressCommand="{Binding Source={x:Reference ThisPage}, Path=SheetLongPressCommand}"
-                                LongPressCommandParameter="{Binding}" />
+                                LongPressCommandParameter="{Binding Source={x:Reference SheetItemRoot}, Path=BindingContext}" />
                         </Grid.Behaviors>
                         <Label Text="{Binding Title}" VerticalOptions="Center" />
                     </Grid>
@@ -542,7 +551,7 @@ public partial class LibraryPage : ContentPage
 
     private async void OnSortClicked(object? sender, EventArgs e)
     {
-        var choice = await DisplayActionSheet(
+        var choice = await DisplayActionSheetAsync(
             "Sort by",
             "Cancel",
             null,
@@ -576,7 +585,7 @@ public partial class LibraryPage : ContentPage
 
     private async Task OnFolderLongPressedAsync(Folder folder)
     {
-        var choice = await DisplayActionSheet($"\"{folder.Name}\"", "Cancel", null, "Delete Sheets", "Keep Sheets");
+        var choice = await DisplayActionSheetAsync($"\"{folder.Name}\"", "Cancel", null, "Delete Sheets", "Keep Sheets");
 
         switch (choice)
         {
@@ -591,7 +600,7 @@ public partial class LibraryPage : ContentPage
 
     private async Task OnSheetLongPressedAsync(Sheet sheet)
     {
-        var choice = await DisplayActionSheet($"\"{sheet.Title}\"", "Cancel", null, "Move", "Delete");
+        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", "Cancel", null, "Move", "Delete");
 
         if (choice == "Delete")
         {
@@ -616,7 +625,7 @@ public partial class LibraryPage : ContentPage
                 return;
             }
 
-            var target = await DisplayActionSheet("Move to…", "Cancel", null, folders.Select(f => f.Name).ToArray());
+            var target = await DisplayActionSheetAsync("Move to…", "Cancel", null, folders.Select(f => f.Name).ToArray());
 
             if (target is null || target == "Cancel")
             {
@@ -706,11 +715,11 @@ Replace the entire contents of `src/PiccoloReader/Views/FolderPage.xaml`:
         <CollectionView ItemsSource="{Binding Sheets}">
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <Grid Padding="4">
+                    <Grid x:Name="SheetItemRoot" Padding="4">
                         <Grid.Behaviors>
                             <toolkit:TouchBehavior
                                 LongPressCommand="{Binding Source={x:Reference ThisPage}, Path=SheetLongPressCommand}"
-                                LongPressCommandParameter="{Binding}" />
+                                LongPressCommandParameter="{Binding Source={x:Reference SheetItemRoot}, Path=BindingContext}" />
                         </Grid.Behaviors>
                         <Label Text="{Binding Title}" VerticalOptions="Center" />
                     </Grid>
@@ -785,7 +794,7 @@ public partial class FolderPage : ContentPage
 
     private async void OnSortClicked(object? sender, EventArgs e)
     {
-        var choice = await DisplayActionSheet(
+        var choice = await DisplayActionSheetAsync(
             "Sort by",
             "Cancel",
             null,
@@ -811,7 +820,7 @@ public partial class FolderPage : ContentPage
 
     private async Task OnSheetLongPressedAsync(Sheet sheet)
     {
-        var choice = await DisplayActionSheet($"\"{sheet.Title}\"", "Cancel", null, "Move", "Delete");
+        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", "Cancel", null, "Move", "Delete");
 
         if (choice == "Delete")
         {
@@ -833,7 +842,7 @@ public partial class FolderPage : ContentPage
             var options = new List<string> { "Root" };
             options.AddRange(folders.Where(f => f.Id != _viewModel.FolderId).Select(f => f.Name));
 
-            var target = await DisplayActionSheet("Move to…", "Cancel", null, options.ToArray());
+            var target = await DisplayActionSheetAsync("Move to…", "Cancel", null, options.ToArray());
 
             if (target is null || target == "Cancel")
             {
