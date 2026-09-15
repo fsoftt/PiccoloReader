@@ -5,12 +5,16 @@ namespace PiccoloReader.Views;
 [QueryProperty(nameof(SheetId), "sheetId")]
 public partial class SheetViewerPage : ContentPage
 {
+    private const double ZoomedInThreshold = 1.05;
+    private const double PageTurnDragThreshold = 60;
+
     private readonly SheetViewerViewModel _viewModel;
 
-    private double _currentScale = 1;
     private double _startScale = 1;
+    private double _currentScale = 1;
     private double _xOffset;
     private double _yOffset;
+    private double _panTotalX;
 
     public SheetViewerPage(SheetViewerViewModel viewModel)
     {
@@ -40,8 +44,8 @@ public partial class SheetViewerPage : ContentPage
 
     private void ResetZoom()
     {
-        _currentScale = 1;
         _startScale = 1;
+        _currentScale = 1;
         _xOffset = 0;
         _yOffset = 0;
         PageImage.Scale = 1;
@@ -51,7 +55,7 @@ public partial class SheetViewerPage : ContentPage
 
     private void OnPageTapped(object? sender, TappedEventArgs e)
     {
-        if (_currentScale > 1.05)
+        if (_currentScale > ZoomedInThreshold)
         {
             // Ignore tap-to-turn while zoomed in - the user is most likely
             // trying to look around the page, not turn it.
@@ -66,50 +70,20 @@ public partial class SheetViewerPage : ContentPage
 
         if (position.Value.X < PageImage.Width / 2)
         {
-            if (_viewModel.PreviousPageCommand.CanExecute(null))
-            {
-                _viewModel.PreviousPageCommand.Execute(null);
-                ResetZoom();
-            }
+            TryGoToPreviousPage();
         }
         else
         {
-            if (_viewModel.NextPageCommand.CanExecute(null))
-            {
-                _viewModel.NextPageCommand.Execute(null);
-                ResetZoom();
-            }
+            TryGoToNextPage();
         }
     }
 
-    private void OnSwipedLeft(object? sender, SwipedEventArgs e)
-    {
-        if (_currentScale > 1.05)
-        {
-            return;
-        }
-
-        if (_viewModel.NextPageCommand.CanExecute(null))
-        {
-            _viewModel.NextPageCommand.Execute(null);
-            ResetZoom();
-        }
-    }
-
-    private void OnSwipedRight(object? sender, SwipedEventArgs e)
-    {
-        if (_currentScale > 1.05)
-        {
-            return;
-        }
-
-        if (_viewModel.PreviousPageCommand.CanExecute(null))
-        {
-            _viewModel.PreviousPageCommand.Execute(null);
-            ResetZoom();
-        }
-    }
-
+    // Pinch-to-zoom, following the standard .NET MAUI pinch gesture sample:
+    // e.Scale is the scale delta *since the last Running event*, not a
+    // cumulative value since the gesture started, so it must be
+    // accumulated onto a persistent _currentScale rather than multiplied
+    // against the gesture's starting scale each frame - multiplying
+    // produced the reported "shaky"/stuck-zoom behavior.
     private void OnPinchUpdated(object? sender, PinchGestureUpdatedEventArgs e)
     {
         if (e.Status == GestureStatus.Started)
@@ -118,10 +92,10 @@ public partial class SheetViewerPage : ContentPage
             PageImage.AnchorX = 0;
             PageImage.AnchorY = 0;
         }
-
-        if (e.Status == GestureStatus.Running)
+        else if (e.Status == GestureStatus.Running)
         {
-            _currentScale = Math.Max(1, _startScale * e.Scale);
+            _currentScale += (e.Scale - 1) * _startScale;
+            _currentScale = Math.Max(1, _currentScale);
 
             var renderedX = PageImage.X + _xOffset;
             var deltaX = renderedX / PageImage.Width;
@@ -136,37 +110,74 @@ public partial class SheetViewerPage : ContentPage
             var targetX = _xOffset - (originX * PageImage.Width * (_currentScale - _startScale));
             var targetY = _yOffset - (originY * PageImage.Height * (_currentScale - _startScale));
 
-            PageImage.TranslationX = targetX;
-            PageImage.TranslationY = targetY;
+            PageImage.TranslationX = Math.Clamp(targetX, -PageImage.Width * (_currentScale - 1), 0);
+            PageImage.TranslationY = Math.Clamp(targetY, -PageImage.Height * (_currentScale - 1), 0);
             PageImage.Scale = _currentScale;
         }
-
-        if (e.Status == GestureStatus.Completed)
+        else if (e.Status is GestureStatus.Completed or GestureStatus.Canceled)
         {
             _xOffset = PageImage.TranslationX;
             _yOffset = PageImage.TranslationY;
         }
     }
 
+    // Handles both panning around a zoomed-in page and swipe-to-turn-pages
+    // when not zoomed. A separate SwipeGestureRecognizer on the same
+    // element was removed - stacking Pan and Swipe recognizers on one
+    // view is a known source of gesture-arena conflicts on Android (Pan
+    // claims the touch as soon as it moves, before Swipe's own threshold
+    // logic gets a chance to recognize the gesture), which is why swiping
+    // to turn pages wasn't working.
     private void OnPanUpdated(object? sender, PanUpdatedEventArgs e)
     {
-        if (_currentScale <= 1.05)
-        {
-            // Not zoomed in - don't pan (also avoids fighting the swipe-to-turn gestures).
-            return;
-        }
-
         switch (e.StatusType)
         {
             case GestureStatus.Running:
-                PageImage.TranslationX = _xOffset + e.TotalX;
-                PageImage.TranslationY = _yOffset + e.TotalY;
+                if (_currentScale > ZoomedInThreshold)
+                {
+                    PageImage.TranslationX = Math.Clamp(_xOffset + e.TotalX, -PageImage.Width * (_currentScale - 1), 0);
+                    PageImage.TranslationY = Math.Clamp(_yOffset + e.TotalY, -PageImage.Height * (_currentScale - 1), 0);
+                }
+
+                _panTotalX = e.TotalX;
                 break;
 
             case GestureStatus.Completed:
-                _xOffset = PageImage.TranslationX;
-                _yOffset = PageImage.TranslationY;
+            case GestureStatus.Canceled:
+                if (_currentScale > ZoomedInThreshold)
+                {
+                    _xOffset = PageImage.TranslationX;
+                    _yOffset = PageImage.TranslationY;
+                }
+                else if (_panTotalX <= -PageTurnDragThreshold)
+                {
+                    TryGoToNextPage();
+                }
+                else if (_panTotalX >= PageTurnDragThreshold)
+                {
+                    TryGoToPreviousPage();
+                }
+
+                _panTotalX = 0;
                 break;
+        }
+    }
+
+    private void TryGoToNextPage()
+    {
+        if (_viewModel.NextPageCommand.CanExecute(null))
+        {
+            _viewModel.NextPageCommand.Execute(null);
+            ResetZoom();
+        }
+    }
+
+    private void TryGoToPreviousPage()
+    {
+        if (_viewModel.PreviousPageCommand.CanExecute(null))
+        {
+            _viewModel.PreviousPageCommand.Execute(null);
+            ResetZoom();
         }
     }
 }
