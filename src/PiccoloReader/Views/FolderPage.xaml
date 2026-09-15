@@ -8,22 +8,41 @@
     Title="Folder">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Import" Clicked="OnImportPdfClicked" />
-        <ToolbarItem Text="Sort" Clicked="OnSortClicked" />
+        <ToolbarItem Clicked="OnImportPdfClicked">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xE2C6;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
+        <ToolbarItem Clicked="OnSortClicked">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xE164;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
     </ContentPage.ToolbarItems>
 
     <Grid Padding="16">
         <CollectionView ItemsSource="{Binding Sheets}">
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <Grid x:Name="SheetItemRoot" Padding="4">
-                        <Grid.Behaviors>
+                    <Border x:Name="SheetItemRoot" Style="{StaticResource ListItemCard}">
+                        <Border.Behaviors>
                             <toolkit:TouchBehavior
                                 LongPressCommand="{Binding Source={x:Reference ThisPage}, Path=SheetLongPressCommand}"
                                 LongPressCommandParameter="{Binding Source={x:Reference SheetItemRoot}, Path=BindingContext}" />
-                        </Grid.Behaviors>
-                        <Label Text="{Binding Title}" VerticalOptions="Center" />
-                    </Grid>
+                        </Border.Behaviors>
+                        <HorizontalStackLayout Spacing="12">
+                            <Image>
+                                <Image.Source>
+                                    <FontImageSource
+                                        Glyph="&#xE873;"
+                                        FontFamily="MaterialOutlined"
+                                        Size="24"
+                                        Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <Label Text="{Binding Title}" VerticalOptions="Center" FontSize="16" />
+                        </HorizontalStackLayout>
+                    </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
