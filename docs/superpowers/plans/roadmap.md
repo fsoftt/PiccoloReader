@@ -35,7 +35,7 @@ which supersedes Plan 1's Task 7.
 
 | # | Task | Status | PR |
 |---|---|---|---|
-| 1 | Add CommunityToolkit.Maui + real Shell flyout | Not started | |
+| 1 | Add CommunityToolkit.Maui + real Shell flyout | PR open, awaiting CI | [#11](https://github.com/fsoftt/PiccoloReader/pull/11) |
 | 2 | Sort support + LibraryViewModel.MoveSheetCommand | Not started | |
 | 3 | Rework Library page | Not started | |
 | 4 | Rework Folder page | Not started | |
