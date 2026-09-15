@@ -26,6 +26,7 @@ public static class MauiProgram
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
 				fonts.AddFont("Pacifico-Regular.ttf", "Pacifico");
+				fonts.AddFont("Bravura.otf", "Bravura");
 				fonts.AddMaterialSymbolsFonts();
 			});
 
