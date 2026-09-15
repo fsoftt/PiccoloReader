@@ -38,7 +38,7 @@ which supersedes Plan 1's Task 7.
 | 1 | Add CommunityToolkit.Maui + real Shell flyout | Merged | [#11](https://github.com/fsoftt/PiccoloReader/pull/11) |
 | 2 | Sort support + LibraryViewModel.MoveSheetCommand | Merged | [#12](https://github.com/fsoftt/PiccoloReader/pull/12) |
 | 3 | Rework Library page | Merged | [#13](https://github.com/fsoftt/PiccoloReader/pull/13) |
-| 4 | Rework Folder page | PR open, awaiting CI | [#14](https://github.com/fsoftt/PiccoloReader/pull/14) |
+| 4 | Rework Folder page | PR open, CI passing | [#14](https://github.com/fsoftt/PiccoloReader/pull/14) |
 
 ## Plan 2: PDF Viewer
 
