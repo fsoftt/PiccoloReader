@@ -116,6 +116,17 @@ public class LibraryServiceTests : IDisposable
         Assert.Equal(12, reloaded.PageCount);
     }
 
+    [Fact]
+    public async Task UpdateSheetLastViewedPageAsync_PersistsPageIndex()
+    {
+        var sheet = await InsertSheetAsync(null);
+
+        await _sut.UpdateSheetLastViewedPageAsync(sheet, 4);
+
+        var reloaded = await _sut.GetSheetAsync(sheet.Id);
+        Assert.Equal(4, reloaded.LastViewedPageIndex);
+    }
+
     private async Task<Sheet> InsertSheetAsync(int? folderId)
     {
         Directory.CreateDirectory(_storage.SheetsDirectory);

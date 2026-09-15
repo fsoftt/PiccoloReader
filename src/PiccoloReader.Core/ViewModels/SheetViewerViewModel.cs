@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Services;
 
 namespace PiccoloReader.Core.ViewModels;
@@ -10,6 +11,7 @@ public partial class SheetViewerViewModel : ObservableObject
     private readonly IAppStorageProvider _storageProvider;
     private readonly IPdfPageRenderer _pdfPageRenderer;
 
+    private Sheet? _sheet;
     private string _filePath = string.Empty;
     private int _targetWidthPx;
     private int _targetHeightPx;
@@ -55,6 +57,7 @@ public partial class SheetViewerViewModel : ObservableObject
             _targetHeightPx = targetHeightPx;
 
             var sheet = await _libraryService.GetSheetAsync(sheetId);
+            _sheet = sheet;
             Title = sheet.Title;
             _filePath = Path.Combine(_storageProvider.SheetsDirectory, sheet.FileName);
 
@@ -66,7 +69,9 @@ public partial class SheetViewerViewModel : ObservableObject
             }
 
             PageCount = pageCount;
-            CurrentPageIndex = 0;
+            CurrentPageIndex = pageCount > 0
+                ? Math.Clamp(sheet.LastViewedPageIndex, 0, pageCount - 1)
+                : 0;
 
             await LoadCurrentPageAsync();
         }
@@ -85,6 +90,7 @@ public partial class SheetViewerViewModel : ObservableObject
     {
         CurrentPageIndex++;
         await LoadCurrentPageAsync();
+        await PersistLastViewedPageAsync();
     }
 
     [RelayCommand(CanExecute = nameof(CanGoToPreviousPage))]
@@ -92,10 +98,19 @@ public partial class SheetViewerViewModel : ObservableObject
     {
         CurrentPageIndex--;
         await LoadCurrentPageAsync();
+        await PersistLastViewedPageAsync();
     }
 
     private async Task LoadCurrentPageAsync()
     {
         CurrentPageImageBytes = await _pdfPageRenderer.RenderPageAsync(_filePath, CurrentPageIndex, _targetWidthPx, _targetHeightPx);
+    }
+
+    private async Task PersistLastViewedPageAsync()
+    {
+        if (_sheet is not null)
+        {
+            await _libraryService.UpdateSheetLastViewedPageAsync(_sheet, CurrentPageIndex);
+        }
     }
 }
