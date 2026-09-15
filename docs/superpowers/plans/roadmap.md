@@ -38,7 +38,17 @@ which supersedes Plan 1's Task 7.
 | 1 | Add CommunityToolkit.Maui + real Shell flyout | Merged | [#11](https://github.com/fsoftt/PiccoloReader/pull/11) |
 | 2 | Sort support + LibraryViewModel.MoveSheetCommand | Merged | [#12](https://github.com/fsoftt/PiccoloReader/pull/12) |
 | 3 | Rework Library page | Merged | [#13](https://github.com/fsoftt/PiccoloReader/pull/13) |
-| 4 | Rework Folder page | PR open, CI passing | [#14](https://github.com/fsoftt/PiccoloReader/pull/14) |
+| 4 | Rework Folder page | Merged | [#14](https://github.com/fsoftt/PiccoloReader/pull/14) |
+
+## UI Polish
+
+Bounded UI tasks done outside the numbered plans above.
+
+| Item | Status | PR |
+|---|---|---|
+| Dark theme toolbar contrast, list item cards, folder/file icons | Merged | [#15](https://github.com/fsoftt/PiccoloReader/pull/15) |
+| Animated Lottie splash screen | Merged | [#16](https://github.com/fsoftt/PiccoloReader/pull/16) |
+| CI: build + upload Release APK on push to main | Merged | [#17](https://github.com/fsoftt/PiccoloReader/pull/17) |
 
 ## Plan 2: PDF Viewer
 
