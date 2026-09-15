@@ -1,5 +1,8 @@
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.ViewModels;
+using SkiaSharp;
+using SkiaSharp.Views.Maui;
+using SkiaSharp.Views.Maui.Controls;
 
 namespace PiccoloReader.Views;
 
@@ -16,6 +19,8 @@ public partial class SheetViewerPage : ContentPage
     private double _xOffset;
     private double _yOffset;
     private double _panTotalX;
+
+    private SKTypeface? _bravuraTypeface;
 
     public SheetViewerPage(SheetViewerViewModel viewModel)
     {
@@ -58,6 +63,16 @@ public partial class SheetViewerPage : ContentPage
 
     private void OnPageTapped(object? sender, TappedEventArgs e)
     {
+        if (ToolPanel.IsVisible)
+        {
+            // Tapping the page while the tool panel is open closes it
+            // instead of turning the page - the panel covers only part of
+            // the screen, so the page area outside it acts as the "tap
+            // outside to dismiss" region.
+            ToolPanel.IsVisible = false;
+            return;
+        }
+
         if (_currentScale > ZoomedInThreshold)
         {
             // Ignore tap-to-turn while zoomed in - the user is most likely
@@ -138,6 +153,19 @@ public partial class SheetViewerPage : ContentPage
     // to turn pages wasn't working.
     private void OnPanUpdated(object? sender, PanUpdatedEventArgs e)
     {
+        if (ToolPanel.IsVisible)
+        {
+            // Dragging on the page while the tool panel is open closes it,
+            // same as a plain tap (see OnPageTapped) - don't also pan/turn
+            // the page underneath.
+            if (e.StatusType == GestureStatus.Completed)
+            {
+                ToolPanel.IsVisible = false;
+            }
+
+            return;
+        }
+
         switch (e.StatusType)
         {
             case GestureStatus.Running:
@@ -189,9 +217,32 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    private void OnToggleToolPanelClicked(object? sender, EventArgs e)
+    private async void OnToggleToolPanelClicked(object? sender, EventArgs e)
     {
+        if (!ToolPanel.IsVisible)
+        {
+            // Load before showing, not after - the icon buttons' SKCanvasViews
+            // paint as soon as they're visible, and painting before the
+            // typeface is ready would leave them blank with no later
+            // repaint trigger.
+            await EnsureBravuraTypefaceLoadedAsync();
+        }
+
         ToolPanel.IsVisible = !ToolPanel.IsVisible;
+    }
+
+    private async Task EnsureBravuraTypefaceLoadedAsync()
+    {
+        if (_bravuraTypeface is not null)
+        {
+            return;
+        }
+
+        using var stream = await FileSystem.OpenAppPackageFileAsync("Bravura.otf");
+        using var memoryStream = new MemoryStream();
+        await stream.CopyToAsync(memoryStream);
+        memoryStream.Position = 0;
+        _bravuraTypeface = SKTypeface.FromStream(memoryStream);
     }
 
     private async void OnIconPickerTapped(object? sender, TappedEventArgs e)
@@ -200,5 +251,54 @@ public partial class SheetViewerPage : ContentPage
         {
             await _viewModel.PlaceIconCommand.ExecuteAsync(iconKey);
         }
+    }
+
+    // Fits each glyph tightly to its canvas instead of relying on
+    // FontImageSource's own sizing - Bravura (like most music fonts)
+    // reserves a lot of vertical em-box space for staff-line alignment
+    // around each glyph's actual ink, so FontImageSource's rendered
+    // bitmap is mostly whitespace; scaling that bitmap up (via its Size
+    // property) scales the whitespace right along with it; the displayed
+    // glyph never visibly grows since it's fit into a fixed-size box
+    // either way. Measuring the glyph's own bounds via Skia and fitting
+    // *that* to the box sidesteps it entirely - confirmed by testing
+    // FontImageSource at several sizes (28 up to 72) with zero visible
+    // difference on a clean install (so it wasn't a caching artifact),
+    // then confirming this approach renders visibly larger.
+    private void OnIconGlyphPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
+    {
+        var canvas = e.Surface.Canvas;
+        canvas.Clear(SKColors.Transparent);
+
+        if (_bravuraTypeface is null || sender is not SKCanvasView { BindingContext: MusicIcon icon })
+        {
+            return;
+        }
+
+        var text = char.ConvertFromUtf32(icon.Codepoint);
+        var info = e.Info;
+
+        using var measureFont = new SKFont(_bravuraTypeface, 100);
+        measureFont.MeasureText(text, out var measuredBounds);
+
+        if (measuredBounds.Width <= 0 || measuredBounds.Height <= 0)
+        {
+            return;
+        }
+
+        var scale = Math.Min(info.Width / measuredBounds.Width, info.Height / measuredBounds.Height) * 0.9f;
+        using var font = new SKFont(_bravuraTypeface, 100f * scale);
+        font.MeasureText(text, out var fittedBounds);
+
+        using var paint = new SKPaint
+        {
+            Color = SKColors.Black,
+            IsAntialias = true
+        };
+
+        var x = info.Width / 2f - fittedBounds.MidX;
+        var y = info.Height / 2f - fittedBounds.MidY;
+
+        canvas.DrawText(text, x, y, font, paint);
     }
 }

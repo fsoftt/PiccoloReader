@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:converters="clr-namespace:PiccoloReader.Converters"
+    xmlns:skia="clr-namespace:SkiaSharp.Views.Maui.Controls;assembly=SkiaSharp.Views.Maui.Controls"
     x:Name="ThisPage"
     Title="{Binding Title}">
 
@@ -17,7 +18,6 @@
 
     <ContentPage.Resources>
         <converters:ByteArrayToImageSourceConverter x:Key="ByteArrayToImageSource" />
-        <converters:CodepointToGlyphStringConverter x:Key="CodepointToGlyphString" />
     </ContentPage.Resources>
 
     <Grid BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
@@ -81,15 +81,12 @@
                                                             Tapped="OnIconPickerTapped"
                                                             CommandParameter="{Binding Key}" />
                                                     </Border.GestureRecognizers>
-                                                    <Image HorizontalOptions="Center" VerticalOptions="Center">
-                                                        <Image.Source>
-                                                            <FontImageSource
-                                                                Glyph="{Binding Codepoint, Converter={StaticResource CodepointToGlyphString}}"
-                                                                FontFamily="Bravura"
-                                                                Size="34"
-                                                                Color="{StaticResource Black}" />
-                                                        </Image.Source>
-                                                    </Image>
+                                                    <skia:SKCanvasView
+                                                        WidthRequest="40"
+                                                        HeightRequest="40"
+                                                        HorizontalOptions="Center"
+                                                        VerticalOptions="Center"
+                                                        PaintSurface="OnIconGlyphPaintSurface" />
                                                 </Border>
                                             </DataTemplate>
                                         </BindableLayout.ItemTemplate>
