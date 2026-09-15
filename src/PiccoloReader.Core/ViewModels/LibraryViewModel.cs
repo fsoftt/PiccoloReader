@@ -24,6 +24,12 @@ public partial class LibraryViewModel : ObservableObject
     [ObservableProperty]
     private string _newFolderName = string.Empty;
 
+    [ObservableProperty]
+    private SortField _sortField = SortField.Name;
+
+    [ObservableProperty]
+    private SortDirection _sortDirection = SortDirection.Ascending;
+
     public async Task LoadAsync()
     {
         Folders.Clear();
@@ -77,6 +83,35 @@ public partial class LibraryViewModel : ObservableObject
     private async Task DeleteFolderKeepSheetsAsync(Folder folder)
     {
         await _libraryService.DeleteFolderAsync(folder.Id, deleteSheets: false);
+        await LoadAsync();
+    }
+
+    public void ApplySort(SortField field, SortDirection direction)
+    {
+        SortField = field;
+        SortDirection = direction;
+
+        var sorted = field switch
+        {
+            SortField.DateAdded => direction == SortDirection.Ascending
+                ? RootSheets.OrderBy(s => s.DateAdded).ToList()
+                : RootSheets.OrderByDescending(s => s.DateAdded).ToList(),
+            _ => direction == SortDirection.Ascending
+                ? RootSheets.OrderBy(s => s.Title).ToList()
+                : RootSheets.OrderByDescending(s => s.Title).ToList()
+        };
+
+        RootSheets.Clear();
+        foreach (var sheet in sorted)
+        {
+            RootSheets.Add(sheet);
+        }
+    }
+
+    [RelayCommand]
+    private async Task MoveSheetAsync((Sheet Sheet, int? TargetFolderId) args)
+    {
+        await _libraryService.MoveSheetAsync(args.Sheet, args.TargetFolderId);
         await LoadAsync();
     }
 }
