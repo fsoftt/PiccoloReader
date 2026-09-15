@@ -8,5 +8,6 @@ public partial class AppShell : Shell
 	{
 		InitializeComponent();
 		Routing.RegisterRoute("folder", typeof(FolderPage));
+		Routing.RegisterRoute("sheetviewer", typeof(SheetViewerPage));
 	}
 }
