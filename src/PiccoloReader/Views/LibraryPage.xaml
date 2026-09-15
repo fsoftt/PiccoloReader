@@ -8,9 +8,21 @@
     Title="Library">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Import" Clicked="OnImportPdfClicked" />
-        <ToolbarItem Text="Create Folder" Clicked="OnCreateFolderClicked" />
-        <ToolbarItem Text="Sort" Clicked="OnSortClicked" />
+        <ToolbarItem Clicked="OnImportPdfClicked">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xE2C6;" FontFamily="MaterialOutlined" Size="24" Color="Black" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
+        <ToolbarItem Clicked="OnCreateFolderClicked">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xE2CC;" FontFamily="MaterialOutlined" Size="24" Color="Black" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
+        <ToolbarItem Clicked="OnSortClicked">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xE164;" FontFamily="MaterialOutlined" Size="24" Color="Black" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
     </ContentPage.ToolbarItems>
 
     <Grid RowDefinitions="Auto,Auto" Padding="16" RowSpacing="12">
