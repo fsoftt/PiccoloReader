@@ -32,6 +32,12 @@ public class LibraryService
         return _database.Connection.UpdateAsync(sheet);
     }
 
+    public Task UpdateSheetLastViewedPageAsync(Sheet sheet, int pageIndex)
+    {
+        sheet.LastViewedPageIndex = pageIndex;
+        return _database.Connection.UpdateAsync(sheet);
+    }
+
     public async Task<Folder> CreateFolderAsync(string name)
     {
         var folder = new Folder { Name = name };

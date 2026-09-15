@@ -25,7 +25,7 @@ public class SheetViewerViewModelTests : IDisposable
 
     public void Dispose() => _storage.Dispose();
 
-    private async Task<Sheet> InsertSheetAsync(int pageCount)
+    private async Task<Sheet> InsertSheetAsync(int pageCount, int lastViewedPageIndex = 0)
     {
         var sheet = new Sheet
         {
@@ -33,6 +33,7 @@ public class SheetViewerViewModelTests : IDisposable
             Title = "My Piece",
             FileName = "irrelevant.pdf",
             PageCount = pageCount,
+            LastViewedPageIndex = lastViewedPageIndex,
             DateAdded = DateTime.UtcNow
         };
         await _database.Connection.InsertAsync(sheet);
@@ -131,5 +132,50 @@ public class SheetViewerViewModelTests : IDisposable
 
         Assert.Equal(0, _sut.CurrentPageIndex);
         Assert.False(_sut.PreviousPageCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task LoadAsync_ResumesFromLastViewedPage()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5, lastViewedPageIndex: 3);
+
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.Equal(3, _sut.CurrentPageIndex);
+        Assert.Equal(new byte[] { 3 }, _sut.CurrentPageImageBytes);
+    }
+
+    [Fact]
+    public async Task LoadAsync_LastViewedPageOutOfRange_ClampsToLastPage()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5, lastViewedPageIndex: 99);
+
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.Equal(4, _sut.CurrentPageIndex);
+    }
+
+    [Fact]
+    public async Task NextPageAsync_PersistsLastViewedPage()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.NextPageCommand.ExecuteAsync(null);
+
+        var reloaded = await _libraryService.GetSheetAsync(sheet.Id);
+        Assert.Equal(1, reloaded.LastViewedPageIndex);
+    }
+
+    [Fact]
+    public async Task PreviousPageAsync_PersistsLastViewedPage()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5, lastViewedPageIndex: 2);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.PreviousPageCommand.ExecuteAsync(null);
+
+        var reloaded = await _libraryService.GetSheetAsync(sheet.Id);
+        Assert.Equal(1, reloaded.LastViewedPageIndex);
     }
 }

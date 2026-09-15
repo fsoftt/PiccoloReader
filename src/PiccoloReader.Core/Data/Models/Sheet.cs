@@ -15,5 +15,7 @@ public class Sheet
 
     public int PageCount { get; set; }
 
+    public int LastViewedPageIndex { get; set; }
+
     public DateTime DateAdded { get; set; }
 }
