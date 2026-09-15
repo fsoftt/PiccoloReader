@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore tests/PiccoloReader.Core.Tests/PiccoloReader.Core.Tests.csproj
+
+      - name: Test
+        run: dotnet test tests/PiccoloReader.Core.Tests/PiccoloReader.Core.Tests.csproj --no-restore --verbosity normal
