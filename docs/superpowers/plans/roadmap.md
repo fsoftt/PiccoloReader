@@ -17,8 +17,8 @@ Plan: [`2026-09-14-project-scaffolding-library.md`](2026-09-14-project-scaffoldi
 
 | # | Task | Status | PR |
 |---|---|---|---|
-| 1 | Solution scaffolding + CI | PR open, CI passing — awaiting review/merge | [#3](https://github.com/fsoftt/PiccoloReader/pull/3) |
-| 2 | SQLite data layer (Folder, Sheet, AppDatabase) | Not started | |
+| 1 | Solution scaffolding + CI | Merged | [#3](https://github.com/fsoftt/PiccoloReader/pull/3) |
+| 2 | SQLite data layer (Folder, Sheet, AppDatabase) | PR open, awaiting review/merge | [#4](https://github.com/fsoftt/PiccoloReader/pull/4) |
 | 3 | LibraryService (folder/sheet CRUD) | Not started | |
 | 4 | PdfImportService | Not started | |
 | 5 | LibraryViewModel & FolderViewModel | Not started | |
