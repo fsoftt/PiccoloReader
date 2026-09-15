@@ -20,6 +20,12 @@ public partial class FolderViewModel : ObservableObject
     [ObservableProperty]
     private int _folderId;
 
+    [ObservableProperty]
+    private SortField _sortField = SortField.Name;
+
+    [ObservableProperty]
+    private SortDirection _sortDirection = SortDirection.Ascending;
+
     public ObservableCollection<Sheet> Sheets { get; } = new();
 
     public async Task LoadAsync()
@@ -50,5 +56,27 @@ public partial class FolderViewModel : ObservableObject
     {
         await _libraryService.MoveSheetAsync(args.Sheet, args.TargetFolderId);
         await LoadAsync();
+    }
+
+    public void ApplySort(SortField field, SortDirection direction)
+    {
+        SortField = field;
+        SortDirection = direction;
+
+        var sorted = field switch
+        {
+            SortField.DateAdded => direction == SortDirection.Ascending
+                ? Sheets.OrderBy(s => s.DateAdded).ToList()
+                : Sheets.OrderByDescending(s => s.DateAdded).ToList(),
+            _ => direction == SortDirection.Ascending
+                ? Sheets.OrderBy(s => s.Title).ToList()
+                : Sheets.OrderByDescending(s => s.Title).ToList()
+        };
+
+        Sheets.Clear();
+        foreach (var sheet in sorted)
+        {
+            Sheets.Add(sheet);
+        }
     }
 }

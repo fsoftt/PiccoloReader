@@ -1,4 +1,5 @@
 using PiccoloReader.Core.Data;
+using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.ViewModels;
 using SQLitePCL;
@@ -52,5 +53,17 @@ public class FolderViewModelTests : IDisposable
 
         Assert.Empty(_sut.Sheets);
         File.Delete(sourcePath);
+    }
+
+    [Fact]
+    public void ApplySort_NameDescending_OrdersSheetsReverseAlphabetically()
+    {
+        _sut.Sheets.Add(new Sheet { Title = "A-Piece", DateAdded = DateTime.UtcNow });
+        _sut.Sheets.Add(new Sheet { Title = "Z-Piece", DateAdded = DateTime.UtcNow });
+
+        _sut.ApplySort(SortField.Name, SortDirection.Descending);
+
+        Assert.Equal("Z-Piece", _sut.Sheets[0].Title);
+        Assert.Equal("A-Piece", _sut.Sheets[1].Title);
     }
 }
