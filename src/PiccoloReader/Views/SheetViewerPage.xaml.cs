@@ -27,6 +27,8 @@ public partial class SheetViewerPage : ContentPage
         InitializeComponent();
         _viewModel = viewModel;
         BindingContext = _viewModel;
+
+        _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => AnnotationCanvas.InvalidateSurface();
     }
 
     public string SheetId { get; set; } = string.Empty;
@@ -42,12 +44,15 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
+        await EnsureBravuraTypefaceLoadedAsync();
+
         var displayInfo = DeviceDisplay.Current.MainDisplayInfo;
         var targetWidthPx = (int)displayInfo.Width;
         var targetHeightPx = (int)displayInfo.Height;
 
         await _viewModel.LoadAsync(sheetId, targetWidthPx, targetHeightPx);
         ResetZoom();
+        AnnotationCanvas.InvalidateSurface();
     }
 
     private void ResetZoom()
@@ -56,9 +61,9 @@ public partial class SheetViewerPage : ContentPage
         _currentScale = 1;
         _xOffset = 0;
         _yOffset = 0;
-        PageImage.Scale = 1;
-        PageImage.TranslationX = 0;
-        PageImage.TranslationY = 0;
+        PageContainer.Scale = 1;
+        PageContainer.TranslationX = 0;
+        PageContainer.TranslationY = 0;
     }
 
     private void OnPageTapped(object? sender, TappedEventArgs e)
@@ -80,13 +85,13 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        var position = e.GetPosition(PageImage);
+        var position = e.GetPosition(PageContainer);
         if (position is null)
         {
             return;
         }
 
-        if (position.Value.X < PageImage.Width / 2)
+        if (position.Value.X < PageContainer.Width / 2)
         {
             TryGoToPreviousPage();
         }
@@ -111,36 +116,36 @@ public partial class SheetViewerPage : ContentPage
     {
         if (e.Status == GestureStatus.Started)
         {
-            _startScale = PageImage.Scale;
-            PageImage.AnchorX = 0;
-            PageImage.AnchorY = 0;
+            _startScale = PageContainer.Scale;
+            PageContainer.AnchorX = 0;
+            PageContainer.AnchorY = 0;
         }
         else if (e.Status == GestureStatus.Running)
         {
             _currentScale += e.Scale - 1;
             _currentScale = Math.Max(1, _currentScale);
 
-            var renderedX = PageImage.X + _xOffset;
-            var deltaX = renderedX / PageImage.Width;
-            var deltaWidth = PageImage.Width / (PageImage.Width * _startScale);
+            var renderedX = PageContainer.X + _xOffset;
+            var deltaX = renderedX / PageContainer.Width;
+            var deltaWidth = PageContainer.Width / (PageContainer.Width * _startScale);
             var originX = (e.ScaleOrigin.X - deltaX) * deltaWidth;
 
-            var renderedY = PageImage.Y + _yOffset;
-            var deltaY = renderedY / PageImage.Height;
-            var deltaHeight = PageImage.Height / (PageImage.Height * _startScale);
+            var renderedY = PageContainer.Y + _yOffset;
+            var deltaY = renderedY / PageContainer.Height;
+            var deltaHeight = PageContainer.Height / (PageContainer.Height * _startScale);
             var originY = (e.ScaleOrigin.Y - deltaY) * deltaHeight;
 
-            var targetX = _xOffset - (originX * PageImage.Width * (_currentScale - _startScale));
-            var targetY = _yOffset - (originY * PageImage.Height * (_currentScale - _startScale));
+            var targetX = _xOffset - (originX * PageContainer.Width * (_currentScale - _startScale));
+            var targetY = _yOffset - (originY * PageContainer.Height * (_currentScale - _startScale));
 
-            PageImage.TranslationX = Math.Clamp(targetX, -PageImage.Width * (_currentScale - 1), 0);
-            PageImage.TranslationY = Math.Clamp(targetY, -PageImage.Height * (_currentScale - 1), 0);
-            PageImage.Scale = _currentScale;
+            PageContainer.TranslationX = Math.Clamp(targetX, -PageContainer.Width * (_currentScale - 1), 0);
+            PageContainer.TranslationY = Math.Clamp(targetY, -PageContainer.Height * (_currentScale - 1), 0);
+            PageContainer.Scale = _currentScale;
         }
         else if (e.Status is GestureStatus.Completed or GestureStatus.Canceled)
         {
-            _xOffset = PageImage.TranslationX;
-            _yOffset = PageImage.TranslationY;
+            _xOffset = PageContainer.TranslationX;
+            _yOffset = PageContainer.TranslationY;
         }
     }
 
@@ -171,8 +176,8 @@ public partial class SheetViewerPage : ContentPage
             case GestureStatus.Running:
                 if (_currentScale > ZoomedInThreshold)
                 {
-                    PageImage.TranslationX = Math.Clamp(_xOffset + e.TotalX, -PageImage.Width * (_currentScale - 1), 0);
-                    PageImage.TranslationY = Math.Clamp(_yOffset + e.TotalY, -PageImage.Height * (_currentScale - 1), 0);
+                    PageContainer.TranslationX = Math.Clamp(_xOffset + e.TotalX, -PageContainer.Width * (_currentScale - 1), 0);
+                    PageContainer.TranslationY = Math.Clamp(_yOffset + e.TotalY, -PageContainer.Height * (_currentScale - 1), 0);
                 }
 
                 _panTotalX = e.TotalX;
@@ -182,8 +187,8 @@ public partial class SheetViewerPage : ContentPage
             case GestureStatus.Canceled:
                 if (_currentScale > ZoomedInThreshold)
                 {
-                    _xOffset = PageImage.TranslationX;
-                    _yOffset = PageImage.TranslationY;
+                    _xOffset = PageContainer.TranslationX;
+                    _yOffset = PageContainer.TranslationY;
                 }
                 else if (_panTotalX <= -PageTurnDragThreshold)
                 {
@@ -253,30 +258,63 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    // Fits each glyph tightly to its canvas instead of relying on
-    // FontImageSource's own sizing - Bravura (like most music fonts)
-    // reserves a lot of vertical em-box space for staff-line alignment
-    // around each glyph's actual ink, so FontImageSource's rendered
-    // bitmap is mostly whitespace; scaling that bitmap up (via its Size
-    // property) scales the whitespace right along with it; the displayed
-    // glyph never visibly grows since it's fit into a fixed-size box
-    // either way. Measuring the glyph's own bounds via Skia and fitting
-    // *that* to the box sidesteps it entirely - confirmed by testing
-    // FontImageSource at several sizes (28 up to 72) with zero visible
-    // difference on a clean install (so it wasn't a caching artifact),
-    // then confirming this approach renders visibly larger.
     private void OnIconGlyphPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
     {
         var canvas = e.Surface.Canvas;
         canvas.Clear(SKColors.Transparent);
 
-        if (_bravuraTypeface is null || sender is not SKCanvasView { BindingContext: MusicIcon icon })
+        if (sender is not SKCanvasView { BindingContext: MusicIcon icon })
         {
             return;
         }
 
-        var text = char.ConvertFromUtf32(icon.Codepoint);
         var info = e.Info;
+        DrawGlyphFitted(canvas, icon.Codepoint, new SKRect(0, 0, info.Width, info.Height));
+    }
+
+    private void OnAnnotationCanvasPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
+    {
+        var canvas = e.Surface.Canvas;
+        canvas.Clear(SKColors.Transparent);
+
+        var info = e.Info;
+
+        foreach (var annotation in _viewModel.CurrentPageAnnotations)
+        {
+            var icon = MusicIconCatalog.FindByKey(annotation.IconKey);
+            if (icon is null)
+            {
+                continue;
+            }
+
+            var targetRect = new SKRect(
+                (float)(annotation.X * info.Width),
+                (float)(annotation.Y * info.Height),
+                (float)((annotation.X + annotation.Width) * info.Width),
+                (float)((annotation.Y + annotation.Height) * info.Height));
+
+            DrawGlyphFitted(canvas, icon.Codepoint, targetRect);
+        }
+    }
+
+    // Fits a glyph tightly to targetRect instead of relying on the font's
+    // own em-box sizing - Bravura (like most music fonts) reserves a lot
+    // of vertical em-box space for staff-line alignment around each
+    // glyph's actual ink, so naively scaling a font size leaves the
+    // *displayed* glyph the same apparent size regardless (confirmed by
+    // testing FontImageSource.Size 28 through 72 on a clean install with
+    // zero visible difference). Measuring the glyph's own ink bounds via
+    // Skia and fitting *that* to targetRect sidesteps it entirely.
+    // Shared by the icon picker buttons and the on-page annotation
+    // overlay so both render identically.
+    private void DrawGlyphFitted(SKCanvas canvas, int codepoint, SKRect targetRect)
+    {
+        if (_bravuraTypeface is null || targetRect.Width <= 0 || targetRect.Height <= 0)
+        {
+            return;
+        }
+
+        var text = char.ConvertFromUtf32(codepoint);
 
         using var measureFont = new SKFont(_bravuraTypeface, 100);
         measureFont.MeasureText(text, out var measuredBounds);
@@ -286,7 +324,7 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        var scale = Math.Min(info.Width / measuredBounds.Width, info.Height / measuredBounds.Height) * 0.9f;
+        var scale = Math.Min(targetRect.Width / measuredBounds.Width, targetRect.Height / measuredBounds.Height) * 0.9f;
         using var font = new SKFont(_bravuraTypeface, 100f * scale);
         font.MeasureText(text, out var fittedBounds);
 
@@ -296,8 +334,8 @@ public partial class SheetViewerPage : ContentPage
             IsAntialias = true
         };
 
-        var x = info.Width / 2f - fittedBounds.MidX;
-        var y = info.Height / 2f - fittedBounds.MidY;
+        var x = targetRect.MidX - fittedBounds.MidX;
+        var y = targetRect.MidY - fittedBounds.MidY;
 
         canvas.DrawText(text, x, y, font, paint);
     }
