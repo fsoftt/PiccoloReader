@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PiccoloReader.Core.Data.Models;
@@ -7,20 +8,24 @@ namespace PiccoloReader.Core.ViewModels;
 
 public partial class SheetViewerViewModel : ObservableObject
 {
+    private const double DefaultIconWidth = 0.12;
+
     private readonly LibraryService _libraryService;
     private readonly IAppStorageProvider _storageProvider;
     private readonly IPdfPageRenderer _pdfPageRenderer;
+    private readonly AnnotationService _annotationService;
 
     private Sheet? _sheet;
     private string _filePath = string.Empty;
     private int _targetWidthPx;
     private int _targetHeightPx;
 
-    public SheetViewerViewModel(LibraryService libraryService, IAppStorageProvider storageProvider, IPdfPageRenderer pdfPageRenderer)
+    public SheetViewerViewModel(LibraryService libraryService, IAppStorageProvider storageProvider, IPdfPageRenderer pdfPageRenderer, AnnotationService annotationService)
     {
         _libraryService = libraryService;
         _storageProvider = storageProvider;
         _pdfPageRenderer = pdfPageRenderer;
+        _annotationService = annotationService;
     }
 
     [ObservableProperty]
@@ -43,6 +48,12 @@ public partial class SheetViewerViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isLoading;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DeleteSelectedAnnotationCommand))]
+    private Annotation? _selectedAnnotation;
+
+    public ObservableCollection<Annotation> CurrentPageAnnotations { get; } = new();
 
     public int CurrentPageDisplay => CurrentPageIndex + 1;
 
@@ -85,6 +96,8 @@ public partial class SheetViewerViewModel : ObservableObject
 
     private bool CanGoToPreviousPage() => CurrentPageIndex > 0;
 
+    private bool CanDeleteSelectedAnnotation() => SelectedAnnotation is not null;
+
     [RelayCommand(CanExecute = nameof(CanGoToNextPage))]
     private async Task NextPageAsync()
     {
@@ -101,9 +114,79 @@ public partial class SheetViewerViewModel : ObservableObject
         await PersistLastViewedPageAsync();
     }
 
+    [RelayCommand]
+    private async Task PlaceIconAsync(string iconKey)
+    {
+        if (_sheet is null)
+        {
+            return;
+        }
+
+        var icon = MusicIconCatalog.FindByKey(iconKey);
+        var aspectRatio = icon?.AspectRatio ?? 1.0;
+
+        var width = DefaultIconWidth;
+        var height = width / aspectRatio;
+        var x = 0.5 - width / 2;
+        var y = 0.5 - height / 2;
+
+        var annotation = await _annotationService.AddIconAsync(_sheet.Id, CurrentPageIndex, iconKey, x, y, width, height);
+
+        CurrentPageAnnotations.Add(annotation);
+        SelectedAnnotation = annotation;
+    }
+
+    public async Task MoveSelectedAnnotationAsync(double newX, double newY)
+    {
+        if (SelectedAnnotation is null)
+        {
+            return;
+        }
+
+        SelectedAnnotation.X = newX;
+        SelectedAnnotation.Y = newY;
+        await _annotationService.UpdateAnnotationAsync(SelectedAnnotation);
+    }
+
+    public async Task ResizeSelectedAnnotationAsync(double newWidth, double newHeight)
+    {
+        if (SelectedAnnotation is null)
+        {
+            return;
+        }
+
+        SelectedAnnotation.Width = newWidth;
+        SelectedAnnotation.Height = newHeight;
+        await _annotationService.UpdateAnnotationAsync(SelectedAnnotation);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanDeleteSelectedAnnotation))]
+    private async Task DeleteSelectedAnnotationAsync()
+    {
+        if (SelectedAnnotation is null)
+        {
+            return;
+        }
+
+        await _annotationService.DeleteAnnotationAsync(SelectedAnnotation);
+        CurrentPageAnnotations.Remove(SelectedAnnotation);
+        SelectedAnnotation = null;
+    }
+
     private async Task LoadCurrentPageAsync()
     {
         CurrentPageImageBytes = await _pdfPageRenderer.RenderPageAsync(_filePath, CurrentPageIndex, _targetWidthPx, _targetHeightPx);
+
+        SelectedAnnotation = null;
+        CurrentPageAnnotations.Clear();
+        if (_sheet is not null)
+        {
+            var annotations = await _annotationService.GetAnnotationsAsync(_sheet.Id, CurrentPageIndex);
+            foreach (var annotation in annotations)
+            {
+                CurrentPageAnnotations.Add(annotation);
+            }
+        }
     }
 
     private async Task PersistLastViewedPageAsync()
