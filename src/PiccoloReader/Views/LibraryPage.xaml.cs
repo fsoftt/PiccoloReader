@@ -1,4 +1,6 @@
+using System.Windows.Input;
 using PiccoloReader.Core.Data.Models;
+using PiccoloReader.Core.Services;
 using PiccoloReader.Core.ViewModels;
 
 namespace PiccoloReader.Views;
@@ -6,13 +8,22 @@ namespace PiccoloReader.Views;
 public partial class LibraryPage : ContentPage
 {
     private readonly LibraryViewModel _viewModel;
+    private readonly LibraryService _libraryService;
 
-    public LibraryPage(LibraryViewModel viewModel)
+    public LibraryPage(LibraryViewModel viewModel, LibraryService libraryService)
     {
         InitializeComponent();
         _viewModel = viewModel;
+        _libraryService = libraryService;
         BindingContext = _viewModel;
+
+        FolderLongPressCommand = new Command<Folder>(async folder => await OnFolderLongPressedAsync(folder));
+        SheetLongPressCommand = new Command<Sheet>(async sheet => await OnSheetLongPressedAsync(sheet));
     }
+
+    public ICommand FolderLongPressCommand { get; }
+
+    public ICommand SheetLongPressCommand { get; }
 
     protected override async void OnAppearing()
     {
@@ -34,6 +45,45 @@ public partial class LibraryPage : ContentPage
         }
     }
 
+    private async void OnCreateFolderClicked(object? sender, EventArgs e)
+    {
+        var name = await DisplayPromptAsync("Create Folder", "Folder name:");
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        _viewModel.NewFolderName = name;
+        await _viewModel.CreateFolderCommand.ExecuteAsync(null);
+    }
+
+    private async void OnSortClicked(object? sender, EventArgs e)
+    {
+        var choice = await DisplayActionSheetAsync(
+            "Sort by",
+            "Cancel",
+            null,
+            "Name (A-Z)",
+            "Name (Z-A)",
+            "Date Added (Oldest First)",
+            "Date Added (Newest First)");
+
+        (SortField Field, SortDirection Direction)? sort = choice switch
+        {
+            "Name (A-Z)" => (SortField.Name, SortDirection.Ascending),
+            "Name (Z-A)" => (SortField.Name, SortDirection.Descending),
+            "Date Added (Oldest First)" => (SortField.DateAdded, SortDirection.Ascending),
+            "Date Added (Newest First)" => (SortField.DateAdded, SortDirection.Descending),
+            _ => null
+        };
+
+        if (sort is { } selected)
+        {
+            _viewModel.ApplySort(selected.Field, selected.Direction);
+        }
+    }
+
     private async void OnFolderTapped(object? sender, TappedEventArgs e)
     {
         if (e.Parameter is Folder folder)
@@ -42,26 +92,57 @@ public partial class LibraryPage : ContentPage
         }
     }
 
-    private async void OnDeleteFolderClicked(object? sender, EventArgs e)
+    private async Task OnFolderLongPressedAsync(Folder folder)
     {
-        if (sender is not Button { CommandParameter: Folder folder })
-        {
-            return;
-        }
+        var choice = await DisplayActionSheetAsync($"\"{folder.Name}\"", "Cancel", null, "Delete Sheets", "Keep Sheets");
 
-        var deleteSheets = await DisplayAlertAsync(
-            "Delete folder",
-            $"Delete \"{folder.Name}\" and all sheets inside it? Choose \"Keep Sheets\" to move them to the root instead.",
-            "Delete Sheets",
-            "Keep Sheets");
-
-        if (deleteSheets)
+        switch (choice)
         {
-            await _viewModel.DeleteFolderCommand.ExecuteAsync(folder);
+            case "Delete Sheets":
+                await _viewModel.DeleteFolderCommand.ExecuteAsync(folder);
+                break;
+            case "Keep Sheets":
+                await _viewModel.DeleteFolderKeepSheetsCommand.ExecuteAsync(folder);
+                break;
         }
-        else
+    }
+
+    private async Task OnSheetLongPressedAsync(Sheet sheet)
+    {
+        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", "Cancel", null, "Move", "Delete");
+
+        if (choice == "Delete")
         {
-            await _viewModel.DeleteFolderKeepSheetsCommand.ExecuteAsync(folder);
+            var confirmed = await DisplayAlertAsync(
+                "Delete sheet",
+                $"Delete \"{sheet.Title}\"? This cannot be undone.",
+                "Delete",
+                "Cancel");
+
+            if (confirmed)
+            {
+                await _viewModel.DeleteSheetCommand.ExecuteAsync(sheet);
+            }
+        }
+        else if (choice == "Move")
+        {
+            var folders = await _libraryService.GetFoldersAsync();
+
+            if (folders.Count == 0)
+            {
+                await DisplayAlertAsync("Move", "Create a folder first to move sheets into.", "OK");
+                return;
+            }
+
+            var target = await DisplayActionSheetAsync("Move to…", "Cancel", null, folders.Select(f => f.Name).ToArray());
+
+            if (target is null || target == "Cancel")
+            {
+                return;
+            }
+
+            var targetFolder = folders.First(f => f.Name == target);
+            await _viewModel.MoveSheetCommand.ExecuteAsync((sheet, (int?)targetFolder.Id));
         }
     }
 }
