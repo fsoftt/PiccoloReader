@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="PiccoloReader.Views.LibraryPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Library">
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="12">
+
+        <HorizontalStackLayout Grid.Row="0" Spacing="8">
+            <Entry Placeholder="New folder name" Text="{Binding NewFolderName}" WidthRequest="220" />
+            <Button Text="Create Folder" Command="{Binding CreateFolderCommand}" />
+        </HorizontalStackLayout>
+
+        <Button Grid.Row="1" Text="Import PDF" Clicked="OnImportPdfClicked" />
+
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Folders}">
+            <CollectionView.Header>
+                <Label Text="Folders" FontAttributes="Bold" Margin="0,0,0,4" />
+            </CollectionView.Header>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="4" ColumnDefinitions="*,Auto">
+                        <Label Text="{Binding Name}" VerticalOptions="Center">
+                            <Label.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnFolderTapped" CommandParameter="{Binding}" />
+                            </Label.GestureRecognizers>
+                        </Label>
+                        <Button Grid.Column="1" Text="Delete" Clicked="OnDeleteFolderClicked" CommandParameter="{Binding}" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>
