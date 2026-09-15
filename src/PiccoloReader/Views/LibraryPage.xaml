@@ -66,6 +66,9 @@
             <CollectionView.ItemTemplate>
                 <DataTemplate>
                     <Border x:Name="SheetItemRoot" Style="{StaticResource ListItemCard}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnSheetTapped" CommandParameter="{Binding}" />
+                        </Border.GestureRecognizers>
                         <Border.Behaviors>
                             <toolkit:TouchBehavior
                                 LongPressCommand="{Binding Source={x:Reference ThisPage}, Path=SheetLongPressCommand}"

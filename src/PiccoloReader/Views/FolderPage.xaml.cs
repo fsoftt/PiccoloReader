@@ -80,6 +80,14 @@ public partial class FolderPage : ContentPage
         }
     }
 
+    private async void OnSheetTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is Sheet sheet)
+        {
+            await Shell.Current.GoToAsync($"sheetviewer?sheetId={sheet.Id}");
+        }
+    }
+
     private async Task OnSheetLongPressedAsync(Sheet sheet)
     {
         var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", "Cancel", null, "Move", "Delete");
