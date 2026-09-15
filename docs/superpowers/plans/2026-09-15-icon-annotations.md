@@ -808,6 +808,8 @@ git commit -m "feat: wire AnnotationService into SheetViewerViewModel"
 
 Only the "Music Icons" tab is built now — the architecture's Pencil/Eraser tabs are Plan 4 (roadmap explicitly scopes Eraser to Plan 4 alongside pencil strokes). Building a 3-tab switcher for two tabs that do nothing yet would just be thrown away; this task builds a single-purpose panel that Plan 4 extends with tabs.
 
+Icon buttons use `Image` + `FontImageSource`, not a `Label` with `FontFamily="Bravura"` — verified live on-device that `Label`'s text rendering shows blank/tofu boxes for this font on Android (Bravura is a CFF-flavored OTF, unlike the TTF fonts already working elsewhere in the app), while `FontImageSource` — the same mechanism already proven for the `MaterialOutlined` toolbar icons — renders the real glyphs correctly. If implementing this step from scratch and a `Label`-based attempt is tried first, don't spend time debugging it: switch to `FontImageSource` directly.
+
 - [ ] **Step 1: Add the toolbar pen button and panel to SheetViewerPage.xaml**
 
 Add a `ContentPage.ToolbarItems` block and the panel `Grid`, inserting into the existing page (the `Grid` that currently holds `PageImage`, the page indicator `Label`, and the `ActivityIndicator` gets a new sibling panel added after them, and a `ToolbarItems` block added before `ContentPage.Resources`):
@@ -895,13 +897,15 @@ Add a `ContentPage.ToolbarItems` block and the panel `Grid`, inserting into the 
                                                             Tapped="OnIconPickerTapped"
                                                             CommandParameter="{Binding Key}" />
                                                     </Border.GestureRecognizers>
-                                                    <Label
-                                                        Text="{Binding Codepoint, Converter={StaticResource CodepointToGlyphString}}"
-                                                        FontFamily="Bravura"
-                                                        FontSize="28"
-                                                        TextColor="{StaticResource Black}"
-                                                        HorizontalOptions="Center"
-                                                        VerticalOptions="Center" />
+                                                    <Image HorizontalOptions="Center" VerticalOptions="Center">
+                                                        <Image.Source>
+                                                            <FontImageSource
+                                                                Glyph="{Binding Codepoint, Converter={StaticResource CodepointToGlyphString}}"
+                                                                FontFamily="Bravura"
+                                                                Size="34"
+                                                                Color="{StaticResource Black}" />
+                                                        </Image.Source>
+                                                    </Image>
                                                 </Border>
                                             </DataTemplate>
                                         </BindableLayout.ItemTemplate>
