@@ -65,8 +65,16 @@ No Core unit tests — this is app-head wiring, verified by running the app.
 
 - [ ] **Step 1: Add the CommunityToolkit.Maui package**
 
+Pinned to 13.0.0, not latest: the latest release (15.0.1 at time of
+writing) requires `Microsoft.Maui.Controls >= 10.0.90`, which downgrades
+against the `Microsoft.Maui.Controls 10.0.20` this project's installed
+MAUI workload provides (`NU1605`, a hard restore error, not just a
+warning). 13.0.0 is the newest release whose floor (`>= 10.0.10`) the
+current workload satisfies — confirmed by checking each version's nuspec
+on nuget.org, not by trial and error.
+
 ```bash
-dotnet add src/PiccoloReader/PiccoloReader.csproj package CommunityToolkit.Maui
+dotnet add src/PiccoloReader/PiccoloReader.csproj package CommunityToolkit.Maui --version 13.0.0
 ```
 
 - [ ] **Step 2: Call UseMauiCommunityToolkit() in MauiProgram**
