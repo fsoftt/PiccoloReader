@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="PiccoloReader.Views.SplashPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:skia="clr-namespace:SkiaSharp.Extended.UI.Controls;assembly=SkiaSharp.Extended.UI.Maui"
+    BackgroundColor="{StaticResource Secondary}"
+    NavigationPage.HasNavigationBar="False">
+
+    <Grid RowDefinitions="*,Auto,Auto,*" Padding="32">
+
+        <skia:SKLottieView
+            x:Name="LottieView"
+            Grid.Row="1"
+            Source="musical-notes.json"
+            RepeatCount="0"
+            AnimationCompleted="OnAnimationCompleted"
+            HorizontalOptions="Center"
+            WidthRequest="280"
+            HeightRequest="280" />
+
+        <Label
+            Grid.Row="2"
+            Text="PiccoloReader"
+            FontFamily="OpenSansSemibold"
+            FontSize="28"
+            TextColor="{StaticResource Tertiary}"
+            HorizontalOptions="Center"
+            Margin="0,16,0,0" />
+
+    </Grid>
+</ContentPage>
