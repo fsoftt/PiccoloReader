@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PiccoloReader.Core/PiccoloReader.Core.csproj" />
+    <Project Path="src/PiccoloReader/PiccoloReader.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PiccoloReader.Core.Tests/PiccoloReader.Core.Tests.csproj" />
+  </Folder>
+</Solution>
