@@ -36,6 +36,11 @@ public static class MauiProgram
 		Batteries_V2.Init();
 
 		builder.Services.AddSingleton<IAppStorageProvider, MauiAppStorageProvider>();
+#if ANDROID
+		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.Android.PdfPageRenderer>();
+#elif IOS
+		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.iOS.PdfPageRenderer>();
+#endif
 		builder.Services.AddSingleton(sp =>
 		{
 			var storage = sp.GetRequiredService<IAppStorageProvider>();

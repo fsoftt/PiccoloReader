@@ -68,7 +68,6 @@ using Android.Graphics;
 using Android.Graphics.Pdf;
 using Android.OS;
 using PiccoloReader.Core.Services;
-using Java.IO;
 
 namespace PiccoloReader.Platforms.Android;
 
@@ -76,14 +75,14 @@ public class PdfPageRenderer : IPdfPageRenderer
 {
     public Task<int> GetPageCountAsync(string filePath) => Task.Run(() =>
     {
-        using var descriptor = ParcelFileDescriptor.Open(new File(filePath), ParcelFileMode.ReadOnly);
+        using var descriptor = ParcelFileDescriptor.Open(new Java.IO.File(filePath), ParcelFileMode.ReadOnly);
         using var renderer = new global::Android.Graphics.Pdf.PdfRenderer(descriptor!);
         return renderer.PageCount;
     });
 
     public Task<byte[]> RenderPageAsync(string filePath, int pageIndex, int targetWidthPx, int targetHeightPx) => Task.Run(() =>
     {
-        using var descriptor = ParcelFileDescriptor.Open(new File(filePath), ParcelFileMode.ReadOnly);
+        using var descriptor = ParcelFileDescriptor.Open(new Java.IO.File(filePath), ParcelFileMode.ReadOnly);
         using var renderer = new global::Android.Graphics.Pdf.PdfRenderer(descriptor!);
         using var page = renderer.OpenPage(pageIndex);
 
@@ -102,7 +101,7 @@ public class PdfPageRenderer : IPdfPageRenderer
 }
 ```
 
-Android SDK binding method/property names (`PageCount`, `OpenPage`, `Page.Width`/`Height`, `Render` overload, `PdfRenderMode.ForDisplay`, `Bitmap.CreateBitmap`, `Bitmap.Config.Argb8888`, `Bitmap.CompressFormat.Png`) are written from Android SDK knowledge — if any name doesn't match what the installed Android bindings expose, the build error will name the correct one; fix and continue rather than guessing further.
+Android SDK binding method/property names (`PageCount`, `OpenPage`, `Page.Width`/`Height`, `Render` overload, `PdfRenderMode.ForDisplay`, `Bitmap.CreateBitmap`, `Bitmap.Config.Argb8888`, `Bitmap.CompressFormat.Png`) are written from Android SDK knowledge — if any name doesn't match what the installed Android bindings expose, the build error will name the correct one; fix and continue rather than guessing further. Note `Java.IO.File` is referenced fully-qualified rather than via a `using Java.IO;` — a bare `File` is ambiguous with `System.IO.File`, which is in scope through the project's implicit global usings (confirmed by the actual CS0104 build error).
 
 - [ ] **Step 3: Write the iOS stub**
 
