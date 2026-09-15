@@ -9,7 +9,7 @@ specific task — one small, reviewable PR per task.
 | Item | Status | PR |
 |---|---|---|
 | Requirements + architecture design + roadmap | Merged | [#1](https://github.com/fsoftt/PiccoloReader/pull/1) |
-| Navigation/toolbar UX redefinition + this rework plan | PR open | [#9](https://github.com/fsoftt/PiccoloReader/pull/9) |
+| Navigation/toolbar UX redefinition + this rework plan | Merged | [#9](https://github.com/fsoftt/PiccoloReader/pull/9) |
 
 ## Plan 1: Project Scaffolding & Library Management
 
