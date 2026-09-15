@@ -78,12 +78,17 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    // Pinch-to-zoom, following the standard .NET MAUI pinch gesture sample:
-    // e.Scale is the scale delta *since the last Running event*, not a
-    // cumulative value since the gesture started, so it must be
-    // accumulated onto a persistent _currentScale rather than multiplied
-    // against the gesture's starting scale each frame - multiplying
-    // produced the reported "shaky"/stuck-zoom behavior.
+    // Pinch-to-zoom. On Android, PinchGestureHandler.OnPinch (MAUI source,
+    // src/Controls/src/Core/Platform/Android/PinchGestureHandler.cs)
+    // already computes e.Scale as `1 + (rawFrameDelta - 1) * viewScaleAtGestureStart`
+    // before it ever reaches this handler - i.e. e.Scale-1 is already
+    // scaled by the view's starting scale. Multiplying by _startScale
+    // again here (as an earlier version of this code did, copying a
+    // formula meant for a raw/unscaled delta) squares that factor:
+    // harmless at scale=1 (1*1=1, why zoom-in "looked fine" from a fresh
+    // page), but wildly overcorrects once already zoomed in - which is
+    // why zooming back out was broken. Only the *delta* needs adding, no
+    // extra multiplication.
     private void OnPinchUpdated(object? sender, PinchGestureUpdatedEventArgs e)
     {
         if (e.Status == GestureStatus.Started)
@@ -94,7 +99,7 @@ public partial class SheetViewerPage : ContentPage
         }
         else if (e.Status == GestureStatus.Running)
         {
-            _currentScale += (e.Scale - 1) * _startScale;
+            _currentScale += e.Scale - 1;
             _currentScale = Math.Max(1, _currentScale);
 
             var renderedX = PageImage.X + _xOffset;
