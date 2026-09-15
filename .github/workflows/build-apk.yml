@@ -7,6 +7,11 @@ on:
     branches: [main, master]
   workflow_dispatch: {}
 
+# Runs on every PR (so a downloadable APK is available for manual testing
+# before merge) and on every push to main/master (so main always has a
+# fresh build too). Signing uses the default debug keystore - this is for
+# internal sideload testing only, not a Play Store release pipeline.
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,11 +27,21 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Install MAUI workloads
-        run: dotnet workload install maui-android maui-ios
+      - name: Install Android workload
+        run: dotnet workload install maui-android
+
+      # iOS builds need Xcode/macOS, so the maui-ios workload can't be
+      # installed on this Linux runner. The app project multi-targets
+      # net10.0-android;net10.0-ios, and passing -f/-p:TargetFrameworks to
+      # scope the build to Android alone still leaks into the restore graph
+      # for the referenced Core project (it's a global MSBuild property).
+      # Stripping the ios TFM from the csproj before building sidesteps
+      # that entirely - restore then never needs the ios workload.
+      - name: Drop iOS target framework for this CI build
+        run: sed -i 's#<TargetFrameworks>net10.0-android;net10.0-ios</TargetFrameworks>#<TargetFrameworks>net10.0-android</TargetFrameworks>#' src/PiccoloReader/PiccoloReader.csproj
 
       - name: Build Release APK
-        run: dotnet build src/PiccoloReader/PiccoloReader.csproj -f net10.0-android -c Release
+        run: dotnet build src/PiccoloReader/PiccoloReader.csproj -c Release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
