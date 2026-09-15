@@ -31,7 +31,7 @@
                 TextColor="{StaticResource Tertiary}"
                 HorizontalOptions="Center" />
             <Label
-                Text="Music Reader"
+                Text="Music Reader by fsoftt"
                 FontFamily="OpenSansSemibold"
                 FontSize="14"
                 CharacterSpacing="1"
