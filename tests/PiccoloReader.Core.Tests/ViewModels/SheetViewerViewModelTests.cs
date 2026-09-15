@@ -12,6 +12,7 @@ public class SheetViewerViewModelTests : IDisposable
     private readonly AppDatabase _database;
     private readonly LibraryService _libraryService;
     private readonly FakePdfPageRenderer _renderer = new();
+    private readonly AnnotationService _annotationService;
     private readonly SheetViewerViewModel _sut;
 
     public SheetViewerViewModelTests()
@@ -20,7 +21,8 @@ public class SheetViewerViewModelTests : IDisposable
         _database = new AppDatabase(_storage.DatabasePath);
         _database.InitializeAsync().GetAwaiter().GetResult();
         _libraryService = new LibraryService(_database, _storage);
-        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer);
+        _annotationService = new AnnotationService(_database);
+        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService);
     }
 
     public void Dispose() => _storage.Dispose();
@@ -177,5 +179,108 @@ public class SheetViewerViewModelTests : IDisposable
 
         var reloaded = await _libraryService.GetSheetAsync(sheet.Id);
         Assert.Equal(1, reloaded.LastViewedPageIndex);
+    }
+
+    [Fact]
+    public async Task LoadAsync_LoadsAnnotationsForCurrentPage()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _annotationService.AddIconAsync(sheet.Id, pageIndex: 0, "dynamicForte", 0.4, 0.5, 0.1, 0.09);
+
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.Single(_sut.CurrentPageAnnotations);
+        Assert.Equal("dynamicForte", _sut.CurrentPageAnnotations[0].IconKey);
+    }
+
+    [Fact]
+    public async Task NextPageAsync_ReloadsAnnotationsForNewPage()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _annotationService.AddIconAsync(sheet.Id, pageIndex: 1, "dynamicPiano", 0.3, 0.3, 0.1, 0.1);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        Assert.Empty(_sut.CurrentPageAnnotations);
+
+        await _sut.NextPageCommand.ExecuteAsync(null);
+
+        Assert.Single(_sut.CurrentPageAnnotations);
+        Assert.Equal("dynamicPiano", _sut.CurrentPageAnnotations[0].IconKey);
+    }
+
+    [Fact]
+    public async Task PlaceIconAsync_AddsAnnotationCenteredWithCatalogAspectRatio()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        Assert.Single(_sut.CurrentPageAnnotations);
+        var placed = _sut.CurrentPageAnnotations[0];
+        Assert.Equal("dynamicForte", placed.IconKey);
+        Assert.Equal(0.12, placed.Width, precision: 6);
+        Assert.Equal(0.12 / 0.85, placed.Height, precision: 6);
+        Assert.Equal(0.5 - placed.Width / 2, placed.X, precision: 6);
+        Assert.Equal(0.5 - placed.Height / 2, placed.Y, precision: 6);
+
+        var persisted = await _annotationService.GetAnnotationsAsync(sheet.Id, 0);
+        Assert.Single(persisted);
+    }
+
+    [Fact]
+    public async Task PlaceIconAsync_SelectsTheNewIcon()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        Assert.NotNull(_sut.SelectedAnnotation);
+        Assert.Equal("dynamicForte", _sut.SelectedAnnotation!.IconKey);
+    }
+
+    [Fact]
+    public async Task MoveSelectedAnnotationAsync_UpdatesAndPersistsPosition()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        await _sut.MoveSelectedAnnotationAsync(0.2, 0.3);
+
+        Assert.Equal(0.2, _sut.SelectedAnnotation!.X);
+        Assert.Equal(0.3, _sut.SelectedAnnotation!.Y);
+        var persisted = await _annotationService.GetAnnotationsAsync(sheet.Id, 0);
+        Assert.Equal(0.2, persisted[0].X);
+    }
+
+    [Fact]
+    public async Task ResizeSelectedAnnotationAsync_UpdatesAndPersistsSize()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        await _sut.ResizeSelectedAnnotationAsync(0.2, 0.18);
+
+        Assert.Equal(0.2, _sut.SelectedAnnotation!.Width);
+        Assert.Equal(0.18, _sut.SelectedAnnotation!.Height);
+        var persisted = await _annotationService.GetAnnotationsAsync(sheet.Id, 0);
+        Assert.Equal(0.2, persisted[0].Width);
+    }
+
+    [Fact]
+    public async Task DeleteSelectedAnnotationAsync_RemovesFromCollectionAndPersistence()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        await _sut.DeleteSelectedAnnotationCommand.ExecuteAsync(null);
+
+        Assert.Empty(_sut.CurrentPageAnnotations);
+        Assert.Null(_sut.SelectedAnnotation);
+        var persisted = await _annotationService.GetAnnotationsAsync(sheet.Id, 0);
+        Assert.Empty(persisted);
     }
 }

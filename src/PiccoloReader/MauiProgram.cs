@@ -59,6 +59,7 @@ public static class MauiProgram
 		});
 		builder.Services.AddSingleton<LibraryService>();
 		builder.Services.AddSingleton<PdfImportService>();
+		builder.Services.AddSingleton<AnnotationService>();
 
 		builder.Services.AddTransient<LibraryViewModel>();
 		builder.Services.AddTransient<FolderViewModel>();
