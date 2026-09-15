@@ -52,8 +52,20 @@ Bounded UI tasks done outside the numbered plans above.
 
 ## Plan 2: PDF Viewer
 
-Not planned yet — native Android/iOS PDF rasterization, Sheet Viewer
-screen, page navigation, zoom/pan.
+Spec: [`2026-09-14-architecture-design.md`](../specs/2026-09-14-architecture-design.md)
+Plan: [`2026-09-15-pdf-viewer.md`](2026-09-15-pdf-viewer.md)
+
+Scoped to Android only — no Mac/iOS simulator available to build or verify
+an iOS `IPdfPageRenderer` against; iOS gets a `NotImplementedException`
+stub until that changes.
+
+| # | Task | Status | PR |
+|---|---|---|---|
+| 1 | IPdfPageRenderer interface + Android implementation | Merged | [#18](https://github.com/fsoftt/PiccoloReader/pull/18) |
+| 2 | LibraryService.GetSheetAsync / UpdateSheetPageCountAsync | Merged | [#19](https://github.com/fsoftt/PiccoloReader/pull/19) |
+| 3 | SheetViewerViewModel | Merged | [#20](https://github.com/fsoftt/PiccoloReader/pull/20) |
+| 4 | SheetViewerPage (zoom/pan, tap/swipe page turning) | Merged | [#21](https://github.com/fsoftt/PiccoloReader/pull/21) |
+| 5 | Routing + tap-to-open wiring + end-to-end verification | PR open, CI passing | |
 
 ## Plan 3: Icon Annotations
 
