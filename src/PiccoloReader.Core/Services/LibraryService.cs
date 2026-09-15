@@ -23,6 +23,15 @@ public class LibraryService
             .OrderBy(s => s.Title)
             .ToListAsync();
 
+    public Task<Sheet> GetSheetAsync(int sheetId) =>
+        _database.Connection.Table<Sheet>().Where(s => s.Id == sheetId).FirstAsync();
+
+    public Task UpdateSheetPageCountAsync(Sheet sheet, int pageCount)
+    {
+        sheet.PageCount = pageCount;
+        return _database.Connection.UpdateAsync(sheet);
+    }
+
     public async Task<Folder> CreateFolderAsync(string name)
     {
         var folder = new Folder { Name = name };

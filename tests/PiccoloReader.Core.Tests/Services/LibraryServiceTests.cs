@@ -94,6 +94,28 @@ public class LibraryServiceTests : IDisposable
         Assert.False(File.Exists(filePath));
     }
 
+    [Fact]
+    public async Task GetSheetAsync_ReturnsMatchingSheet()
+    {
+        var sheet = await InsertSheetAsync(null);
+
+        var result = await _sut.GetSheetAsync(sheet.Id);
+
+        Assert.Equal(sheet.Id, result.Id);
+        Assert.Equal(sheet.Title, result.Title);
+    }
+
+    [Fact]
+    public async Task UpdateSheetPageCountAsync_PersistsPageCount()
+    {
+        var sheet = await InsertSheetAsync(null);
+
+        await _sut.UpdateSheetPageCountAsync(sheet, 12);
+
+        var reloaded = await _sut.GetSheetAsync(sheet.Id);
+        Assert.Equal(12, reloaded.PageCount);
+    }
+
     private async Task<Sheet> InsertSheetAsync(int? folderId)
     {
         Directory.CreateDirectory(_storage.SheetsDirectory);
