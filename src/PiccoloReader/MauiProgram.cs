@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Maui;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
+using SkiaSharp.Views.Maui.Controls.Hosting;
 using UraniumUI;
 using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Services;
@@ -19,10 +20,12 @@ public static class MauiProgram
 		builder
 			.UseMauiApp<App>()
 			.UseMauiCommunityToolkit()
+			.UseSkiaSharp()
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+				fonts.AddFont("Pacifico-Regular.ttf", "Pacifico");
 				fonts.AddMaterialSymbolsFonts();
 			});
 

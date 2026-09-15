@@ -61,6 +61,8 @@
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.20" />
+		<PackageReference Include="SkiaSharp.Extended.UI.Maui" Version="3.0.0" />
 		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
 		<PackageReference Include="UraniumUI.Icons.MaterialSymbols" Version="3.0.0" />
 	</ItemGroup>
