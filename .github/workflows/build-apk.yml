@@ -1,0 +1,49 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch: {}
+
+# Runs after a PR merges into main/master, so a downloadable APK is
+# always available for the latest main. Signing uses the default debug
+# keystore - this is for internal sideload testing only, not a Play
+# Store release pipeline.
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Android workload
+        run: dotnet workload install maui-android
+
+      # iOS builds need Xcode/macOS, so the maui-ios workload can't be
+      # installed on this Linux runner. The app project multi-targets
+      # net10.0-android;net10.0-ios, and passing -f/-p:TargetFrameworks to
+      # scope the build to Android alone still leaks into the restore graph
+      # for the referenced Core project (it's a global MSBuild property).
+      # Stripping the ios TFM from the csproj before building sidesteps
+      # that entirely - restore then never needs the ios workload.
+      - name: Drop iOS target framework for this CI build
+        run: sed -i 's#<TargetFrameworks>net10.0-android;net10.0-ios</TargetFrameworks>#<TargetFrameworks>net10.0-android</TargetFrameworks>#' src/PiccoloReader/PiccoloReader.csproj
+
+      - name: Build Release APK
+        run: dotnet build src/PiccoloReader/PiccoloReader.csproj -c Release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: piccoloreader-apk-${{ github.sha }}
+          path: src/PiccoloReader/bin/Release/net10.0-android/*-Signed.apk
+          retention-days: 30
