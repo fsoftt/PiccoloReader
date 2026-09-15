@@ -56,7 +56,18 @@ public partial class FolderPage : ContentPage
 
     private async void OnDeleteSheetClicked(object? sender, EventArgs e)
     {
-        if (sender is Button { CommandParameter: Sheet sheet })
+        if (sender is not Button { CommandParameter: Sheet sheet })
+        {
+            return;
+        }
+
+        var confirmed = await DisplayAlertAsync(
+            "Delete sheet",
+            $"Delete \"{sheet.Title}\"? This cannot be undone.",
+            "Delete",
+            "Cancel");
+
+        if (confirmed)
         {
             await _viewModel.DeleteSheetCommand.ExecuteAsync(sheet);
         }
