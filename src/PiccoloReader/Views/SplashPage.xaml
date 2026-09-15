@@ -7,7 +7,7 @@
     BackgroundColor="{StaticResource Secondary}"
     NavigationPage.HasNavigationBar="False">
 
-    <Grid RowDefinitions="*,Auto,Auto,*" Padding="32">
+    <Grid RowDefinitions="*,Auto,*,Auto" Padding="32">
 
         <skia:SKLottieView
             x:Name="LottieView"
@@ -20,13 +20,13 @@
             HeightRequest="280" />
 
         <Label
-            Grid.Row="2"
+            Grid.Row="3"
             Text="PiccoloReader"
-            FontFamily="OpenSansSemibold"
-            FontSize="28"
+            FontFamily="Baloo2"
+            FontSize="34"
             TextColor="{StaticResource Tertiary}"
             HorizontalOptions="Center"
-            Margin="0,16,0,0" />
+            Margin="0,0,0,24" />
 
     </Grid>
 </ContentPage>
