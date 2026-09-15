@@ -22,7 +22,7 @@ Plan: [`2026-09-14-project-scaffolding-library.md`](2026-09-14-project-scaffoldi
 | 3 | LibraryService (folder/sheet CRUD) | Merged | [#5](https://github.com/fsoftt/PiccoloReader/pull/5) |
 | 4 | PdfImportService | Merged | [#6](https://github.com/fsoftt/PiccoloReader/pull/6) |
 | 5 | LibraryViewModel & FolderViewModel | Merged | [#7](https://github.com/fsoftt/PiccoloReader/pull/7) |
-| 6 | DI wiring, navigation skeleton, Library page | PR open, awaiting CI | [#8](https://github.com/fsoftt/PiccoloReader/pull/8) |
+| 6 | DI wiring, navigation skeleton, Library page | PR open, CI passing | [#8](https://github.com/fsoftt/PiccoloReader/pull/8) |
 | 7 | Root sheets list, move-to-folder, delete prompt polish | Not started | |
 
 ## Plan 2: PDF Viewer
