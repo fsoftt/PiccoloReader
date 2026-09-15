@@ -106,22 +106,31 @@ page is rasterized and which page's annotations are queried.
 
 ## Annotation Editing & Undo/Redo
 
-**Tools**, presented in a right-edge sliding panel on the Sheet Viewer:
+**Tool panel**, on the Sheet Viewer's right side, opened either by sliding
+from the right edge or by tapping a pen-icon button in the toolbar:
 
-- **Pen** — expands inline color swatches (accordion-style) to pick ink
-  color; finger drag draws a new `StrokeAnnotation`, committed on lift.
-- **Eraser** — simple toggle, no sub-options; drag over the page hit-tests
-  against annotations on the page (icon bounding box, or stroke
-  path/bounding box) — any annotation touched during the gesture is
-  deleted **whole** (not partial), and a single drag can sweep through and
-  delete several objects.
-- **Icon categories** — one accordion per category (categories and the
-  icon set itself are TBD, tracked in requirements.md), expands to show
-  that category's icons; tap one to place it on the page with a default
-  size.
+- The panel's top row is three icons laid out horizontally — **Music
+  icons**, **Pencil**, **Eraser** — acting as a tab selector. Exactly one
+  is active at a time; tapping one reveals that tool's section below the
+  row, replacing whatever section was showing:
+  - **Music icons** section — one accordion per category (categories and
+    the icon set itself are TBD, tracked in `requirements.md`); expanding
+    a category shows its icons, tap one to place it on the page with a
+    default size.
+  - **Pencil** section — a size selector and a color selector; finger
+    drag on the page draws a new `StrokeAnnotation` in the chosen
+    size/color, committed on lift.
+  - **Eraser** section — a size selector only. Size sets the **touch
+    hit-test radius** used when dragging over the page — a larger radius
+    makes small objects easier to catch — but it does not change *what*
+    happens on a hit: any annotation (icon or stroke) touched during the
+    drag is still deleted **whole**, never partially. Eraser size is a
+    transient tool setting (like the active tool itself), not persisted
+    per annotation — no data model impact.
 
-The panel stays open across placements/strokes rather than closing after
-each action, and can be manually collapsed via its handle.
+The panel stays open across placements/strokes/erases rather than closing
+after each action, and can be collapsed by sliding it back or tapping the
+toolbar pen icon again.
 
 **Default state (no tool active)** is select/move: tapping an existing
 icon on the page selects it directly and shows move/resize handles (drag
@@ -137,21 +146,30 @@ closing the app never loses work — it only clears what you *could* undo.
 
 ## Navigation & Screens
 
-- **Left hamburger menu** (MAUI Shell flyout) — lists all folders plus a
-  root/"Library" entry; tapping one jumps straight to that folder's or
-  root's sheet list.
-- **Library (root) / Folder view** — list of a folder's (or root's) sheets
-  and, at root, its folders; "+" to create a folder or import a PDF (MAUI
-  file picker); delete-folder action triggers the keep/delete-sheets
-  prompt.
+- **Left hamburger menu** (MAUI Shell flyout) — the app's top-level menu,
+  not a folder list. Today it has a single item, **Library**; the menu is
+  designed to grow (future items TBD), so it's a real Shell flyout with
+  `FlyoutItem`s rather than anything folder-specific.
+- **Library page** — lists created folders plus root-level sheets.
+  Toolbar (appbar) icons: **Import** (file picker, copies the PDF in via
+  `PdfImportService`), **Create folder**, **Sort** (opens a menu to pick
+  field — name or date added — and direction; re-sorts the already-loaded
+  `ObservableCollection`s client-side in the ViewModel, no repository
+  change needed at this data scale). Tap an item to open it (folder ->
+  Folder page, sheet -> Sheet Viewer). Long-press opens an action menu:
+  Delete on a folder (three-way Delete Sheets / Keep Sheets / Cancel
+  alert); Move + Delete on a sheet (Delete is a plain confirm alert; Move
+  presents the folder list, including root, to move into).
+- **Folder page** — same pattern as the Library page minus the Create
+  folder icon (folders don't nest): Import + Sort in the toolbar, tap to
+  open a sheet, long-press for the Move/Delete action menu.
 - **Sheet Viewer** — the PDF + annotation overlay screen with the right
-  sliding tool panel described above.
-- A sheet's context menu (from Library or Folder view) offers **Move to
-  folder** and **Delete**.
+  sliding tool panel described above, plus a pen-icon toolbar button that
+  also opens/closes it.
 
-Navigation is simple hierarchical push/pop via MAUI Shell plus the flyout
-for direct folder-to-folder jumps — no deep linking or tabs needed given
-the flat (single-level) folder structure.
+Navigation is hierarchical push/pop via MAUI Shell (Library -> Folder ->
+Sheet Viewer), with the flyout only for top-level destinations — no deep
+linking or tabs needed given the flat (single-level) folder structure.
 
 ## Testing Approach
 
