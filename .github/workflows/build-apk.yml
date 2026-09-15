@@ -3,14 +3,12 @@ name: Build APK
 on:
   push:
     branches: [main, master]
-  pull_request:
-    branches: [main, master]
   workflow_dispatch: {}
 
-# Runs on every PR (so a downloadable APK is available for manual testing
-# before merge) and on every push to main/master (so main always has a
-# fresh build too). Signing uses the default debug keystore - this is for
-# internal sideload testing only, not a Play Store release pipeline.
+# Runs after a PR merges into main/master, so a downloadable APK is
+# always available for the latest main. Signing uses the default debug
+# keystore - this is for internal sideload testing only, not a Play
+# Store release pipeline.
 
 jobs:
   build:
