@@ -22,18 +22,23 @@
 
     <Grid BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
 
-        <Image
-            x:Name="PageImage"
-            Source="{Binding CurrentPageImageBytes, Converter={StaticResource ByteArrayToImageSource}}"
-            Aspect="AspectFit"
+        <Grid
+            x:Name="PageContainer"
             HorizontalOptions="Center"
             VerticalOptions="Center">
-            <Image.GestureRecognizers>
+            <Grid.GestureRecognizers>
                 <TapGestureRecognizer Tapped="OnPageTapped" />
                 <PinchGestureRecognizer PinchUpdated="OnPinchUpdated" />
                 <PanGestureRecognizer PanUpdated="OnPanUpdated" />
-            </Image.GestureRecognizers>
-        </Image>
+            </Grid.GestureRecognizers>
+
+            <Image
+                x:Name="PageImage"
+                Source="{Binding CurrentPageImageBytes, Converter={StaticResource ByteArrayToImageSource}}"
+                Aspect="AspectFit" />
+
+            <skia:SKCanvasView x:Name="AnnotationCanvas" PaintSurface="OnAnnotationCanvasPaintSurface" />
+        </Grid>
 
         <Label
             Text="{Binding PageIndicatorText}"
