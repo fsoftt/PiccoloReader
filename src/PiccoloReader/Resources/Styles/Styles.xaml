@@ -417,6 +417,12 @@
         <Setter Property="Shell.BackgroundColor" Value="{StaticResource Primary}" />
         <Setter Property="Shell.ForegroundColor" Value="{StaticResource White}" />
         <Setter Property="Shell.TitleColor" Value="{StaticResource White}" />
+        <!--
+            FlyoutBackgroundColor is set directly on the <Shell> element in
+            AppShell.xaml, not here - confirmed on-device this Style setter
+            is silently ignored for that specific property on Android (the
+            flyout rendered pure black instead), a known MAUI Shell quirk.
+        -->
         <Setter Property="Shell.DisabledColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray950}}" />
         <Setter Property="Shell.UnselectedColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray200}}" />
         <Setter Property="Shell.NavBarHasShadow" Value="False" />
