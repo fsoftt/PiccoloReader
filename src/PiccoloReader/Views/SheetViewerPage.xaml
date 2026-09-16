@@ -124,38 +124,48 @@
             StrokeThickness="0">
             <Grid RowDefinitions="Auto,*">
 
-                <HorizontalStackLayout Grid.Row="0" Padding="12,12,12,4" Spacing="8">
-                    <Border x:Name="MusicIconsTabButton" WidthRequest="52" HeightRequest="44" Padding="4" StrokeThickness="1">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="MusicIcons" />
-                        </Border.GestureRecognizers>
-                        <Image HorizontalOptions="Center" VerticalOptions="Center">
-                            <Image.Source>
-                                <FontImageSource Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Black}" />
-                            </Image.Source>
-                        </Image>
-                    </Border>
-                    <Border x:Name="PencilTabButton" WidthRequest="52" HeightRequest="44" Padding="4" StrokeThickness="1">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="Pencil" />
-                        </Border.GestureRecognizers>
-                        <Image HorizontalOptions="Center" VerticalOptions="Center">
-                            <Image.Source>
-                                <FontImageSource Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Black}" />
-                            </Image.Source>
-                        </Image>
-                    </Border>
-                    <Border x:Name="EraserTabButton" WidthRequest="52" HeightRequest="44" Padding="4" StrokeThickness="1">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="Eraser" />
-                        </Border.GestureRecognizers>
-                        <Image HorizontalOptions="Center" VerticalOptions="Center">
-                            <Image.Source>
-                                <FontImageSource Glyph="&#xE14C;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Black}" />
-                            </Image.Source>
-                        </Image>
-                    </Border>
-                </HorizontalStackLayout>
+                <Grid Grid.Row="0" RowDefinitions="Auto,1">
+
+                    <Grid Grid.Row="0" ColumnDefinitions="*,*,*">
+                        <Grid Grid.Column="0" RowDefinitions="Auto,Auto" RowSpacing="10" Padding="0,14,0,10" BackgroundColor="Transparent">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="MusicIcons" />
+                            </Grid.GestureRecognizers>
+                            <Image Grid.Row="0" HeightRequest="24" HorizontalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource x:Name="MusicIconsTabIcon" Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Primary}" />
+                                </Image.Source>
+                            </Image>
+                            <BoxView x:Name="MusicIconsTabIndicator" Grid.Row="1" WidthRequest="32" HeightRequest="3" CornerRadius="2" HorizontalOptions="Center" BackgroundColor="Transparent" Color="{StaticResource Primary}" />
+                        </Grid>
+
+                        <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="10" Padding="0,14,0,10" BackgroundColor="Transparent">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="Pencil" />
+                            </Grid.GestureRecognizers>
+                            <Image Grid.Row="0" HeightRequest="24" HorizontalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource x:Name="PencilTabIcon" Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Gray500}" />
+                                </Image.Source>
+                            </Image>
+                            <BoxView x:Name="PencilTabIndicator" Grid.Row="1" WidthRequest="32" HeightRequest="3" CornerRadius="2" HorizontalOptions="Center" BackgroundColor="Transparent" Color="Transparent" />
+                        </Grid>
+
+                        <Grid Grid.Column="2" RowDefinitions="Auto,Auto" RowSpacing="10" Padding="0,14,0,10" BackgroundColor="Transparent">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="Eraser" />
+                            </Grid.GestureRecognizers>
+                            <Image Grid.Row="0" HeightRequest="24" HorizontalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource x:Name="EraserTabIcon" Glyph="&#xE14C;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Gray500}" />
+                                </Image.Source>
+                            </Image>
+                            <BoxView x:Name="EraserTabIndicator" Grid.Row="1" WidthRequest="32" HeightRequest="3" CornerRadius="2" HorizontalOptions="Center" BackgroundColor="Transparent" Color="Transparent" />
+                        </Grid>
+                    </Grid>
+
+                    <BoxView Grid.Row="1" HeightRequest="1" HorizontalOptions="Fill" Color="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray500}}" />
+                </Grid>
 
                 <ScrollView Grid.Row="1">
                     <Grid Padding="12">
