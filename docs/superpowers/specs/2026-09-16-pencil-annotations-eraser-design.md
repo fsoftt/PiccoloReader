@@ -109,42 +109,63 @@ same as today.
 
 ## Pencil: Drawing Mechanics
 
-Freehand drawing must work at any zoom level and coexist with
-`PageContainer`'s existing `PinchGestureRecognizer`/`PanGestureRecognizer`/`TapGestureRecognizer`.
-Rather than adding a new gesture recognizer — which, per two real bugs
-already hit and fixed in this app (Pan+Swipe on one element in Plan 2;
-Tap on a covering child vs. Pinch+Pan on its parent in Plan 3's PR #36 —
-see `SheetViewerPage.xaml.cs`'s existing comments), reliably causes
-gesture-arena conflicts — this plan **extends the existing `OnPanUpdated`
-handler** with a third behavior, branching on which tool tab is active:
+**Revised from the original plan** after checking (not assuming) what
+`CommunityToolkit.Maui` — already a project dependency, used elsewhere
+for `TouchBehavior` — actually ships: `CommunityToolkit.Maui.Views.DrawingView`,
+a purpose-built freehand-line capture control (`LineColor`/`LineWidth`,
+a `Lines` collection, a `DrawingLineCompleted` event carrying the
+finished stroke's points). This is a better foundation than hand-rolling
+point capture on top of `PanGestureRecognizer` — which, on inspection,
+turned out not to expose absolute touch positions at all, only
+cumulative `TotalX`/`TotalY` deltas from gesture start, making a
+multi-point freehand path impossible to reconstruct from it directly.
+Using an already-built, already-tested control instead avoids that gap
+entirely.
 
-- **Music Icons active** (today's only behavior): pan either drags the
-  zoomed page around, or (not zoomed) turns pages on a large enough
-  swipe. Unchanged.
-- **Pencil active**: a drag draws. On `GestureStatus.Started`, begin a new
-  in-progress point list. On `Running`, convert the current touch
-  position to a normalized page coordinate — reusing the zoom-aware
-  conversion formula already fixed for move/resize in PR #39
-  (`screenDelta / (PageContainer.Width * _currentScale)`, and the
-  equivalent absolute-position form for the touch point itself) — append
-  it to the in-progress list, and repaint immediately so ink appears
-  live under the finger. On `Completed`, if the stroke has at least 2
-  points, commit it via `AnnotationService.AddStrokeAsync` using the
-  currently-selected color/width, add the resulting `Annotation` to
-  `CurrentPageAnnotations`, and clear the in-progress buffer. A stroke
-  that never leaves its starting point (a tap, not a drag) is discarded,
-  not committed as a zero-length stroke.
-- **Eraser active**: see below.
+A `DrawingView` sits as a sibling of `PageImage`/`AnnotationCanvas`/
+`SelectionOverlay` inside `PageContainer`, sized to fill the same area,
+so it inherits the same zoom/pan transform and its captured points are
+already in `PageContainer`'s local (unscaled) coordinate space — no
+zoom-aware conversion math needed for drawing, unlike the eraser (see
+below) or the existing move/resize handlers.
 
-Stroke rendering reuses the existing `AnnotationCanvas` SkiaSharp surface
-(`OnAnnotationCanvasPaintSurface`) that already draws icons — no new
-canvas. Each stroke annotation draws as an `SKPath` (built from its
-deserialized `Points`, converted from normalized to the canvas's pixel
-space the same way icon positions already are) stroked with `ColorHex`/
-`StrokeWidth` via `SKPaint` (`Style = SKPaintStyle.Stroke`, round caps/
-joins for a natural pencil feel). The in-progress (uncommitted) stroke
-currently being drawn is painted the same way, read from a field on the
-page rather than from `CurrentPageAnnotations` (it isn't committed yet).
+- The `DrawingView` is only visible and interactive while **Pencil** is
+  the active tab (`IsVisible`/`InputTransparent` toggled on tab change).
+  When it's not the active tab, touches pass through to `PageContainer`
+  as today. When it is, `DrawingView` — being a covering child with its
+  own native touch handling — captures all touches on the page itself,
+  the same way `ResizeHandle`/`SelectionBorder` already do for their own
+  gestures without conflicting with `PageContainer`'s pinch/pan. One
+  consequence: pinch-zoom is unavailable *while actively drawing* (the
+  same touch would otherwise be ambiguous between "draw" and "zoom") —
+  zoom first on a different tab, then switch to Pencil to draw at that
+  level. Confirmed acceptable.
+- `LineColor`/`LineWidth` are bound to the ViewModel's remembered
+  pencil color/width, updated live if changed mid-session.
+- On `DrawingLineCompleted`, the finished line's `Points` (in
+  `DrawingView`'s local coordinate space) are normalized by dividing by
+  `DrawingView.Width`/`Height`, committed via `AnnotationService.AddStrokeAsync`
+  using the current color/width, the resulting `Annotation` added to
+  `CurrentPageAnnotations`, and `DrawingView.Lines` cleared — the
+  persisted representation lives in `CurrentPageAnnotations`/SQLite,
+  same as every other annotation; `DrawingView`'s own `Lines` is only
+  scratch state for the stroke currently being drawn. A line with fewer
+  than 2 points (a tap, not a drag) is discarded, not committed as a
+  zero-length stroke.
+- **Eraser active**: see below — still implemented by extending
+  `OnPanUpdated`, since there's no equivalent off-the-shelf control for
+  "hit-test and delete along a drag path."
+
+Stroke rendering for already-committed strokes reuses the existing
+`AnnotationCanvas` SkiaSharp surface (`OnAnnotationCanvasPaintSurface`)
+that already draws icons — no new canvas for *that* part. Each stroke
+annotation draws as an `SKPath` (built from its deserialized `Points`,
+converted from normalized to the canvas's pixel space the same way icon
+positions already are) stroked with `ColorHex`/`StrokeWidth` via
+`SKPaint` (`Style = SKPaintStyle.Stroke`, round caps/joins for a natural
+pencil feel). The stroke *currently being drawn* is rendered by
+`DrawingView` itself (it draws its own in-progress `Lines`), not by
+`AnnotationCanvas` — the two only hand off once a line completes.
 
 ## Eraser: Mechanics
 
