@@ -73,15 +73,21 @@ public partial class SheetViewerPage : ContentPage
         UpdateSelectionOverlay();
     }
 
-    // AnnotationCanvas fully covers PageContainer (it's stacked on top of
-    // PageImage in the same Grid cell), so it receives every tap before
-    // PageContainer's own gesture recognizers would - a plain
-    // TapGestureRecognizer on PageContainer here would just never fire.
-    // Rather than stack two competing tap recognizers (the same class of
-    // gesture-arena conflict already hit with Pan+Swipe in Plan 2), all
-    // tap handling - tool panel dismissal, icon hit-testing/selection, and
-    // the fallback tap-to-turn-page - lives in this one handler.
-    private void OnAnnotationCanvasTapped(object? sender, TappedEventArgs e)
+    // Tap lives on PageContainer itself, alongside its own Pinch and Pan
+    // recognizers - not on AnnotationCanvas, even though AnnotationCanvas
+    // is what visually sits on top and is the natural place to hit-test
+    // icons. Confirmed on-device (PR #35 follow-up): a GestureRecognizer
+    // on a child consumes the whole native touch stream for that gesture
+    // on Android, so a *different* recognizer type on an ancestor never
+    // gets ACTION_MOVE/ACTION_UP once a covering child's recognizer has
+    // claimed ACTION_DOWN - even though nothing here stacks two
+    // recognizers of the *same* type (the Pan+Swipe conflict from Plan 2).
+    // Putting Tap on PageContainer instead - the same element Pinch and
+    // Pan already live on, a combination already proven to coexist since
+    // Plan 2 - avoids the cross-element conflict entirely. All tap
+    // handling (tool panel dismissal, icon hit-testing/selection, and the
+    // fallback tap-to-turn-page) stays in this one handler.
+    private void OnPageContainerTapped(object? sender, TappedEventArgs e)
     {
         if (ToolPanel.IsVisible)
         {
@@ -299,7 +305,7 @@ public partial class SheetViewerPage : ContentPage
         if (ToolPanel.IsVisible)
         {
             // Dragging on the page while the tool panel is open closes it,
-            // same as a plain tap (see OnAnnotationCanvasTapped) - don't
+            // same as a plain tap (see OnPageContainerTapped) - don't
             // also pan/turn the page underneath.
             if (e.StatusType == GestureStatus.Completed)
             {
