@@ -27,6 +27,7 @@
             HorizontalOptions="Center"
             VerticalOptions="Center">
             <Grid.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnPageContainerTapped" />
                 <PinchGestureRecognizer PinchUpdated="OnPinchUpdated" />
                 <PanGestureRecognizer PanUpdated="OnPanUpdated" />
             </Grid.GestureRecognizers>
@@ -36,11 +37,7 @@
                 Source="{Binding CurrentPageImageBytes, Converter={StaticResource ByteArrayToImageSource}}"
                 Aspect="AspectFit" />
 
-            <skia:SKCanvasView x:Name="AnnotationCanvas" PaintSurface="OnAnnotationCanvasPaintSurface">
-                <skia:SKCanvasView.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnAnnotationCanvasTapped" />
-                </skia:SKCanvasView.GestureRecognizers>
-            </skia:SKCanvasView>
+            <skia:SKCanvasView x:Name="AnnotationCanvas" PaintSurface="OnAnnotationCanvasPaintSurface" />
 
             <Grid
                 x:Name="SelectionOverlay"
