@@ -14,6 +14,11 @@
                 <FontImageSource Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="24" Color="White" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
+        <ToolbarItem x:Name="DeactivateToolItem" Clicked="OnDeactivateToolClicked">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xE14C;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
     </ContentPage.ToolbarItems>
 
     <ContentPage.Resources>
@@ -117,45 +122,93 @@
             VerticalOptions="Fill"
             BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
             StrokeThickness="0">
-            <ScrollView>
-                <VerticalStackLayout Padding="12" Spacing="4">
-                    <Label Text="Music Icons" FontAttributes="Bold" FontSize="16" Margin="0,0,0,8" />
-                    <CollectionView ItemsSource="{Binding Source={x:Reference ThisPage}, Path=IconCategories}">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate>
-                                <VerticalStackLayout Spacing="4" Margin="0,0,0,12">
-                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="14" />
-                                    <FlexLayout Wrap="Wrap" Direction="Row" BindableLayout.ItemsSource="{Binding Icons}">
-                                        <BindableLayout.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border
-                                                    WidthRequest="52"
-                                                    HeightRequest="52"
-                                                    Margin="4"
-                                                    Padding="4"
-                                                    BackgroundColor="{StaticResource White}"
-                                                    StrokeThickness="1">
-                                                    <Border.GestureRecognizers>
-                                                        <TapGestureRecognizer
-                                                            Tapped="OnIconPickerTapped"
-                                                            CommandParameter="{Binding Key}" />
-                                                    </Border.GestureRecognizers>
-                                                    <skia:SKCanvasView
-                                                        WidthRequest="40"
-                                                        HeightRequest="40"
-                                                        HorizontalOptions="Center"
-                                                        VerticalOptions="Center"
-                                                        PaintSurface="OnIconGlyphPaintSurface" />
-                                                </Border>
-                                            </DataTemplate>
-                                        </BindableLayout.ItemTemplate>
-                                    </FlexLayout>
-                                </VerticalStackLayout>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-                </VerticalStackLayout>
-            </ScrollView>
+            <Grid RowDefinitions="Auto,*">
+
+                <HorizontalStackLayout Grid.Row="0" Padding="12,12,12,4" Spacing="8">
+                    <Border x:Name="MusicIconsTabButton" WidthRequest="52" HeightRequest="44" Padding="4" StrokeThickness="1">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="MusicIcons" />
+                        </Border.GestureRecognizers>
+                        <Image HorizontalOptions="Center" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Black}" />
+                            </Image.Source>
+                        </Image>
+                    </Border>
+                    <Border x:Name="PencilTabButton" WidthRequest="52" HeightRequest="44" Padding="4" StrokeThickness="1">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="Pencil" />
+                        </Border.GestureRecognizers>
+                        <Image HorizontalOptions="Center" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Black}" />
+                            </Image.Source>
+                        </Image>
+                    </Border>
+                    <Border x:Name="EraserTabButton" WidthRequest="52" HeightRequest="44" Padding="4" StrokeThickness="1">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="Eraser" />
+                        </Border.GestureRecognizers>
+                        <Image HorizontalOptions="Center" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE14C;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Black}" />
+                            </Image.Source>
+                        </Image>
+                    </Border>
+                </HorizontalStackLayout>
+
+                <ScrollView Grid.Row="1">
+                    <Grid Padding="12">
+
+                        <VerticalStackLayout x:Name="MusicIconsSection" Spacing="4">
+                            <Label Text="Music Icons" FontAttributes="Bold" FontSize="16" Margin="0,0,0,8" />
+                            <CollectionView ItemsSource="{Binding Source={x:Reference ThisPage}, Path=IconCategories}">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <VerticalStackLayout Spacing="4" Margin="0,0,0,12">
+                                            <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="14" />
+                                            <FlexLayout Wrap="Wrap" Direction="Row" BindableLayout.ItemsSource="{Binding Icons}">
+                                                <BindableLayout.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border
+                                                            WidthRequest="52"
+                                                            HeightRequest="52"
+                                                            Margin="4"
+                                                            Padding="4"
+                                                            BackgroundColor="{StaticResource White}"
+                                                            StrokeThickness="1">
+                                                            <Border.GestureRecognizers>
+                                                                <TapGestureRecognizer
+                                                                    Tapped="OnIconPickerTapped"
+                                                                    CommandParameter="{Binding Key}" />
+                                                            </Border.GestureRecognizers>
+                                                            <skia:SKCanvasView
+                                                                WidthRequest="40"
+                                                                HeightRequest="40"
+                                                                HorizontalOptions="Center"
+                                                                VerticalOptions="Center"
+                                                                PaintSurface="OnIconGlyphPaintSurface" />
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </BindableLayout.ItemTemplate>
+                                            </FlexLayout>
+                                        </VerticalStackLayout>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout x:Name="PencilSection" IsVisible="False" Spacing="8">
+                            <Label Text="Pencil" FontAttributes="Bold" FontSize="16" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout x:Name="EraserSection" IsVisible="False" Spacing="8">
+                            <Label Text="Eraser" FontAttributes="Bold" FontSize="16" />
+                        </VerticalStackLayout>
+
+                    </Grid>
+                </ScrollView>
+            </Grid>
         </Border>
 
     </Grid>
