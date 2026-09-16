@@ -68,20 +68,6 @@
                         <PanGestureRecognizer PanUpdated="OnSelectionResizePanUpdated" />
                     </BoxView.GestureRecognizers>
                 </BoxView>
-
-                <ImageButton
-                    x:Name="DeleteButton"
-                    WidthRequest="28"
-                    HeightRequest="28"
-                    CornerRadius="14"
-                    BackgroundColor="{StaticResource Primary}"
-                    HorizontalOptions="Start"
-                    VerticalOptions="Start"
-                    Clicked="OnDeleteSelectedIconClicked">
-                    <ImageButton.Source>
-                        <FontImageSource Glyph="&#xE5CD;" FontFamily="MaterialOutlined" Size="16" Color="White" />
-                    </ImageButton.Source>
-                </ImageButton>
             </Grid>
         </Grid>
 
@@ -99,6 +85,29 @@
             IsVisible="{Binding IsLoading}"
             HorizontalOptions="Center"
             VerticalOptions="Center" />
+
+        <Border
+            x:Name="TrashTarget"
+            IsVisible="False"
+            WidthRequest="56"
+            HeightRequest="56"
+            Margin="0,0,0,88"
+            HorizontalOptions="Center"
+            VerticalOptions="End"
+            BackgroundColor="{StaticResource Primary}"
+            StrokeThickness="0">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="28" />
+            </Border.StrokeShape>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnTrashTargetTapped" />
+            </Border.GestureRecognizers>
+            <Image HorizontalOptions="Center" VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xE872;" FontFamily="MaterialOutlined" Size="26" Color="White" />
+                </Image.Source>
+            </Image>
+        </Border>
 
         <Border
             x:Name="ToolPanel"
