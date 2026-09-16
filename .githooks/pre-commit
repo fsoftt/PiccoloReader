@@ -1,0 +1,17 @@
+#!/bin/sh
+# Blocks commits made directly on main. All work in this project goes
+# through a feature branch and a PR - see the workflow notes in the repo's
+# planning docs (docs/superpowers/plans/roadmap.md and friends).
+#
+# This hook only runs if it's wired up - see .githooks/README.md for the
+# one-time setup each clone/machine needs.
+
+branch="$(git symbolic-ref --short HEAD 2>/dev/null)"
+
+if [ "$branch" = "main" ]; then
+    echo "Refusing to commit directly to 'main'." >&2
+    echo "Create a feature branch first: git checkout -b <name>" >&2
+    exit 1
+fi
+
+exit 0
