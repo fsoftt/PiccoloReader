@@ -32,8 +32,23 @@ public partial class SheetViewerPage : ContentPage
     private readonly Dictionary<int, SKRect> _glyphBoundsCache = new();
     private readonly SKPaint _glyphPaint = new() { Color = SKColors.Black, IsAntialias = true };
 
-    private static readonly Color TabActiveColor = (Color)Application.Current!.Resources["Primary"];
-    private static readonly Color TabInactiveColor = Colors.Transparent;
+    // Both computed per-call, not static fields, so they reflect the
+    // theme at the moment each tab redraw happens. Active uses the same
+    // Primary/PrimaryDark pairing the Library page already uses for
+    // icons - plain Primary (#512BD4) reads fine on the light panel
+    // background but nearly disappears against the dark one (Gray600,
+    // #404040), so dark mode swaps to PrimaryDark (#ac99ea), a lighter
+    // tint meant for exactly this case. Inactive uses dark grey against
+    // the light panel and white against the dark one.
+    private static Color TabActiveColor =>
+        Application.Current!.RequestedTheme == AppTheme.Dark
+            ? (Color)Application.Current!.Resources["PrimaryDark"]
+            : (Color)Application.Current!.Resources["Primary"];
+
+    private static Color TabInactiveIconColor =>
+        Application.Current!.RequestedTheme == AppTheme.Dark
+            ? Colors.White
+            : (Color)Application.Current!.Resources["Gray600"];
 
     public SheetViewerPage(SheetViewerViewModel viewModel)
     {
@@ -544,9 +559,9 @@ public partial class SheetViewerPage : ContentPage
         PencilSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Pencil;
         EraserSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Eraser;
 
-        MusicIconsTabButton.BackgroundColor = _viewModel.ActiveTool == AnnotationTool.MusicIcons ? TabActiveColor : TabInactiveColor;
-        PencilTabButton.BackgroundColor = _viewModel.ActiveTool == AnnotationTool.Pencil ? TabActiveColor : TabInactiveColor;
-        EraserTabButton.BackgroundColor = _viewModel.ActiveTool == AnnotationTool.Eraser ? TabActiveColor : TabInactiveColor;
+        SetTabAppearance(MusicIconsTabIcon, _viewModel.ActiveTool == AnnotationTool.MusicIcons);
+        SetTabAppearance(PencilTabIcon, _viewModel.ActiveTool == AnnotationTool.Pencil);
+        SetTabAppearance(EraserTabIcon, _viewModel.ActiveTool == AnnotationTool.Eraser);
 
         if (_viewModel.IsDrawingToolActive)
         {
@@ -559,6 +574,11 @@ public partial class SheetViewerPage : ContentPage
         {
             ToolbarItems.Remove(DeactivateToolItem);
         }
+    }
+
+    private static void SetTabAppearance(FontImageSource icon, bool active)
+    {
+        icon.Color = active ? TabActiveColor : TabInactiveIconColor;
     }
 
     private async Task EnsureBravuraTypefaceLoadedAsync()
