@@ -1,3 +1,4 @@
+using System.Text.Json;
 using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Data.Models;
 
@@ -23,6 +24,7 @@ public class AnnotationService
         {
             SheetId = sheetId,
             PageIndex = pageIndex,
+            Type = AnnotationType.Icon,
             IconKey = iconKey,
             X = x,
             Y = y,
@@ -35,9 +37,39 @@ public class AnnotationService
         return annotation;
     }
 
+    public async Task<Annotation> AddStrokeAsync(int sheetId, int pageIndex, string colorHex, double strokeWidth, IReadOnlyList<StrokePoint> points)
+    {
+        var annotation = new Annotation
+        {
+            SheetId = sheetId,
+            PageIndex = pageIndex,
+            Type = AnnotationType.Stroke,
+            ColorHex = colorHex,
+            StrokeWidth = strokeWidth,
+            Points = SerializePoints(points),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _database.Connection.InsertAsync(annotation);
+        return annotation;
+    }
+
     public Task UpdateAnnotationAsync(Annotation annotation) =>
         _database.Connection.UpdateAsync(annotation);
 
     public Task DeleteAnnotationAsync(Annotation annotation) =>
         _database.Connection.DeleteAsync(annotation);
+
+    public static string SerializePoints(IReadOnlyList<StrokePoint> points) =>
+        JsonSerializer.Serialize(points);
+
+    public static IReadOnlyList<StrokePoint> DeserializePoints(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+        {
+            return Array.Empty<StrokePoint>();
+        }
+
+        return JsonSerializer.Deserialize<List<StrokePoint>>(json) ?? new List<StrokePoint>();
+    }
 }
