@@ -32,6 +32,9 @@ public partial class SheetViewerPage : ContentPage
     private readonly Dictionary<int, SKRect> _glyphBoundsCache = new();
     private readonly SKPaint _glyphPaint = new() { Color = SKColors.Black, IsAntialias = true };
 
+    private static readonly Color TabActiveColor = (Color)Application.Current!.Resources["Primary"];
+    private static readonly Color TabInactiveColor = Colors.Transparent;
+
     public SheetViewerPage(SheetViewerViewModel viewModel)
     {
         InitializeComponent();
@@ -39,6 +42,12 @@ public partial class SheetViewerPage : ContentPage
         BindingContext = _viewModel;
 
         _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => AnnotationCanvas.InvalidateSurface();
+
+        // ToolbarItem has no bindable IsVisible in this MAUI version (it
+        // derives from Element, not VisualElement), so visibility is
+        // managed by adding/removing it from ToolbarItems instead - starts
+        // removed since ActiveTool defaults to MusicIcons.
+        ToolbarItems.Remove(DeactivateToolItem);
     }
 
     public string SheetId { get; set; } = string.Empty;
@@ -55,6 +64,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         await EnsureBravuraTypefaceLoadedAsync();
+        UpdateToolSections();
 
         var displayInfo = DeviceDisplay.Current.MainDisplayInfo;
         var targetWidthPx = (int)displayInfo.Width;
@@ -509,6 +519,46 @@ public partial class SheetViewerPage : ContentPage
         }
 
         ToolPanel.IsVisible = !ToolPanel.IsVisible;
+    }
+
+    private void OnToolTabTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is not string toolName || !Enum.TryParse<AnnotationTool>(toolName, out var tool))
+        {
+            return;
+        }
+
+        _viewModel.ActiveTool = tool;
+        UpdateToolSections();
+    }
+
+    private void OnDeactivateToolClicked(object? sender, EventArgs e)
+    {
+        _viewModel.ActiveTool = AnnotationTool.MusicIcons;
+        UpdateToolSections();
+    }
+
+    private void UpdateToolSections()
+    {
+        MusicIconsSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.MusicIcons;
+        PencilSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Pencil;
+        EraserSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Eraser;
+
+        MusicIconsTabButton.BackgroundColor = _viewModel.ActiveTool == AnnotationTool.MusicIcons ? TabActiveColor : TabInactiveColor;
+        PencilTabButton.BackgroundColor = _viewModel.ActiveTool == AnnotationTool.Pencil ? TabActiveColor : TabInactiveColor;
+        EraserTabButton.BackgroundColor = _viewModel.ActiveTool == AnnotationTool.Eraser ? TabActiveColor : TabInactiveColor;
+
+        if (_viewModel.IsDrawingToolActive)
+        {
+            if (!ToolbarItems.Contains(DeactivateToolItem))
+            {
+                ToolbarItems.Add(DeactivateToolItem);
+            }
+        }
+        else
+        {
+            ToolbarItems.Remove(DeactivateToolItem);
+        }
     }
 
     private async Task EnsureBravuraTypefaceLoadedAsync()

@@ -53,6 +53,12 @@ public partial class SheetViewerViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(DeleteSelectedAnnotationCommand))]
     private Annotation? _selectedAnnotation;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDrawingToolActive))]
+    private AnnotationTool _activeTool = AnnotationTool.MusicIcons;
+
+    public bool IsDrawingToolActive => ActiveTool != AnnotationTool.MusicIcons;
+
     public ObservableCollection<Annotation> CurrentPageAnnotations { get; } = new();
 
     public int CurrentPageDisplay => CurrentPageIndex + 1;
