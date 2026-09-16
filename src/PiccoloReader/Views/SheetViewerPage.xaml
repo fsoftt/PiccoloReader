@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:converters="clr-namespace:PiccoloReader.Converters"
     xmlns:skia="clr-namespace:SkiaSharp.Views.Maui.Controls;assembly=SkiaSharp.Views.Maui.Controls"
+    xmlns:ctViews="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
     x:Name="ThisPage"
     Title="{Binding Title}">
 
@@ -74,6 +75,14 @@
                     </BoxView.GestureRecognizers>
                 </BoxView>
             </Grid>
+
+            <ctViews:DrawingView
+                x:Name="PencilDrawingView"
+                IsVisible="False"
+                InputTransparent="False"
+                BackgroundColor="Transparent"
+                ShouldClearOnFinish="True"
+                DrawingLineCompleted="OnPencilDrawingLineCompleted" />
         </Grid>
 
         <Label
@@ -207,6 +216,44 @@
 
                         <VerticalStackLayout x:Name="PencilSection" IsVisible="False" Spacing="8">
                             <Label Text="Pencil" FontAttributes="Bold" FontSize="16" />
+                            <Label Text="Color" FontSize="14" />
+                            <HorizontalStackLayout Spacing="8">
+                                <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Black" StrokeThickness="1">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#000000" />
+                                    </Border.GestureRecognizers>
+                                </Border>
+                                <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Red" StrokeThickness="1">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#FF0000" />
+                                    </Border.GestureRecognizers>
+                                </Border>
+                                <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Blue" StrokeThickness="1">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#0000FF" />
+                                    </Border.GestureRecognizers>
+                                </Border>
+                                <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Green" StrokeThickness="1">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#008000" />
+                                    </Border.GestureRecognizers>
+                                </Border>
+                                <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Orange" StrokeThickness="1">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#FFA500" />
+                                    </Border.GestureRecognizers>
+                                </Border>
+                            </HorizontalStackLayout>
+                            <Label Text="Width" FontSize="14" />
+                            <BoxView
+                                x:Name="PencilWidthPreview"
+                                WidthRequest="140"
+                                HeightRequest="8"
+                                CornerRadius="4"
+                                HorizontalOptions="Start"
+                                Margin="0,4"
+                                Color="Black" />
+                            <Slider x:Name="PencilWidthSlider" Minimum="0.003" Maximum="0.02" Value="{Binding PencilStrokeWidth}" ValueChanged="OnPencilWidthChanged" />
                         </VerticalStackLayout>
 
                         <VerticalStackLayout x:Name="EraserSection" IsVisible="False" Spacing="8">
