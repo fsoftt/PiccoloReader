@@ -559,9 +559,9 @@ public partial class SheetViewerPage : ContentPage
         PencilSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Pencil;
         EraserSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Eraser;
 
-        SetTabAppearance(MusicIconsTabIcon, MusicIconsTabIndicator, _viewModel.ActiveTool == AnnotationTool.MusicIcons);
-        SetTabAppearance(PencilTabIcon, PencilTabIndicator, _viewModel.ActiveTool == AnnotationTool.Pencil);
-        SetTabAppearance(EraserTabIcon, EraserTabIndicator, _viewModel.ActiveTool == AnnotationTool.Eraser);
+        SetTabAppearance(MusicIconsTabIcon, _viewModel.ActiveTool == AnnotationTool.MusicIcons);
+        SetTabAppearance(PencilTabIcon, _viewModel.ActiveTool == AnnotationTool.Pencil);
+        SetTabAppearance(EraserTabIcon, _viewModel.ActiveTool == AnnotationTool.Eraser);
 
         if (_viewModel.IsDrawingToolActive)
         {
@@ -576,10 +576,9 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    private static void SetTabAppearance(FontImageSource icon, BoxView indicator, bool active)
+    private static void SetTabAppearance(FontImageSource icon, bool active)
     {
         icon.Color = active ? TabActiveColor : TabInactiveIconColor;
-        indicator.Color = active ? TabActiveColor : Colors.Transparent;
     }
 
     private async Task EnsureBravuraTypefaceLoadedAsync()
