@@ -27,6 +27,8 @@ public partial class SheetViewerPage : ContentPage
     private double _moveStartY;
 
     private SKTypeface? _bravuraTypeface;
+    private readonly Dictionary<int, SKRect> _glyphBoundsCache = new();
+    private readonly SKPaint _glyphPaint = new() { Color = SKColors.Black, IsAntialias = true };
 
     public SheetViewerPage(SheetViewerViewModel viewModel)
     {
@@ -155,6 +157,20 @@ public partial class SheetViewerPage : ContentPage
     // bounds, not the visual union of where its children overflow to.
     private void UpdateSelectionOverlay()
     {
+        RepositionSelectionOverlay();
+
+        // A fresh selection (new tap, newly placed icon) always starts
+        // with both controls visible. Repositioning alone - the per-frame
+        // case during an active drag - must NOT reach this: it would
+        // immediately re-show the controls SetDragControlsVisible(false)
+        // just hid on GestureStatus.Started, on the very next Running
+        // frame. That's why the drag handlers below call
+        // RepositionSelectionOverlay() directly instead of this method.
+        SetDragControlsVisible(_viewModel.SelectedAnnotation is not null);
+    }
+
+    private void RepositionSelectionOverlay()
+    {
         var annotation = _viewModel.SelectedAnnotation;
         if (annotation is null || PageContainer.Width <= 0 || PageContainer.Height <= 0)
         {
@@ -181,6 +197,21 @@ public partial class SheetViewerPage : ContentPage
         DeleteButton.TranslationY = SelectionHandlePadding - DeleteButton.HeightRequest / 2;
     }
 
+    // Hides the resize handle and delete button while a move/resize drag
+    // is in progress, leaving only the thin border outline - reported
+    // feedback was that positioning an icon precisely under a note while
+    // zoomed in was impossible because the delete button (and to a lesser
+    // extent the resize handle) sat right on top of the note being
+    // aligned to. Neither control needs to stay visible mid-drag: the
+    // resize handle's own drag keeps tracking touch input whether or not
+    // it's drawn, and the border alone is enough spatial feedback for the
+    // move drag. Both reappear the instant the drag ends.
+    private void SetDragControlsVisible(bool visible)
+    {
+        ResizeHandle.IsVisible = visible;
+        DeleteButton.IsVisible = visible;
+    }
+
     private void OnSelectionMovePanUpdated(object? sender, PanUpdatedEventArgs e)
     {
         var annotation = _viewModel.SelectedAnnotation;
@@ -194,17 +225,19 @@ public partial class SheetViewerPage : ContentPage
             case GestureStatus.Started:
                 _moveStartX = annotation.X;
                 _moveStartY = annotation.Y;
+                SetDragControlsVisible(false);
                 break;
 
             case GestureStatus.Running:
                 annotation.X = _moveStartX + e.TotalX / PageContainer.Width;
                 annotation.Y = _moveStartY + e.TotalY / PageContainer.Height;
-                UpdateSelectionOverlay();
+                RepositionSelectionOverlay();
                 AnnotationCanvas.InvalidateSurface();
                 break;
 
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
+                SetDragControlsVisible(true);
                 _ = _viewModel.MoveSelectedAnnotationAsync(annotation.X, annotation.Y);
                 break;
         }
@@ -223,17 +256,19 @@ public partial class SheetViewerPage : ContentPage
             case GestureStatus.Started:
                 _resizeStartWidth = annotation.Width;
                 _resizeStartHeight = annotation.Height;
+                SetDragControlsVisible(false);
                 break;
 
             case GestureStatus.Running:
                 annotation.Width = Math.Max(0.02, _resizeStartWidth + e.TotalX / PageContainer.Width);
                 annotation.Height = Math.Max(0.02, _resizeStartHeight + e.TotalY / PageContainer.Height);
-                UpdateSelectionOverlay();
+                RepositionSelectionOverlay();
                 AnnotationCanvas.InvalidateSurface();
                 break;
 
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
+                SetDragControlsVisible(true);
                 _ = _viewModel.ResizeSelectedAnnotationAsync(annotation.Width, annotation.Height);
                 break;
         }
@@ -452,6 +487,16 @@ public partial class SheetViewerPage : ContentPage
     // Skia and fitting *that* to targetRect sidesteps it entirely.
     // Shared by the icon picker buttons and the on-page annotation
     // overlay so both render identically.
+    //
+    // A dragged icon's move/resize repaints this every frame (AnnotationCanvas
+    // is invalidated on every PanUpdated "Running" event), so this used to
+    // allocate two SKFont objects and run MeasureText twice per icon per
+    // frame - on the emulator's software rendering that was slow enough to
+    // visibly drop frames mid-drag (reported as "shaky" move/resize).
+    // measuredBounds only depends on the typeface+codepoint, never on
+    // targetRect, so it's cached once per codepoint instead of remeasured
+    // every repaint; _glyphPaint is similarly a single reused instance
+    // instead of a fresh allocation per glyph per frame.
     private void DrawGlyphFitted(SKCanvas canvas, int codepoint, SKRect targetRect)
     {
         if (_bravuraTypeface is null || targetRect.Width <= 0 || targetRect.Height <= 0)
@@ -461,8 +506,12 @@ public partial class SheetViewerPage : ContentPage
 
         var text = char.ConvertFromUtf32(codepoint);
 
-        using var measureFont = new SKFont(_bravuraTypeface, 100);
-        measureFont.MeasureText(text, out var measuredBounds);
+        if (!_glyphBoundsCache.TryGetValue(codepoint, out var measuredBounds))
+        {
+            using var measureFont = new SKFont(_bravuraTypeface, 100);
+            measureFont.MeasureText(text, out measuredBounds);
+            _glyphBoundsCache[codepoint] = measuredBounds;
+        }
 
         if (measuredBounds.Width <= 0 || measuredBounds.Height <= 0)
         {
@@ -473,15 +522,9 @@ public partial class SheetViewerPage : ContentPage
         using var font = new SKFont(_bravuraTypeface, 100f * scale);
         font.MeasureText(text, out var fittedBounds);
 
-        using var paint = new SKPaint
-        {
-            Color = SKColors.Black,
-            IsAntialias = true
-        };
-
         var x = targetRect.MidX - fittedBounds.MidX;
         var y = targetRect.MidY - fittedBounds.MidY;
 
-        canvas.DrawText(text, x, y, font, paint);
+        canvas.DrawText(text, x, y, font, _glyphPaint);
     }
 }
