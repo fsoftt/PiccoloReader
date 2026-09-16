@@ -1,3 +1,4 @@
+using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.ViewModels;
 using SkiaSharp;
@@ -12,6 +13,7 @@ public partial class SheetViewerPage : ContentPage
     private const double ZoomedInThreshold = 1.05;
     private const double PageTurnDragThreshold = 60;
     private const double SelectionHandlePadding = 20;
+    private const double TrashHitTestRadius = 60;
 
     private readonly SheetViewerViewModel _viewModel;
 
@@ -151,8 +153,8 @@ public partial class SheetViewerPage : ContentPage
     // icon's own box on every side, and SelectionBorder is inset by the
     // same amount (Margin="20" in XAML) so it still lines up exactly with
     // the box - confirmed empirically on-device: without this padding,
-    // ResizeHandle/DeleteButton (translated outside the box to sit at its
-    // corners) render correctly but never receive taps, because a parent
+    // ResizeHandle (translated outside the box to sit at its corner)
+    // renders correctly but never receives taps, because a parent
     // ViewGroup's touch dispatch tests a child against its own arranged
     // bounds, not the visual union of where its children overflow to.
     private void UpdateSelectionOverlay()
@@ -175,10 +177,12 @@ public partial class SheetViewerPage : ContentPage
         if (annotation is null || PageContainer.Width <= 0 || PageContainer.Height <= 0)
         {
             SelectionOverlay.IsVisible = false;
+            TrashTarget.IsVisible = false;
             return;
         }
 
         SelectionOverlay.IsVisible = true;
+        TrashTarget.IsVisible = true;
 
         var left = annotation.X * PageContainer.Width;
         var top = annotation.Y * PageContainer.Height;
@@ -192,27 +196,42 @@ public partial class SheetViewerPage : ContentPage
 
         ResizeHandle.TranslationX = SelectionHandlePadding + width - ResizeHandle.WidthRequest / 2;
         ResizeHandle.TranslationY = SelectionHandlePadding + height - ResizeHandle.HeightRequest / 2;
-
-        DeleteButton.TranslationX = SelectionHandlePadding + width - DeleteButton.WidthRequest / 2;
-        DeleteButton.TranslationY = SelectionHandlePadding - DeleteButton.HeightRequest / 2;
+        UpdateResizeHandleScale();
     }
 
-    // Hides the resize handle and delete button while a move/resize drag
-    // is in progress, leaving only the thin border outline - reported
-    // feedback was that positioning an icon precisely under a note while
-    // zoomed in was impossible because the delete button (and to a lesser
-    // extent the resize handle) sat right on top of the note being
-    // aligned to. Neither control needs to stay visible mid-drag: the
-    // resize handle's own drag keeps tracking touch input whether or not
-    // it's drawn, and the border alone is enough spatial feedback for the
-    // move drag. Both reappear the instant the drag ends.
+    // ResizeHandle lives inside PageContainer, so without this it would
+    // visually scale right along with pinch-zoom - at high zoom a 24px
+    // handle can render 3-4x larger on screen, easily growing bigger than
+    // the icon itself and hiding it (the same problem the old corner
+    // delete button had, which is why deletion moved to the fixed-size
+    // TrashTarget instead of trying to counter-scale a button too). A
+    // Scale inverse to PageContainer's own keeps it a constant on-screen
+    // size at any zoom level; TranslationX/Y above already position its
+    // center at the box corner independent of its own Scale, so this can
+    // be set without touching that math. Called continuously during an
+    // active pinch too (see OnPinchUpdated), not just on
+    // selection/reposition, so the handle doesn't visibly grow mid-pinch.
+    private void UpdateResizeHandleScale()
+    {
+        ResizeHandle.Scale = _currentScale > 0 ? 1.0 / _currentScale : 1.0;
+    }
+
+    // Hides the resize handle while a move/resize drag is in progress,
+    // leaving only the thin border outline - reported feedback was that
+    // positioning an icon precisely under a note while zoomed in was
+    // impossible because a visible handle sat right on top of the note
+    // being aligned to. It doesn't need to stay visible mid-drag: the
+    // handle's own drag keeps tracking touch input whether or not it's
+    // drawn, and the border alone is enough spatial feedback for the move
+    // drag. Reappears the instant the drag ends. The delete affordance no
+    // longer lives on the overlay at all (see TrashTarget), so there's
+    // nothing else here to hide.
     private void SetDragControlsVisible(bool visible)
     {
         ResizeHandle.IsVisible = visible;
-        DeleteButton.IsVisible = visible;
     }
 
-    private void OnSelectionMovePanUpdated(object? sender, PanUpdatedEventArgs e)
+    private async void OnSelectionMovePanUpdated(object? sender, PanUpdatedEventArgs e)
     {
         var annotation = _viewModel.SelectedAnnotation;
         if (annotation is null || PageContainer.Width <= 0 || PageContainer.Height <= 0)
@@ -238,9 +257,63 @@ public partial class SheetViewerPage : ContentPage
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
                 SetDragControlsVisible(true);
-                _ = _viewModel.MoveSelectedAnnotationAsync(annotation.X, annotation.Y);
+                if (IsOverTrashTarget(annotation))
+                {
+                    // Must be awaited, not fire-and-forget, before
+                    // UpdateSelectionOverlay() runs - otherwise the
+                    // overlay reads SelectedAnnotation's still-live
+                    // (pre-delete) state and repositions itself at the
+                    // drop point instead of hiding, leaving a stale
+                    // border/handle behind once the delete actually lands
+                    // a moment later (confirmed on-device: the icon
+                    // itself vanished from the page - the delete worked -
+                    // but its selection border stayed stuck at the drop
+                    // point).
+                    await _viewModel.DeleteSelectedAnnotationCommand.ExecuteAsync(null);
+                    UpdateSelectionOverlay();
+                }
+                else
+                {
+                    _ = _viewModel.MoveSelectedAnnotationAsync(annotation.X, annotation.Y);
+                }
                 break;
         }
+    }
+
+    // Whether the selected icon's current center - converted from
+    // PageContainer's local/zoomed coordinate space into the same
+    // page-relative space TrashTarget lives in - falls within (a generous
+    // tolerance around) TrashTarget, i.e. whether the icon was "dropped
+    // on the trash" at the end of a move drag. PageContainer.X/Y are its
+    // position within the outer Grid, which fills the page with no offset
+    // of its own, so they're already page-relative; composing them with
+    // PageContainer's own zoom Translation/Scale (anchored at its own
+    // top-left - see OnPinchUpdated) gives the icon's true on-screen
+    // position at any zoom level, in the same coordinate space
+    // TrashTarget's own X/Y/Width/Height are already expressed in (it's a
+    // direct sibling of PageContainer, not a descendant, so it's never
+    // affected by the zoom transform).
+    private bool IsOverTrashTarget(Annotation annotation)
+    {
+        if (!TrashTarget.IsVisible || TrashTarget.Width <= 0 || TrashTarget.Height <= 0)
+        {
+            return false;
+        }
+
+        var localCenterX = (annotation.X + annotation.Width / 2) * PageContainer.Width;
+        var localCenterY = (annotation.Y + annotation.Height / 2) * PageContainer.Height;
+
+        var screenCenterX = PageContainer.X + PageContainer.TranslationX + localCenterX * _currentScale;
+        var screenCenterY = PageContainer.Y + PageContainer.TranslationY + localCenterY * _currentScale;
+
+        var trashCenterX = TrashTarget.X + TrashTarget.Width / 2;
+        var trashCenterY = TrashTarget.Y + TrashTarget.Height / 2;
+
+        var dx = screenCenterX - trashCenterX;
+        var dy = screenCenterY - trashCenterY;
+        var radius = TrashTarget.Width / 2 + TrashHitTestRadius;
+
+        return dx * dx + dy * dy <= radius * radius;
     }
 
     private void OnSelectionResizePanUpdated(object? sender, PanUpdatedEventArgs e)
@@ -274,7 +347,7 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    private async void OnDeleteSelectedIconClicked(object? sender, EventArgs e)
+    private async void OnTrashTargetTapped(object? sender, TappedEventArgs e)
     {
         await _viewModel.DeleteSelectedAnnotationCommand.ExecuteAsync(null);
         UpdateSelectionOverlay();
@@ -320,6 +393,7 @@ public partial class SheetViewerPage : ContentPage
             PageContainer.TranslationX = Math.Clamp(targetX, -PageContainer.Width * (_currentScale - 1), 0);
             PageContainer.TranslationY = Math.Clamp(targetY, -PageContainer.Height * (_currentScale - 1), 0);
             PageContainer.Scale = _currentScale;
+            UpdateResizeHandleScale();
         }
         else if (e.Status is GestureStatus.Completed or GestureStatus.Canceled)
         {
@@ -434,6 +508,7 @@ public partial class SheetViewerPage : ContentPage
         if (e.Parameter is string iconKey)
         {
             await _viewModel.PlaceIconCommand.ExecuteAsync(iconKey);
+            ToolPanel.IsVisible = false;
             UpdateSelectionOverlay();
         }
     }
