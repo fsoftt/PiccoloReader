@@ -116,8 +116,8 @@ Plan: [`2026-09-16-pencil-annotations-eraser.md`](2026-09-16-pencil-annotations-
 | 1 | Annotation data model (Type/ColorHex/StrokeWidth/Points) + AnnotationService.AddStrokeAsync | Merged | [#44](https://github.com/fsoftt/PiccoloReader/pull/44) |
 | 2 | StrokeHitTester (eraser point-to-polyline distance) | Merged | [#45](https://github.com/fsoftt/PiccoloReader/pull/45) |
 | 3 | Three-tab tool panel (Music Icons/Pencil/Eraser) + ActiveTool + toolbar X | Merged | [#46](https://github.com/fsoftt/PiccoloReader/pull/46) |
-| 4 | Pencil: color/width selectors + DrawingView overlay + commit strokes | In review | [#48](https://github.com/fsoftt/PiccoloReader/pull/48) |
-| 5 | Eraser: size selector + drag-to-erase (icons + strokes) + radius indicator | Not started | |
+| 4 | Pencil: color/width selectors + DrawingView overlay + commit strokes | Merged | [#48](https://github.com/fsoftt/PiccoloReader/pull/48) |
+| 5 | Eraser: size selector + tap-to-erase (icons + strokes) + radius indicator | In review | [#49](https://github.com/fsoftt/PiccoloReader/pull/49) |
 
 **Post-merge polish** (found via testing PR #46):
 
