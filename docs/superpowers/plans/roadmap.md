@@ -78,8 +78,23 @@ stub until that changes.
 
 ## Plan 3: Icon Annotations
 
-Not planned yet — icon categories panel, place/move/resize/delete icons,
-persistence.
+Spec: [`2026-09-14-architecture-design.md`](../specs/2026-09-14-architecture-design.md)
+Plan: [`2026-09-15-icon-annotations.md`](2026-09-15-icon-annotations.md)
+
+| # | Task | Status | PR |
+|---|---|---|---|
+| 1 | Bundle Bravura font + Annotation data model + MusicIconCatalog | Merged | [#28](https://github.com/fsoftt/PiccoloReader/pull/28) |
+| 2 | AnnotationService | Merged | [#29](https://github.com/fsoftt/PiccoloReader/pull/29) |
+| 3 | Wire annotations into SheetViewerViewModel | Merged | [#31](https://github.com/fsoftt/PiccoloReader/pull/31) |
+| 4 | Tool panel UI + Music Icons picker | Merged | [#32](https://github.com/fsoftt/PiccoloReader/pull/32) |
+| 5 | Render placed icons on the page | Merged | [#34](https://github.com/fsoftt/PiccoloReader/pull/34) |
+| 6 | Select, move, resize, and delete placed icons | In review | |
+
+**Post-merge fixes/polish** (found via testing PR #32):
+
+| Item | Status | PR |
+|---|---|---|
+| Tool panel polish: bigger icons, tap-outside-to-close | Merged | [#33](https://github.com/fsoftt/PiccoloReader/pull/33) |
 
 ## Plan 4: Pencil Annotations + Eraser
 
