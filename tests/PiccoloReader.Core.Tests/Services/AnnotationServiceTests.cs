@@ -1,4 +1,5 @@
 using PiccoloReader.Core.Data;
+using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Services;
 using SQLitePCL;
 
@@ -82,5 +83,65 @@ public class AnnotationServiceTests : IDisposable
 
         var loaded = await _sut.GetAnnotationsAsync(1, 0);
         Assert.Empty(loaded);
+    }
+
+    [Fact]
+    public async Task AddStrokeAsync_InsertsRetrievableStroke()
+    {
+        var points = new List<StrokePoint> { new(0.1, 0.1), new(0.2, 0.2), new(0.3, 0.15) };
+
+        var annotation = await _sut.AddStrokeAsync(sheetId: 1, pageIndex: 0, colorHex: "#FF0000", strokeWidth: 0.01, points: points);
+
+        var loaded = await _sut.GetAnnotationsAsync(sheetId: 1, pageIndex: 0);
+
+        Assert.Single(loaded);
+        Assert.Equal(annotation.Id, loaded[0].Id);
+        Assert.Equal(AnnotationType.Stroke, loaded[0].Type);
+        Assert.True(loaded[0].IsStroke);
+        Assert.Equal("#FF0000", loaded[0].ColorHex);
+        Assert.Equal(0.01, loaded[0].StrokeWidth);
+
+        var roundTrippedPoints = AnnotationService.DeserializePoints(loaded[0].Points);
+        Assert.Equal(3, roundTrippedPoints.Count);
+        Assert.Equal(0.1, roundTrippedPoints[0].X);
+        Assert.Equal(0.1, roundTrippedPoints[0].Y);
+        Assert.Equal(0.3, roundTrippedPoints[2].X);
+    }
+
+    [Fact]
+    public async Task AddIconAsync_SetsTypeToIcon()
+    {
+        var annotation = await _sut.AddIconAsync(1, 0, "dynamicForte", 0.1, 0.1, 0.1, 0.1);
+
+        Assert.Equal(AnnotationType.Icon, annotation.Type);
+        Assert.False(annotation.IsStroke);
+    }
+
+    [Fact]
+    public void Annotation_WithNullType_IsTreatedAsIcon()
+    {
+        var annotation = new Annotation { Type = null! };
+
+        Assert.False(annotation.IsStroke);
+    }
+
+    [Fact]
+    public void SerializePoints_DeserializePoints_RoundTrips()
+    {
+        var points = new List<StrokePoint> { new(0.0, 0.0), new(1.0, 1.0) };
+
+        var json = AnnotationService.SerializePoints(points);
+        var result = AnnotationService.DeserializePoints(json);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(points[0], result[0]);
+        Assert.Equal(points[1], result[1]);
+    }
+
+    [Fact]
+    public void DeserializePoints_NullOrEmpty_ReturnsEmptyList()
+    {
+        Assert.Empty(AnnotationService.DeserializePoints(null));
+        Assert.Empty(AnnotationService.DeserializePoints(""));
     }
 }
