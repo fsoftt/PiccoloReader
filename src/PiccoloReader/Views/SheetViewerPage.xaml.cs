@@ -134,6 +134,21 @@ public partial class SheetViewerPage : ContentPage
         var normalizedX = position.Value.X / PageContainer.Width;
         var normalizedY = position.Value.Y / PageContainer.Height;
 
+        // Eraser is tap-to-erase, not drag-to-erase, despite the spec's
+        // original "continuous drag hit-testing" design - confirmed
+        // on-device that PointerGestureRecognizer (the mechanism that would
+        // give continuous absolute touch position during a drag) only
+        // fires PointerReleased for touch input on Android, never
+        // PointerPressed/PointerMoved, so there's no reliable way to track
+        // a drag path. TapGestureRecognizer's GetPosition, used here, is
+        // the same API already proven reliable all session for icon
+        // hit-testing, so each tap erases whatever's under it instead.
+        if (_viewModel.ActiveTool == AnnotationTool.Eraser)
+        {
+            EraseAt(normalizedX, normalizedY);
+            return;
+        }
+
         var hit = _viewModel.CurrentPageAnnotations.FirstOrDefault(a =>
             normalizedX >= a.X && normalizedX <= a.X + a.Width &&
             normalizedY >= a.Y && normalizedY <= a.Y + a.Height);
@@ -472,6 +487,15 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
+        // Eraser is tap-to-erase (see OnPageContainerTapped), not
+        // drag-to-erase, so a drag while Eraser is active does nothing -
+        // bail out here rather than letting it zoom-pan or turn the page,
+        // which would be a confusing side effect of a failed erase attempt.
+        if (_viewModel.ActiveTool == AnnotationTool.Eraser)
+        {
+            return;
+        }
+
         switch (e.StatusType)
         {
             case GestureStatus.Running:
@@ -502,6 +526,49 @@ public partial class SheetViewerPage : ContentPage
 
                 _panTotalX = 0;
                 break;
+        }
+    }
+
+    // Shows the eraser's hit-test radius centered on a tap, briefly, as
+    // feedback for what the tap's radius covered - not tied to a drag
+    // (see OnPageContainerTapped for why Eraser is tap-to-erase).
+    private void ShowEraserRadiusIndicator(double normalizedX, double normalizedY)
+    {
+        var radiusPx = _viewModel.EraserRadius * PageContainer.Width;
+        EraserRadiusIndicator.WidthRequest = radiusPx * 2;
+        EraserRadiusIndicator.HeightRequest = radiusPx * 2;
+        EraserRadiusIndicator.TranslationX = normalizedX * PageContainer.Width - radiusPx;
+        EraserRadiusIndicator.TranslationY = normalizedY * PageContainer.Height - radiusPx;
+        EraserRadiusIndicator.IsVisible = true;
+
+        Dispatcher.StartTimer(TimeSpan.FromMilliseconds(350), () =>
+        {
+            EraserRadiusIndicator.IsVisible = false;
+            return false;
+        });
+    }
+
+    private void EraseAt(double normalizedX, double normalizedY)
+    {
+        ShowEraserRadiusIndicator(normalizedX, normalizedY);
+
+        var radius = _viewModel.EraserRadius;
+        var hit = _viewModel.CurrentPageAnnotations.FirstOrDefault(a =>
+        {
+            if (a.IsStroke)
+            {
+                var points = AnnotationService.DeserializePoints(a.Points);
+                return StrokeHitTester.DistanceToPolyline(normalizedX, normalizedY, points) <= radius;
+            }
+
+            return normalizedX >= a.X - radius && normalizedX <= a.X + a.Width + radius &&
+                   normalizedY >= a.Y - radius && normalizedY <= a.Y + a.Height + radius;
+        });
+
+        if (hit is not null)
+        {
+            _ = _viewModel.EraseAnnotationAsync(hit);
+            AnnotationCanvas.InvalidateSurface();
         }
     }
 
