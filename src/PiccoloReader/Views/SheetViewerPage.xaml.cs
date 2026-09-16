@@ -1,3 +1,4 @@
+using CommunityToolkit.Maui.Core;
 using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.ViewModels;
@@ -574,11 +575,85 @@ public partial class SheetViewerPage : ContentPage
         {
             ToolbarItems.Remove(DeactivateToolItem);
         }
+
+        // InputTransparent is left False permanently in XAML (never toggled
+        // here) rather than True/False alongside IsVisible - confirmed
+        // on-device that touch capture stopped working entirely as soon as
+        // ZIndex was also set on PencilDrawingView to force it above its
+        // siblings (which also broke its own Transparent BackgroundColor,
+        // rendering solid black). PencilDrawingView is already the last
+        // child in PageContainer's XAML, which is enough for correct
+        // z-order without ZIndex - don't add one.
+        var pencilActive = _viewModel.ActiveTool == AnnotationTool.Pencil;
+        PencilDrawingView.IsVisible = pencilActive;
+        if (pencilActive)
+        {
+            PencilDrawingView.LineColor = Color.FromArgb(_viewModel.PencilColorHex);
+            UpdatePencilDrawingViewLineWidth();
+            PencilWidthPreview.Color = Color.FromArgb(_viewModel.PencilColorHex);
+            UpdatePencilWidthPreview();
+        }
     }
 
     private static void SetTabAppearance(FontImageSource icon, bool active)
     {
         icon.Color = active ? TabActiveColor : TabInactiveIconColor;
+    }
+
+    private void OnPencilColorTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is string colorHex)
+        {
+            _viewModel.PencilColorHex = colorHex;
+            PencilDrawingView.LineColor = Color.FromArgb(colorHex);
+            PencilWidthPreview.Color = Color.FromArgb(colorHex);
+        }
+    }
+
+    private void OnPencilWidthChanged(object? sender, ValueChangedEventArgs e)
+    {
+        UpdatePencilDrawingViewLineWidth();
+        UpdatePencilWidthPreview();
+    }
+
+    private void UpdatePencilDrawingViewLineWidth()
+    {
+        if (PageContainer.Width > 0)
+        {
+            PencilDrawingView.LineWidth = (float)(_viewModel.PencilStrokeWidth * PageContainer.Width);
+        }
+    }
+
+    // Maps the normalized stroke width (a fraction of page width, per the
+    // spec's normalization rationale) to a preview bar height - purely a
+    // visual scale for a 140x~48 swatch, unrelated to actual page pixels,
+    // so the user can see roughly how thick a stroke will look before
+    // drawing one. PencilStrokeWidth's slider range is 0.003-0.02, mapped
+    // to a 3-40 device-independent-pixel bar height.
+    private void UpdatePencilWidthPreview()
+    {
+        PencilWidthPreview.HeightRequest = Math.Clamp(_viewModel.PencilStrokeWidth * 2000, 3, 40);
+    }
+
+    private async void OnPencilDrawingLineCompleted(object? sender, DrawingLineCompletedEventArgs e)
+    {
+        if (PageContainer.Width <= 0 || PageContainer.Height <= 0 || !int.TryParse(SheetId, out var sheetId))
+        {
+            return;
+        }
+
+        var linePoints = e.LastDrawingLine.Points;
+        if (linePoints.Count < 2)
+        {
+            return;
+        }
+
+        var normalizedPoints = linePoints
+            .Select(p => new StrokePoint(p.X / PageContainer.Width, p.Y / PageContainer.Height))
+            .ToList();
+
+        await _viewModel.AddStrokeAsync(sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, normalizedPoints);
+        AnnotationCanvas.InvalidateSurface();
     }
 
     private async Task EnsureBravuraTypefaceLoadedAsync()
@@ -628,6 +703,12 @@ public partial class SheetViewerPage : ContentPage
 
         foreach (var annotation in _viewModel.CurrentPageAnnotations)
         {
+            if (annotation.IsStroke)
+            {
+                DrawStroke(canvas, annotation, info);
+                continue;
+            }
+
             var icon = MusicIconCatalog.FindByKey(annotation.IconKey);
             if (icon is null)
             {
@@ -642,6 +723,34 @@ public partial class SheetViewerPage : ContentPage
 
             DrawGlyphFitted(canvas, icon.Codepoint, targetRect);
         }
+    }
+
+    private void DrawStroke(SKCanvas canvas, Annotation annotation, SKImageInfo info)
+    {
+        var points = AnnotationService.DeserializePoints(annotation.Points);
+        if (points.Count < 2 || annotation.ColorHex is null)
+        {
+            return;
+        }
+
+        using var path = new SKPath();
+        path.MoveTo((float)(points[0].X * info.Width), (float)(points[0].Y * info.Height));
+        for (var i = 1; i < points.Count; i++)
+        {
+            path.LineTo((float)(points[i].X * info.Width), (float)(points[i].Y * info.Height));
+        }
+
+        using var paint = new SKPaint
+        {
+            Color = SKColor.Parse(annotation.ColorHex),
+            StrokeWidth = (float)(annotation.StrokeWidth * info.Width),
+            Style = SKPaintStyle.Stroke,
+            StrokeCap = SKStrokeCap.Round,
+            StrokeJoin = SKStrokeJoin.Round,
+            IsAntialias = true
+        };
+
+        canvas.DrawPath(path, paint);
     }
 
     // Fits a glyph tightly to targetRect instead of relying on the font's

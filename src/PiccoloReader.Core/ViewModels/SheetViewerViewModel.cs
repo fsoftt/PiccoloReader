@@ -57,6 +57,12 @@ public partial class SheetViewerViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsDrawingToolActive))]
     private AnnotationTool _activeTool = AnnotationTool.MusicIcons;
 
+    [ObservableProperty]
+    private string _pencilColorHex = "#000000";
+
+    [ObservableProperty]
+    private double _pencilStrokeWidth = 0.008;
+
     public bool IsDrawingToolActive => ActiveTool != AnnotationTool.MusicIcons;
 
     public ObservableCollection<Annotation> CurrentPageAnnotations { get; } = new();
@@ -140,6 +146,13 @@ public partial class SheetViewerViewModel : ObservableObject
 
         CurrentPageAnnotations.Add(annotation);
         SelectedAnnotation = annotation;
+    }
+
+    public async Task<Annotation> AddStrokeAsync(int sheetId, string colorHex, double strokeWidth, IReadOnlyList<StrokePoint> points)
+    {
+        var annotation = await _annotationService.AddStrokeAsync(sheetId, CurrentPageIndex, colorHex, strokeWidth, points);
+        CurrentPageAnnotations.Add(annotation);
+        return annotation;
     }
 
     public async Task MoveSelectedAnnotationAsync(double newX, double newY)
