@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:views="clr-namespace:PiccoloReader.Views"
     FlyoutBehavior="Flyout"
+    FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
     Title="PiccoloReader">
 
     <FlyoutItem Title="Library" Route="library">
