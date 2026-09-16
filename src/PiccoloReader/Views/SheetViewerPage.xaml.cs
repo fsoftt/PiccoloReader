@@ -248,8 +248,24 @@ public partial class SheetViewerPage : ContentPage
                 break;
 
             case GestureStatus.Running:
-                annotation.X = _moveStartX + e.TotalX / PageContainer.Width;
-                annotation.Y = _moveStartY + e.TotalY / PageContainer.Height;
+                // e.TotalX/TotalY are raw screen-pixel deltas, unaffected
+                // by PageContainer's own zoom Scale (confirmed on a real
+                // device: a modest finger drag while zoomed in produced a
+                // wildly larger move/resize than the finger's visual
+                // travel suggested, and got jumpier/more "shaky" the more
+                // zoomed in the page was - both are the signature of a
+                // screen-pixel delta being normalized against the page's
+                // *unscaled* width/height without first dividing out the
+                // zoom factor). At zoom S, the same screen-pixel drag
+                // covers 1/S as much of the page, so the delta must be
+                // scaled down by _currentScale before normalizing -
+                // dividing by PageContainer.Width*_currentScale (the
+                // page's actual on-screen size) instead of just
+                // PageContainer.Width (its unscaled size) does that in
+                // one step. At the default zoom (_currentScale == 1) this
+                // is identical to the previous formula.
+                annotation.X = _moveStartX + e.TotalX / (PageContainer.Width * _currentScale);
+                annotation.Y = _moveStartY + e.TotalY / (PageContainer.Height * _currentScale);
                 RepositionSelectionOverlay();
                 AnnotationCanvas.InvalidateSurface();
                 break;
@@ -333,8 +349,14 @@ public partial class SheetViewerPage : ContentPage
                 break;
 
             case GestureStatus.Running:
-                annotation.Width = Math.Max(0.02, _resizeStartWidth + e.TotalX / PageContainer.Width);
-                annotation.Height = Math.Max(0.02, _resizeStartHeight + e.TotalY / PageContainer.Height);
+                // See the matching comment in OnSelectionMovePanUpdated -
+                // e.TotalX/TotalY are raw screen pixels, so they need
+                // dividing by _currentScale (via PageContainer.Width/Height
+                // * _currentScale, its actual on-screen size) before
+                // normalizing, or a resize drag while zoomed in ends up
+                // several times larger than the finger's own travel.
+                annotation.Width = Math.Max(0.02, _resizeStartWidth + e.TotalX / (PageContainer.Width * _currentScale));
+                annotation.Height = Math.Max(0.02, _resizeStartHeight + e.TotalY / (PageContainer.Height * _currentScale));
                 RepositionSelectionOverlay();
                 AnnotationCanvas.InvalidateSurface();
                 break;

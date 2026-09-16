@@ -77,8 +77,8 @@
             HorizontalOptions="Center"
             Margin="0,0,0,16"
             Padding="12,6"
-            BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Primary}}"
-            TextColor="{StaticResource Tertiary}" />
+            BackgroundColor="{StaticResource Primary}"
+            TextColor="{StaticResource White}" />
 
         <ActivityIndicator
             IsRunning="{Binding IsLoading}"
@@ -115,7 +115,7 @@
             WidthRequest="260"
             HorizontalOptions="End"
             VerticalOptions="Fill"
-            BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Primary}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
             StrokeThickness="0">
             <ScrollView>
                 <VerticalStackLayout Padding="12" Spacing="4">
