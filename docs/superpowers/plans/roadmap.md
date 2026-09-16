@@ -88,18 +88,42 @@ Plan: [`2026-09-15-icon-annotations.md`](2026-09-15-icon-annotations.md)
 | 3 | Wire annotations into SheetViewerViewModel | Merged | [#31](https://github.com/fsoftt/PiccoloReader/pull/31) |
 | 4 | Tool panel UI + Music Icons picker | Merged | [#32](https://github.com/fsoftt/PiccoloReader/pull/32) |
 | 5 | Render placed icons on the page | Merged | [#34](https://github.com/fsoftt/PiccoloReader/pull/34) |
-| 6 | Select, move, resize, and delete placed icons | In review | |
+| 6 | Select, move, resize, and delete placed icons | Merged | [#35](https://github.com/fsoftt/PiccoloReader/pull/35) |
 
-**Post-merge fixes/polish** (found via testing PR #32):
+**Post-merge fixes/polish** (found via testing PR #32 and PR #35):
 
 | Item | Status | PR |
 |---|---|---|
 | Tool panel polish: bigger icons, tap-outside-to-close | Merged | [#33](https://github.com/fsoftt/PiccoloReader/pull/33) |
+| Gesture-arena fix: pinch/pan broken after Task 6 (Tap moved onto PageContainer) | Merged | [#36](https://github.com/fsoftt/PiccoloReader/pull/36) |
+| Drag/resize shakiness fix #1: glyph allocation caching + auto-hide handles during drag | Merged | [#37](https://github.com/fsoftt/PiccoloReader/pull/37) |
+| Constant-size resize handle + fixed-position drag-to-trash delete (replaces corner delete button) | Merged | [#38](https://github.com/fsoftt/PiccoloReader/pull/38) |
+| Drag/resize math fix #2 (zoom-aware normalization), page indicator readability, theme-aware panel/flyout backgrounds, Library empty-label hiding | Merged | [#39](https://github.com/fsoftt/PiccoloReader/pull/39) |
+
+## Housekeeping
+
+| Item | Status | PR |
+|---|---|---|
+| Pre-commit hook: block direct commits to main | Merged | [#40](https://github.com/fsoftt/PiccoloReader/pull/40) |
 
 ## Plan 4: Pencil Annotations + Eraser
 
-Not planned yet — freehand drawing, color picker, whole-object eraser for
-icons and strokes, persistence.
+Spec: [`2026-09-16-pencil-annotations-eraser-design.md`](../specs/2026-09-16-pencil-annotations-eraser-design.md) ([#41](https://github.com/fsoftt/PiccoloReader/pull/41), revised [#42](https://github.com/fsoftt/PiccoloReader/pull/42))
+Plan: [`2026-09-16-pencil-annotations-eraser.md`](2026-09-16-pencil-annotations-eraser.md) ([#43](https://github.com/fsoftt/PiccoloReader/pull/43))
+
+| # | Task | Status | PR |
+|---|---|---|---|
+| 1 | Annotation data model (Type/ColorHex/StrokeWidth/Points) + AnnotationService.AddStrokeAsync | Merged | [#44](https://github.com/fsoftt/PiccoloReader/pull/44) |
+| 2 | StrokeHitTester (eraser point-to-polyline distance) | Merged | [#45](https://github.com/fsoftt/PiccoloReader/pull/45) |
+| 3 | Three-tab tool panel (Music Icons/Pencil/Eraser) + ActiveTool + toolbar X | Merged | [#46](https://github.com/fsoftt/PiccoloReader/pull/46) |
+| 4 | Pencil: color/width selectors + DrawingView overlay + commit strokes | In review | [#48](https://github.com/fsoftt/PiccoloReader/pull/48) |
+| 5 | Eraser: size selector + drag-to-erase (icons + strokes) + radius indicator | Not started | |
+
+**Post-merge polish** (found via testing PR #46):
+
+| Item | Status | PR |
+|---|---|---|
+| Real underline-style tabs (not buttons), theme-aware active/inactive colors, real eraser icon | Merged | [#47](https://github.com/fsoftt/PiccoloReader/pull/47) |
 
 ## Plan 5: Undo/Redo
 
