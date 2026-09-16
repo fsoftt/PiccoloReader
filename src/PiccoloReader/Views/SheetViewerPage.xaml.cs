@@ -11,6 +11,7 @@ public partial class SheetViewerPage : ContentPage
 {
     private const double ZoomedInThreshold = 1.05;
     private const double PageTurnDragThreshold = 60;
+    private const double SelectionHandlePadding = 20;
 
     private readonly SheetViewerViewModel _viewModel;
 
@@ -19,6 +20,11 @@ public partial class SheetViewerPage : ContentPage
     private double _xOffset;
     private double _yOffset;
     private double _panTotalX;
+
+    private double _resizeStartWidth;
+    private double _resizeStartHeight;
+    private double _moveStartX;
+    private double _moveStartY;
 
     private SKTypeface? _bravuraTypeface;
 
@@ -64,17 +70,49 @@ public partial class SheetViewerPage : ContentPage
         PageContainer.Scale = 1;
         PageContainer.TranslationX = 0;
         PageContainer.TranslationY = 0;
+        UpdateSelectionOverlay();
     }
 
-    private void OnPageTapped(object? sender, TappedEventArgs e)
+    // AnnotationCanvas fully covers PageContainer (it's stacked on top of
+    // PageImage in the same Grid cell), so it receives every tap before
+    // PageContainer's own gesture recognizers would - a plain
+    // TapGestureRecognizer on PageContainer here would just never fire.
+    // Rather than stack two competing tap recognizers (the same class of
+    // gesture-arena conflict already hit with Pan+Swipe in Plan 2), all
+    // tap handling - tool panel dismissal, icon hit-testing/selection, and
+    // the fallback tap-to-turn-page - lives in this one handler.
+    private void OnAnnotationCanvasTapped(object? sender, TappedEventArgs e)
     {
         if (ToolPanel.IsVisible)
         {
-            // Tapping the page while the tool panel is open closes it
-            // instead of turning the page - the panel covers only part of
-            // the screen, so the page area outside it acts as the "tap
-            // outside to dismiss" region.
             ToolPanel.IsVisible = false;
+            return;
+        }
+
+        var position = e.GetPosition(PageContainer);
+        if (position is null || PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return;
+        }
+
+        var normalizedX = position.Value.X / PageContainer.Width;
+        var normalizedY = position.Value.Y / PageContainer.Height;
+
+        var hit = _viewModel.CurrentPageAnnotations.FirstOrDefault(a =>
+            normalizedX >= a.X && normalizedX <= a.X + a.Width &&
+            normalizedY >= a.Y && normalizedY <= a.Y + a.Height);
+
+        if (hit is not null)
+        {
+            _viewModel.SelectedAnnotation = hit;
+            UpdateSelectionOverlay();
+            return;
+        }
+
+        if (_viewModel.SelectedAnnotation is not null)
+        {
+            _viewModel.SelectedAnnotation = null;
+            UpdateSelectionOverlay();
             return;
         }
 
@@ -82,12 +120,6 @@ public partial class SheetViewerPage : ContentPage
         {
             // Ignore tap-to-turn while zoomed in - the user is most likely
             // trying to look around the page, not turn it.
-            return;
-        }
-
-        var position = e.GetPosition(PageContainer);
-        if (position is null)
-        {
             return;
         }
 
@@ -99,6 +131,112 @@ public partial class SheetViewerPage : ContentPage
         {
             TryGoToNextPage();
         }
+    }
+
+    // Positions/sizes SelectionOverlay over the selected annotation using
+    // the same normalized-coordinate convention as everywhere else -
+    // SelectionOverlay is anchored Start/Start in PageContainer's Grid
+    // cell, so TranslationX/Y (plus WidthRequest/HeightRequest) place it
+    // exactly like PageContainer's own transform positions the page.
+    //
+    // SelectionOverlay is padded by SelectionHandlePadding beyond the
+    // icon's own box on every side, and SelectionBorder is inset by the
+    // same amount (Margin="20" in XAML) so it still lines up exactly with
+    // the box - confirmed empirically on-device: without this padding,
+    // ResizeHandle/DeleteButton (translated outside the box to sit at its
+    // corners) render correctly but never receive taps, because a parent
+    // ViewGroup's touch dispatch tests a child against its own arranged
+    // bounds, not the visual union of where its children overflow to.
+    private void UpdateSelectionOverlay()
+    {
+        var annotation = _viewModel.SelectedAnnotation;
+        if (annotation is null || PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            SelectionOverlay.IsVisible = false;
+            return;
+        }
+
+        SelectionOverlay.IsVisible = true;
+
+        var left = annotation.X * PageContainer.Width;
+        var top = annotation.Y * PageContainer.Height;
+        var width = annotation.Width * PageContainer.Width;
+        var height = annotation.Height * PageContainer.Height;
+
+        SelectionOverlay.WidthRequest = width + SelectionHandlePadding * 2;
+        SelectionOverlay.HeightRequest = height + SelectionHandlePadding * 2;
+        SelectionOverlay.TranslationX = left - SelectionHandlePadding;
+        SelectionOverlay.TranslationY = top - SelectionHandlePadding;
+
+        ResizeHandle.TranslationX = SelectionHandlePadding + width - ResizeHandle.WidthRequest / 2;
+        ResizeHandle.TranslationY = SelectionHandlePadding + height - ResizeHandle.HeightRequest / 2;
+
+        DeleteButton.TranslationX = SelectionHandlePadding + width - DeleteButton.WidthRequest / 2;
+        DeleteButton.TranslationY = SelectionHandlePadding - DeleteButton.HeightRequest / 2;
+    }
+
+    private void OnSelectionMovePanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        var annotation = _viewModel.SelectedAnnotation;
+        if (annotation is null || PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return;
+        }
+
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                _moveStartX = annotation.X;
+                _moveStartY = annotation.Y;
+                break;
+
+            case GestureStatus.Running:
+                annotation.X = _moveStartX + e.TotalX / PageContainer.Width;
+                annotation.Y = _moveStartY + e.TotalY / PageContainer.Height;
+                UpdateSelectionOverlay();
+                AnnotationCanvas.InvalidateSurface();
+                break;
+
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                _ = _viewModel.MoveSelectedAnnotationAsync(annotation.X, annotation.Y);
+                break;
+        }
+    }
+
+    private void OnSelectionResizePanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        var annotation = _viewModel.SelectedAnnotation;
+        if (annotation is null || PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return;
+        }
+
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                _resizeStartWidth = annotation.Width;
+                _resizeStartHeight = annotation.Height;
+                break;
+
+            case GestureStatus.Running:
+                annotation.Width = Math.Max(0.02, _resizeStartWidth + e.TotalX / PageContainer.Width);
+                annotation.Height = Math.Max(0.02, _resizeStartHeight + e.TotalY / PageContainer.Height);
+                UpdateSelectionOverlay();
+                AnnotationCanvas.InvalidateSurface();
+                break;
+
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                _ = _viewModel.ResizeSelectedAnnotationAsync(annotation.Width, annotation.Height);
+                break;
+        }
+    }
+
+    private async void OnDeleteSelectedIconClicked(object? sender, EventArgs e)
+    {
+        await _viewModel.DeleteSelectedAnnotationCommand.ExecuteAsync(null);
+        UpdateSelectionOverlay();
     }
 
     // Pinch-to-zoom. On Android, PinchGestureHandler.OnPinch (MAUI source,
@@ -161,8 +299,8 @@ public partial class SheetViewerPage : ContentPage
         if (ToolPanel.IsVisible)
         {
             // Dragging on the page while the tool panel is open closes it,
-            // same as a plain tap (see OnPageTapped) - don't also pan/turn
-            // the page underneath.
+            // same as a plain tap (see OnAnnotationCanvasTapped) - don't
+            // also pan/turn the page underneath.
             if (e.StatusType == GestureStatus.Completed)
             {
                 ToolPanel.IsVisible = false;
@@ -255,6 +393,7 @@ public partial class SheetViewerPage : ContentPage
         if (e.Parameter is string iconKey)
         {
             await _viewModel.PlaceIconCommand.ExecuteAsync(iconKey);
+            UpdateSelectionOverlay();
         }
     }
 

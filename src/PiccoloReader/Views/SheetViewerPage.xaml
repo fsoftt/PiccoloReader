@@ -27,7 +27,6 @@
             HorizontalOptions="Center"
             VerticalOptions="Center">
             <Grid.GestureRecognizers>
-                <TapGestureRecognizer Tapped="OnPageTapped" />
                 <PinchGestureRecognizer PinchUpdated="OnPinchUpdated" />
                 <PanGestureRecognizer PanUpdated="OnPanUpdated" />
             </Grid.GestureRecognizers>
@@ -37,7 +36,56 @@
                 Source="{Binding CurrentPageImageBytes, Converter={StaticResource ByteArrayToImageSource}}"
                 Aspect="AspectFit" />
 
-            <skia:SKCanvasView x:Name="AnnotationCanvas" PaintSurface="OnAnnotationCanvasPaintSurface" />
+            <skia:SKCanvasView x:Name="AnnotationCanvas" PaintSurface="OnAnnotationCanvasPaintSurface">
+                <skia:SKCanvasView.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnAnnotationCanvasTapped" />
+                </skia:SKCanvasView.GestureRecognizers>
+            </skia:SKCanvasView>
+
+            <Grid
+                x:Name="SelectionOverlay"
+                IsVisible="False"
+                HorizontalOptions="Start"
+                VerticalOptions="Start"
+                InputTransparent="False">
+                <Border
+                    x:Name="SelectionBorder"
+                    Margin="20"
+                    Stroke="{StaticResource Primary}"
+                    StrokeThickness="2"
+                    BackgroundColor="Transparent">
+                    <Border.GestureRecognizers>
+                        <PanGestureRecognizer PanUpdated="OnSelectionMovePanUpdated" />
+                    </Border.GestureRecognizers>
+                </Border>
+
+                <BoxView
+                    x:Name="ResizeHandle"
+                    WidthRequest="24"
+                    HeightRequest="24"
+                    CornerRadius="12"
+                    Color="{StaticResource Primary}"
+                    HorizontalOptions="Start"
+                    VerticalOptions="Start">
+                    <BoxView.GestureRecognizers>
+                        <PanGestureRecognizer PanUpdated="OnSelectionResizePanUpdated" />
+                    </BoxView.GestureRecognizers>
+                </BoxView>
+
+                <ImageButton
+                    x:Name="DeleteButton"
+                    WidthRequest="28"
+                    HeightRequest="28"
+                    CornerRadius="14"
+                    BackgroundColor="{StaticResource Primary}"
+                    HorizontalOptions="Start"
+                    VerticalOptions="Start"
+                    Clicked="OnDeleteSelectedIconClicked">
+                    <ImageButton.Source>
+                        <FontImageSource Glyph="&#xE5CD;" FontFamily="MaterialOutlined" Size="16" Color="White" />
+                    </ImageButton.Source>
+                </ImageButton>
+            </Grid>
         </Grid>
 
         <Label
