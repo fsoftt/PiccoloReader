@@ -283,4 +283,27 @@ public class SheetViewerViewModelTests : IDisposable
         var persisted = await _annotationService.GetAnnotationsAsync(sheet.Id, 0);
         Assert.Empty(persisted);
     }
+
+    [Fact]
+    public async Task ActiveTool_DefaultsToMusicIcons()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.Equal(AnnotationTool.MusicIcons, _sut.ActiveTool);
+        Assert.False(_sut.IsDrawingToolActive);
+    }
+
+    [Fact]
+    public void IsDrawingToolActive_TrueWhenPencilOrEraserActive()
+    {
+        _sut.ActiveTool = AnnotationTool.Pencil;
+        Assert.True(_sut.IsDrawingToolActive);
+
+        _sut.ActiveTool = AnnotationTool.Eraser;
+        Assert.True(_sut.IsDrawingToolActive);
+
+        _sut.ActiveTool = AnnotationTool.MusicIcons;
+        Assert.False(_sut.IsDrawingToolActive);
+    }
 }
