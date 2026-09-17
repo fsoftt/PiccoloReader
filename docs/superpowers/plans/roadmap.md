@@ -128,6 +128,14 @@ Plan 4 complete.
 | Real underline-style tabs (not buttons), theme-aware active/inactive colors, real eraser icon | Merged | [#47](https://github.com/fsoftt/PiccoloReader/pull/47) |
 | Eraser drag-to-erase fix: PR #49 shipped tap-only (PointerGestureRecognizer doesn't track touch drags on Android); switched to a repurposed DrawingView for real continuous drag hit-testing | Merged | [#50](https://github.com/fsoftt/PiccoloReader/pull/50) |
 
+## Library Page Fixes
+
+Bounded UI/bug fixes on the Library page, done outside the numbered plans above.
+
+| Item | Status | PR |
+|---|---|---|
+| Toolbar title "Piccolo" in Pacifico font, independent Folder/Sheet sort buttons (folder sort was previously broken — only root sheets sorted), Folder.DateAdded, multi-select PDF import, blank-gap layout fix when no folders exist | Merged | [#52](https://github.com/fsoftt/PiccoloReader/pull/52) |
+
 ## Plan 5: Undo/Redo
 
 Not planned yet.
