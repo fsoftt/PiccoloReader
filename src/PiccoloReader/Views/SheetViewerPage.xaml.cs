@@ -647,14 +647,13 @@ public partial class SheetViewerPage : ContentPage
         PageContainer.AnchorY = 0;
     }
 
-    // rawScaleFactor is Android's own ScaleGestureDetector.ScaleFactor -
-    // the raw per-frame span ratio, with none of MAUI's PinchGestureHandler
-    // pre-multiplication (that class is bypassed entirely on Android now).
-    // Composing it multiplicatively (_currentScale *= rawScaleFactor) is
-    // the exact, not approximated, equivalent of the +(e.Scale-1) summation
-    // OnPinchUpdated uses - and avoids that formula's small approximation
-    // error, though it was never the source of the gesture-arena bug this
-    // listener exists to fix.
+    // rawScaleFactor is PageContainerTouchListener's own hand-rolled
+    // per-frame span ratio (stable-coordinate-based, not Android's
+    // ScaleGestureDetector - see that class's comment for why), with none
+    // of MAUI's PinchGestureHandler pre-multiplication (that class is
+    // bypassed entirely on Android now). Composing it multiplicatively
+    // (_currentScale *= rawScaleFactor) is the exact, not approximated,
+    // equivalent of the +(e.Scale-1) summation OnPinchUpdated uses.
     private void AndroidHandlePinchRunning(double rawScaleFactor, double originXFraction, double originYFraction)
     {
         var previousScale = _currentScale;
