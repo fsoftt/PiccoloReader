@@ -25,10 +25,16 @@ public partial class LibraryViewModel : ObservableObject
     private string _newFolderName = string.Empty;
 
     [ObservableProperty]
-    private SortField _sortField = SortField.Name;
+    private SortField _folderSortField = SortField.Name;
 
     [ObservableProperty]
-    private SortDirection _sortDirection = SortDirection.Ascending;
+    private SortDirection _folderSortDirection = SortDirection.Ascending;
+
+    [ObservableProperty]
+    private SortField _sheetSortField = SortField.Name;
+
+    [ObservableProperty]
+    private SortDirection _sheetSortDirection = SortDirection.Ascending;
 
     public async Task LoadAsync()
     {
@@ -86,10 +92,32 @@ public partial class LibraryViewModel : ObservableObject
         await LoadAsync();
     }
 
-    public void ApplySort(SortField field, SortDirection direction)
+    public void ApplyFolderSort(SortField field, SortDirection direction)
     {
-        SortField = field;
-        SortDirection = direction;
+        FolderSortField = field;
+        FolderSortDirection = direction;
+
+        var sorted = field switch
+        {
+            SortField.DateAdded => direction == SortDirection.Ascending
+                ? Folders.OrderBy(f => f.DateAdded).ToList()
+                : Folders.OrderByDescending(f => f.DateAdded).ToList(),
+            _ => direction == SortDirection.Ascending
+                ? Folders.OrderBy(f => f.Name).ToList()
+                : Folders.OrderByDescending(f => f.Name).ToList()
+        };
+
+        Folders.Clear();
+        foreach (var folder in sorted)
+        {
+            Folders.Add(folder);
+        }
+    }
+
+    public void ApplySheetSort(SortField field, SortDirection direction)
+    {
+        SheetSortField = field;
+        SheetSortDirection = direction;
 
         var sorted = field switch
         {

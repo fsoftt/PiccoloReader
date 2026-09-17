@@ -70,27 +70,51 @@ public class LibraryViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ApplySort_NameDescending_OrdersRootSheetsReverseAlphabetically()
+    public void ApplySheetSort_NameDescending_OrdersRootSheetsReverseAlphabetically()
     {
         _sut.RootSheets.Add(new Sheet { Title = "A-Piece", DateAdded = DateTime.UtcNow });
         _sut.RootSheets.Add(new Sheet { Title = "Z-Piece", DateAdded = DateTime.UtcNow });
 
-        _sut.ApplySort(SortField.Name, SortDirection.Descending);
+        _sut.ApplySheetSort(SortField.Name, SortDirection.Descending);
 
         Assert.Equal("Z-Piece", _sut.RootSheets[0].Title);
         Assert.Equal("A-Piece", _sut.RootSheets[1].Title);
     }
 
     [Fact]
-    public void ApplySort_DateAddedDescending_OrdersRootSheetsNewestFirst()
+    public void ApplySheetSort_DateAddedDescending_OrdersRootSheetsNewestFirst()
     {
         _sut.RootSheets.Add(new Sheet { Title = "Older", DateAdded = DateTime.UtcNow.AddDays(-1) });
         _sut.RootSheets.Add(new Sheet { Title = "Newer", DateAdded = DateTime.UtcNow });
 
-        _sut.ApplySort(SortField.DateAdded, SortDirection.Descending);
+        _sut.ApplySheetSort(SortField.DateAdded, SortDirection.Descending);
 
         Assert.Equal("Newer", _sut.RootSheets[0].Title);
         Assert.Equal("Older", _sut.RootSheets[1].Title);
+    }
+
+    [Fact]
+    public void ApplyFolderSort_NameDescending_OrdersFoldersReverseAlphabetically()
+    {
+        _sut.Folders.Add(new Folder { Name = "A-Folder", DateAdded = DateTime.UtcNow });
+        _sut.Folders.Add(new Folder { Name = "Z-Folder", DateAdded = DateTime.UtcNow });
+
+        _sut.ApplyFolderSort(SortField.Name, SortDirection.Descending);
+
+        Assert.Equal("Z-Folder", _sut.Folders[0].Name);
+        Assert.Equal("A-Folder", _sut.Folders[1].Name);
+    }
+
+    [Fact]
+    public void ApplyFolderSort_DateAddedDescending_OrdersFoldersNewestFirst()
+    {
+        _sut.Folders.Add(new Folder { Name = "Older", DateAdded = DateTime.UtcNow.AddDays(-1) });
+        _sut.Folders.Add(new Folder { Name = "Newer", DateAdded = DateTime.UtcNow });
+
+        _sut.ApplyFolderSort(SortField.DateAdded, SortDirection.Descending);
+
+        Assert.Equal("Newer", _sut.Folders[0].Name);
+        Assert.Equal("Older", _sut.Folders[1].Name);
     }
 
     [Fact]

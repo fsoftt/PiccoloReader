@@ -12,6 +12,15 @@
         <converters:CountToBoolConverter x:Key="CountToBool" />
     </ContentPage.Resources>
 
+    <Shell.TitleView>
+        <Label
+            Text="Piccolo"
+            FontFamily="Pacifico"
+            FontSize="26"
+            TextColor="{StaticResource White}"
+            VerticalOptions="Center" />
+    </Shell.TitleView>
+
     <ContentPage.ToolbarItems>
         <ToolbarItem Clicked="OnImportPdfClicked">
             <ToolbarItem.IconImageSource>
@@ -23,22 +32,33 @@
                 <FontImageSource Glyph="&#xE2CC;" FontFamily="MaterialOutlined" Size="24" Color="White" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
-        <ToolbarItem Clicked="OnSortClicked">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE164;" FontFamily="MaterialOutlined" Size="24" Color="White" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="Auto,Auto" Padding="16" RowSpacing="12">
+    <VerticalStackLayout Padding="16" Spacing="12">
 
-        <CollectionView Grid.Row="0" ItemsSource="{Binding Folders}">
+        <CollectionView
+            ItemsSource="{Binding Folders}"
+            IsVisible="{Binding Folders.Count, Converter={StaticResource CountToBool}}">
             <CollectionView.Header>
-                <Label
-                    Text="Folders"
-                    FontAttributes="Bold"
-                    Margin="0,0,0,4"
-                    IsVisible="{Binding Folders.Count, Converter={StaticResource CountToBool}}" />
+                <Grid
+                    ColumnDefinitions="*,Auto"
+                    Margin="0,0,0,4">
+                    <Label Grid.Column="0" Text="Folders" FontAttributes="Bold" VerticalOptions="Center" />
+                    <Border Grid.Column="1" Padding="6" StrokeThickness="0" BackgroundColor="Transparent">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnFolderSortClicked" />
+                        </Border.GestureRecognizers>
+                        <Image>
+                            <Image.Source>
+                                <FontImageSource
+                                    Glyph="&#xE164;"
+                                    FontFamily="MaterialOutlined"
+                                    Size="20"
+                                    Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                            </Image.Source>
+                        </Image>
+                    </Border>
+                </Grid>
             </CollectionView.Header>
             <CollectionView.ItemTemplate>
                 <DataTemplate>
@@ -68,13 +88,29 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <CollectionView Grid.Row="1" ItemsSource="{Binding RootSheets}">
+        <CollectionView
+            ItemsSource="{Binding RootSheets}"
+            IsVisible="{Binding RootSheets.Count, Converter={StaticResource CountToBool}}">
             <CollectionView.Header>
-                <Label
-                    Text="Sheets"
-                    FontAttributes="Bold"
-                    Margin="0,8,0,4"
-                    IsVisible="{Binding RootSheets.Count, Converter={StaticResource CountToBool}}" />
+                <Grid
+                    ColumnDefinitions="*,Auto"
+                    Margin="0,0,0,4">
+                    <Label Grid.Column="0" Text="Sheets" FontAttributes="Bold" VerticalOptions="Center" />
+                    <Border Grid.Column="1" Padding="6" StrokeThickness="0" BackgroundColor="Transparent">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnSheetSortClicked" />
+                        </Border.GestureRecognizers>
+                        <Image>
+                            <Image.Source>
+                                <FontImageSource
+                                    Glyph="&#xE164;"
+                                    FontFamily="MaterialOutlined"
+                                    Size="20"
+                                    Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                            </Image.Source>
+                        </Image>
+                    </Border>
+                </Grid>
             </CollectionView.Header>
             <CollectionView.ItemTemplate>
                 <DataTemplate>
@@ -103,5 +139,5 @@
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
-    </Grid>
+    </VerticalStackLayout>
 </ContentPage>
