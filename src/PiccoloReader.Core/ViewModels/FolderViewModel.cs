@@ -23,7 +23,7 @@ public partial class FolderViewModel : ObservableObject
     private int _folderId;
 
     [ObservableProperty]
-    private bool _hasSheets;
+    private bool _hasMultipleSheets;
 
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -44,7 +44,14 @@ public partial class FolderViewModel : ObservableObject
     public async Task LoadAsync()
     {
         _allSheets = (await _libraryService.GetSheetsAsync(FolderId)).ToList();
-        HasSheets = _allSheets.Count > 0;
+        HasMultipleSheets = _allSheets.Count > 1;
+
+        if (!HasMultipleSheets)
+        {
+            IsSearchVisible = false;
+            SearchText = string.Empty;
+        }
+
         RefreshSheets();
     }
 

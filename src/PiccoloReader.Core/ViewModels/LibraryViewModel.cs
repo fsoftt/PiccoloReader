@@ -34,6 +34,12 @@ public partial class LibraryViewModel : ObservableObject
     private bool _hasRootSheets;
 
     [ObservableProperty]
+    private bool _hasMultipleFolders;
+
+    [ObservableProperty]
+    private bool _hasMultipleRootSheets;
+
+    [ObservableProperty]
     private string _folderSearchText = string.Empty;
 
     [ObservableProperty]
@@ -65,10 +71,26 @@ public partial class LibraryViewModel : ObservableObject
     {
         _allFolders = (await _libraryService.GetFoldersAsync()).ToList();
         HasFolders = _allFolders.Count > 0;
+        HasMultipleFolders = _allFolders.Count > 1;
+
+        if (!HasMultipleFolders)
+        {
+            IsFolderSearchVisible = false;
+            FolderSearchText = string.Empty;
+        }
+
         RefreshFolders();
 
         _allRootSheets = (await _libraryService.GetSheetsAsync(null)).ToList();
         HasRootSheets = _allRootSheets.Count > 0;
+        HasMultipleRootSheets = _allRootSheets.Count > 1;
+
+        if (!HasMultipleRootSheets)
+        {
+            IsSheetSearchVisible = false;
+            SheetSearchText = string.Empty;
+        }
+
         RefreshSheets();
     }
 
