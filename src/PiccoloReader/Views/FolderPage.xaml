@@ -4,8 +4,13 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    xmlns:converters="clr-namespace:PiccoloReader.Converters"
     x:Name="ThisPage"
     Title="Folder">
+
+    <ContentPage.Resources>
+        <converters:StringNotEmptyConverter x:Key="StringNotEmpty" />
+    </ContentPage.Resources>
 
     <ContentPage.ToolbarItems>
         <ToolbarItem Clicked="OnImportPdfClicked">
@@ -13,15 +18,39 @@
                 <FontImageSource Glyph="&#xE2C6;" FontFamily="MaterialOutlined" Size="24" Color="White" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
-        <ToolbarItem Clicked="OnSortClicked">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE164;" FontFamily="MaterialOutlined" Size="24" Color="White" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
     </ContentPage.ToolbarItems>
 
-    <Grid Padding="16">
-        <CollectionView ItemsSource="{Binding Sheets}">
+    <Grid RowDefinitions="Auto,*" Padding="16">
+        <Grid
+            Grid.Row="0"
+            ColumnDefinitions="*,Auto"
+            Margin="0,0,0,8"
+            IsVisible="{Binding IsSearchVisible}">
+            <Entry
+                Grid.Column="0"
+                Placeholder="Search sheets"
+                Text="{Binding SearchText}" />
+            <Border
+                Grid.Column="1"
+                Padding="6"
+                StrokeThickness="0"
+                BackgroundColor="Transparent"
+                IsVisible="{Binding SearchText, Converter={StaticResource StringNotEmpty}}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnSearchClearClicked" />
+                </Border.GestureRecognizers>
+                <Image>
+                    <Image.Source>
+                        <FontImageSource
+                            Glyph="&#xE5CD;"
+                            FontFamily="MaterialOutlined"
+                            Size="18"
+                            Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                    </Image.Source>
+                </Image>
+            </Border>
+        </Grid>
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Sheets}">
             <CollectionView.ItemTemplate>
                 <DataTemplate>
                     <Border x:Name="SheetItemRoot" Style="{StaticResource ListItemCard}">
