@@ -19,7 +19,6 @@ public partial class SheetViewerPage : ContentPage
 
     private readonly SheetViewerViewModel _viewModel;
 
-    private double _startScale = 1;
     private double _currentScale = 1;
     private double _xOffset;
     private double _yOffset;
@@ -98,7 +97,6 @@ public partial class SheetViewerPage : ContentPage
 
     private void ResetZoom()
     {
-        _startScale = 1;
         _currentScale = 1;
         _xOffset = 0;
         _yOffset = 0;
@@ -462,38 +460,66 @@ public partial class SheetViewerPage : ContentPage
     // src/Controls/src/Core/Platform/Android/PinchGestureHandler.cs)
     // already computes e.Scale as `1 + (rawFrameDelta - 1) * viewScaleAtGestureStart`
     // before it ever reaches this handler - i.e. e.Scale-1 is already
-    // scaled by the view's starting scale. Multiplying by _startScale
-    // again here (as an earlier version of this code did, copying a
+    // scaled by the view's starting scale. Multiplying by that starting
+    // scale again here (as an earlier version of this code did, copying a
     // formula meant for a raw/unscaled delta) squares that factor:
     // harmless at scale=1 (1*1=1, why zoom-in "looked fine" from a fresh
     // page), but wildly overcorrects once already zoomed in - which is
     // why zooming back out was broken. Only the *delta* needs adding, no
     // extra multiplication.
+    //
+    // The translation (zoom-to-pinch-point) math below used to be copied
+    // from Microsoft's classic two-element pinch-zoom recipe (a fixed
+    // outer viewport + a separately-sized inner content view), recomputed
+    // every Running frame from the *gesture-start* scale/translation
+    // snapshot. PageContainer plays both
+    // roles at once (it's the gesture host AND the transformed content),
+    // which collapses that recipe's "outer Width" and "Content.Width"
+    // into the same value - and re-anchoring every frame to stale
+    // gesture-start state (instead of the actual scale/translation from
+    // the previous frame) drifts further off with every frame the
+    // gesture runs, and carries that drift into _xOffset/_yOffset for
+    // the *next* gesture too. That's the compounding error behind
+    // "zooming in gets harder each time" and "panning gets slower after
+    // each zoom": the content silently pans out of alignment with the
+    // fingers, hits the clamp bounds early, and has less room left each
+    // time.
+    //
+    // Replaced with a direct per-frame derivation: e.ScaleOrigin is a
+    // [0,1] fraction of PageContainer's own unscaled local size (per the
+    // same MAUI source, independent of current Scale/Translation), so
+    // the local pinch point is `e.ScaleOrigin * PageContainer.Width/Height`
+    // regardless of zoom level. With AnchorX/AnchorY = 0, a local point
+    // lx renders on screen at `TranslationX + lx * Scale` (relative to
+    // PageContainer's constant layout position), so keeping that exact
+    // point stationary as Scale moves from the *live* previousScale to
+    // the new _currentScale solves to:
+    //   TranslationX_new = TranslationX_prev - lx * (currentScale - previousScale)
+    // Anchoring to the live PageContainer.Scale/TranslationX (read fresh
+    // every frame) instead of a per-gesture snapshot means there's
+    // nothing left to drift.
     private void OnPinchUpdated(object? sender, PinchGestureUpdatedEventArgs e)
     {
         if (e.Status == GestureStatus.Started)
         {
-            _startScale = PageContainer.Scale;
             PageContainer.AnchorX = 0;
             PageContainer.AnchorY = 0;
         }
         else if (e.Status == GestureStatus.Running)
         {
+            var previousScale = _currentScale;
             _currentScale += e.Scale - 1;
             _currentScale = Math.Max(1, _currentScale);
 
-            var renderedX = PageContainer.X + _xOffset;
-            var deltaX = renderedX / PageContainer.Width;
-            var deltaWidth = PageContainer.Width / (PageContainer.Width * _startScale);
-            var originX = (e.ScaleOrigin.X - deltaX) * deltaWidth;
+            var previousTranslationX = PageContainer.TranslationX;
+            var previousTranslationY = PageContainer.TranslationY;
 
-            var renderedY = PageContainer.Y + _yOffset;
-            var deltaY = renderedY / PageContainer.Height;
-            var deltaHeight = PageContainer.Height / (PageContainer.Height * _startScale);
-            var originY = (e.ScaleOrigin.Y - deltaY) * deltaHeight;
+            var localX = e.ScaleOrigin.X * PageContainer.Width;
+            var localY = e.ScaleOrigin.Y * PageContainer.Height;
+            var scaleDelta = _currentScale - previousScale;
 
-            var targetX = _xOffset - (originX * PageContainer.Width * (_currentScale - _startScale));
-            var targetY = _yOffset - (originY * PageContainer.Height * (_currentScale - _startScale));
+            var targetX = previousTranslationX - localX * scaleDelta;
+            var targetY = previousTranslationY - localY * scaleDelta;
 
             PageContainer.TranslationX = Math.Clamp(targetX, -PageContainer.Width * (_currentScale - 1), 0);
             PageContainer.TranslationY = Math.Clamp(targetY, -PageContainer.Height * (_currentScale - 1), 0);
