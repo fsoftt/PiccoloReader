@@ -84,6 +84,17 @@
                 ShouldClearOnFinish="True"
                 DrawingLineCompleted="OnPencilDrawingLineCompleted" />
 
+            <ctViews:DrawingView
+                x:Name="EraserDrawingView"
+                IsVisible="False"
+                InputTransparent="False"
+                BackgroundColor="Transparent"
+                ShouldClearOnFinish="True"
+                DrawingLineStarted="OnEraserDrawingLineStarted"
+                PointDrawn="OnEraserPointDrawn"
+                DrawingLineCompleted="OnEraserDrawingLineCompleted"
+                DrawingLineCancelled="OnEraserDrawingLineCancelled" />
+
             <Ellipse
                 x:Name="EraserRadiusIndicator"
                 IsVisible="False"

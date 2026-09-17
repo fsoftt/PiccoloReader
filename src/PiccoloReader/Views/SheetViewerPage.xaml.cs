@@ -134,21 +134,6 @@ public partial class SheetViewerPage : ContentPage
         var normalizedX = position.Value.X / PageContainer.Width;
         var normalizedY = position.Value.Y / PageContainer.Height;
 
-        // Eraser is tap-to-erase, not drag-to-erase, despite the spec's
-        // original "continuous drag hit-testing" design - confirmed
-        // on-device that PointerGestureRecognizer (the mechanism that would
-        // give continuous absolute touch position during a drag) only
-        // fires PointerReleased for touch input on Android, never
-        // PointerPressed/PointerMoved, so there's no reliable way to track
-        // a drag path. TapGestureRecognizer's GetPosition, used here, is
-        // the same API already proven reliable all session for icon
-        // hit-testing, so each tap erases whatever's under it instead.
-        if (_viewModel.ActiveTool == AnnotationTool.Eraser)
-        {
-            EraseAt(normalizedX, normalizedY);
-            return;
-        }
-
         var hit = _viewModel.CurrentPageAnnotations.FirstOrDefault(a =>
             normalizedX >= a.X && normalizedX <= a.X + a.Width &&
             normalizedY >= a.Y && normalizedY <= a.Y + a.Height);
@@ -487,10 +472,12 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        // Eraser is tap-to-erase (see OnPageContainerTapped), not
-        // drag-to-erase, so a drag while Eraser is active does nothing -
-        // bail out here rather than letting it zoom-pan or turn the page,
-        // which would be a confusing side effect of a failed erase attempt.
+        // While Eraser is active, EraserDrawingView covers PageContainer
+        // and captures the entire touch stream for drag-to-erase (see its
+        // handlers below) the same way PencilDrawingView already does for
+        // drawing - this handler shouldn't normally even run during an
+        // Eraser drag, but bails out just in case, rather than letting a
+        // stray event zoom-pan or turn the page mid-erase.
         if (_viewModel.ActiveTool == AnnotationTool.Eraser)
         {
             return;
@@ -529,9 +516,11 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    // Shows the eraser's hit-test radius centered on a tap, briefly, as
-    // feedback for what the tap's radius covered - not tied to a drag
-    // (see OnPageContainerTapped for why Eraser is tap-to-erase).
+    // Shows the eraser's hit-test radius centered on the current touch
+    // point, hiding itself 350ms after the most recent call - during a
+    // drag (see the EraserDrawingView handlers below), each new point
+    // restarts the timer, so the indicator tracks the finger live and
+    // only fades out shortly after it lifts.
     private void ShowEraserRadiusIndicator(double normalizedX, double normalizedY)
     {
         var radiusPx = _viewModel.EraserRadius * PageContainer.Width;
@@ -570,6 +559,49 @@ public partial class SheetViewerPage : ContentPage
             _ = _viewModel.EraseAnnotationAsync(hit);
             AnnotationCanvas.InvalidateSurface();
         }
+    }
+
+    // EraserDrawingView gives real drag-to-erase, unlike the
+    // PointerGestureRecognizer approach tried first: confirmed on-device
+    // that PointerGestureRecognizer only fires PointerReleased for touch
+    // input on Android, never PointerPressed/PointerMoved, so there was no
+    // way to track a drag path through it (Eraser originally shipped as
+    // tap-to-erase because of this). DrawingView doesn't have that gap -
+    // it drives its own native touch handling directly (confirmed working
+    // for Pencil), and DrawingLineStarted/PointDrawn between them cover
+    // both the initial touch-down point and every subsequent point along
+    // the drag, in the same PageContainer-local coordinate space Pencil's
+    // points already use. EraserDrawingView never persists anything - it's
+    // repurposed purely as a reliable continuous-touch-position source,
+    // hit-testing and deleting live via EraseAt at every point.
+    private void OnEraserDrawingLineStarted(object? sender, DrawingLineStartedEventArgs e)
+    {
+        EraseAtDrawingViewPoint(e.Point);
+    }
+
+    private void OnEraserPointDrawn(object? sender, PointDrawnEventArgs e)
+    {
+        EraseAtDrawingViewPoint(e.Point);
+    }
+
+    private void OnEraserDrawingLineCompleted(object? sender, DrawingLineCompletedEventArgs e)
+    {
+        EraserRadiusIndicator.IsVisible = false;
+    }
+
+    private void OnEraserDrawingLineCancelled(object? sender, EventArgs e)
+    {
+        EraserRadiusIndicator.IsVisible = false;
+    }
+
+    private void EraseAtDrawingViewPoint(PointF point)
+    {
+        if (PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return;
+        }
+
+        EraseAt(point.X / PageContainer.Width, point.Y / PageContainer.Height);
     }
 
     private void TryGoToNextPage()
@@ -660,6 +692,8 @@ public partial class SheetViewerPage : ContentPage
             PencilWidthPreview.Color = Color.FromArgb(_viewModel.PencilColorHex);
             UpdatePencilWidthPreview();
         }
+
+        EraserDrawingView.IsVisible = _viewModel.ActiveTool == AnnotationTool.Eraser;
     }
 
     private static void SetTabAppearance(FontImageSource icon, bool active)
