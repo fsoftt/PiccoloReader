@@ -11,6 +11,9 @@ public partial class LibraryViewModel : ObservableObject
     private readonly LibraryService _libraryService;
     private readonly PdfImportService _importService;
 
+    private List<Folder> _allFolders = new();
+    private List<Sheet> _allRootSheets = new();
+
     public LibraryViewModel(LibraryService libraryService, PdfImportService importService)
     {
         _libraryService = libraryService;
@@ -25,6 +28,24 @@ public partial class LibraryViewModel : ObservableObject
     private string _newFolderName = string.Empty;
 
     [ObservableProperty]
+    private bool _hasFolders;
+
+    [ObservableProperty]
+    private bool _hasRootSheets;
+
+    [ObservableProperty]
+    private string _folderSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _sheetSearchText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isFolderSearchVisible;
+
+    [ObservableProperty]
+    private bool _isSheetSearchVisible;
+
+    [ObservableProperty]
     private SortField _folderSortField = SortField.Name;
 
     [ObservableProperty]
@@ -36,19 +57,19 @@ public partial class LibraryViewModel : ObservableObject
     [ObservableProperty]
     private SortDirection _sheetSortDirection = SortDirection.Ascending;
 
+    partial void OnFolderSearchTextChanged(string value) => RefreshFolders();
+
+    partial void OnSheetSearchTextChanged(string value) => RefreshSheets();
+
     public async Task LoadAsync()
     {
-        Folders.Clear();
-        foreach (var folder in await _libraryService.GetFoldersAsync())
-        {
-            Folders.Add(folder);
-        }
+        _allFolders = (await _libraryService.GetFoldersAsync()).ToList();
+        HasFolders = _allFolders.Count > 0;
+        RefreshFolders();
 
-        RootSheets.Clear();
-        foreach (var sheet in await _libraryService.GetSheetsAsync(null))
-        {
-            RootSheets.Add(sheet);
-        }
+        _allRootSheets = (await _libraryService.GetSheetsAsync(null)).ToList();
+        HasRootSheets = _allRootSheets.Count > 0;
+        RefreshSheets();
     }
 
     [RelayCommand]
@@ -96,15 +117,30 @@ public partial class LibraryViewModel : ObservableObject
     {
         FolderSortField = field;
         FolderSortDirection = direction;
+        RefreshFolders();
+    }
 
-        var sorted = field switch
+    public void ApplySheetSort(SortField field, SortDirection direction)
+    {
+        SheetSortField = field;
+        SheetSortDirection = direction;
+        RefreshSheets();
+    }
+
+    private void RefreshFolders()
+    {
+        IEnumerable<Folder> filtered = string.IsNullOrWhiteSpace(FolderSearchText)
+            ? _allFolders
+            : _allFolders.Where(f => f.Name.Contains(FolderSearchText, StringComparison.OrdinalIgnoreCase));
+
+        var sorted = FolderSortField switch
         {
-            SortField.DateAdded => direction == SortDirection.Ascending
-                ? Folders.OrderBy(f => f.DateAdded).ToList()
-                : Folders.OrderByDescending(f => f.DateAdded).ToList(),
-            _ => direction == SortDirection.Ascending
-                ? Folders.OrderBy(f => f.Name).ToList()
-                : Folders.OrderByDescending(f => f.Name).ToList()
+            SortField.DateAdded => FolderSortDirection == SortDirection.Ascending
+                ? filtered.OrderBy(f => f.DateAdded)
+                : filtered.OrderByDescending(f => f.DateAdded),
+            _ => FolderSortDirection == SortDirection.Ascending
+                ? filtered.OrderBy(f => f.Name)
+                : filtered.OrderByDescending(f => f.Name)
         };
 
         Folders.Clear();
@@ -114,19 +150,20 @@ public partial class LibraryViewModel : ObservableObject
         }
     }
 
-    public void ApplySheetSort(SortField field, SortDirection direction)
+    private void RefreshSheets()
     {
-        SheetSortField = field;
-        SheetSortDirection = direction;
+        IEnumerable<Sheet> filtered = string.IsNullOrWhiteSpace(SheetSearchText)
+            ? _allRootSheets
+            : _allRootSheets.Where(s => s.Title.Contains(SheetSearchText, StringComparison.OrdinalIgnoreCase));
 
-        var sorted = field switch
+        var sorted = SheetSortField switch
         {
-            SortField.DateAdded => direction == SortDirection.Ascending
-                ? RootSheets.OrderBy(s => s.DateAdded).ToList()
-                : RootSheets.OrderByDescending(s => s.DateAdded).ToList(),
-            _ => direction == SortDirection.Ascending
-                ? RootSheets.OrderBy(s => s.Title).ToList()
-                : RootSheets.OrderByDescending(s => s.Title).ToList()
+            SortField.DateAdded => SheetSortDirection == SortDirection.Ascending
+                ? filtered.OrderBy(s => s.DateAdded)
+                : filtered.OrderByDescending(s => s.DateAdded),
+            _ => SheetSortDirection == SortDirection.Ascending
+                ? filtered.OrderBy(s => s.Title)
+                : filtered.OrderByDescending(s => s.Title)
         };
 
         RootSheets.Clear();

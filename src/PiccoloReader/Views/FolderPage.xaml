@@ -13,15 +13,16 @@
                 <FontImageSource Glyph="&#xE2C6;" FontFamily="MaterialOutlined" Size="24" Color="White" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
-        <ToolbarItem Clicked="OnSortClicked">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE164;" FontFamily="MaterialOutlined" Size="24" Color="White" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
     </ContentPage.ToolbarItems>
 
-    <Grid Padding="16">
-        <CollectionView ItemsSource="{Binding Sheets}">
+    <Grid RowDefinitions="Auto,*" Padding="16">
+        <SearchBar
+            Grid.Row="0"
+            Placeholder="Search sheets"
+            Text="{Binding SearchText}"
+            IsVisible="{Binding IsSearchVisible}"
+            Margin="0,0,0,8" />
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Sheets}">
             <CollectionView.ItemTemplate>
                 <DataTemplate>
                     <Border x:Name="SheetItemRoot" Style="{StaticResource ListItemCard}">

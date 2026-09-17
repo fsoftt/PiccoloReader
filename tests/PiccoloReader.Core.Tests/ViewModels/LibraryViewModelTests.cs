@@ -10,6 +10,7 @@ public class LibraryViewModelTests : IDisposable
 {
     private readonly TestAppStorageProvider _storage = new();
     private readonly LibraryViewModel _sut;
+    private readonly string _tempDir;
 
     public LibraryViewModelTests()
     {
@@ -19,9 +20,23 @@ public class LibraryViewModelTests : IDisposable
         var libraryService = new LibraryService(database, _storage);
         var importService = new PdfImportService(database, _storage);
         _sut = new LibraryViewModel(libraryService, importService);
+
+        _tempDir = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
     }
 
-    public void Dispose() => _storage.Dispose();
+    public void Dispose()
+    {
+        _storage.Dispose();
+        Directory.Delete(_tempDir, recursive: true);
+    }
+
+    private async Task ImportSheetAsync(string title)
+    {
+        var sourcePath = Path.Combine(_tempDir, $"{title}.pdf");
+        await File.WriteAllTextAsync(sourcePath, "fake-pdf");
+        await _sut.ImportPdfCommand.ExecuteAsync(sourcePath);
+    }
 
     [Fact]
     public async Task CreateFolderCommand_AddsFolderToFoldersCollection()
@@ -33,6 +48,7 @@ public class LibraryViewModelTests : IDisposable
         Assert.Single(_sut.Folders);
         Assert.Equal("Big Band", _sut.Folders[0].Name);
         Assert.Equal(string.Empty, _sut.NewFolderName);
+        Assert.True(_sut.HasFolders);
     }
 
     [Fact]
@@ -43,18 +59,16 @@ public class LibraryViewModelTests : IDisposable
         await _sut.CreateFolderCommand.ExecuteAsync(null);
 
         Assert.Empty(_sut.Folders);
+        Assert.False(_sut.HasFolders);
     }
 
     [Fact]
     public async Task ImportPdfCommand_AddsSheetToRootSheets()
     {
-        var sourcePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pdf");
-        await File.WriteAllTextAsync(sourcePath, "fake-pdf");
-
-        await _sut.ImportPdfCommand.ExecuteAsync(sourcePath);
+        await ImportSheetAsync("test-sheet");
 
         Assert.Single(_sut.RootSheets);
-        File.Delete(sourcePath);
+        Assert.True(_sut.HasRootSheets);
     }
 
     [Fact]
@@ -67,13 +81,14 @@ public class LibraryViewModelTests : IDisposable
         await _sut.DeleteFolderCommand.ExecuteAsync(folder);
 
         Assert.Empty(_sut.Folders);
+        Assert.False(_sut.HasFolders);
     }
 
     [Fact]
-    public void ApplySheetSort_NameDescending_OrdersRootSheetsReverseAlphabetically()
+    public async Task ApplySheetSort_NameDescending_OrdersRootSheetsReverseAlphabetically()
     {
-        _sut.RootSheets.Add(new Sheet { Title = "A-Piece", DateAdded = DateTime.UtcNow });
-        _sut.RootSheets.Add(new Sheet { Title = "Z-Piece", DateAdded = DateTime.UtcNow });
+        await ImportSheetAsync("A-Piece");
+        await ImportSheetAsync("Z-Piece");
 
         _sut.ApplySheetSort(SortField.Name, SortDirection.Descending);
 
@@ -82,10 +97,11 @@ public class LibraryViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ApplySheetSort_DateAddedDescending_OrdersRootSheetsNewestFirst()
+    public async Task ApplySheetSort_DateAddedDescending_OrdersRootSheetsNewestFirst()
     {
-        _sut.RootSheets.Add(new Sheet { Title = "Older", DateAdded = DateTime.UtcNow.AddDays(-1) });
-        _sut.RootSheets.Add(new Sheet { Title = "Newer", DateAdded = DateTime.UtcNow });
+        await ImportSheetAsync("Older");
+        await Task.Delay(10);
+        await ImportSheetAsync("Newer");
 
         _sut.ApplySheetSort(SortField.DateAdded, SortDirection.Descending);
 
@@ -94,10 +110,12 @@ public class LibraryViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ApplyFolderSort_NameDescending_OrdersFoldersReverseAlphabetically()
+    public async Task ApplyFolderSort_NameDescending_OrdersFoldersReverseAlphabetically()
     {
-        _sut.Folders.Add(new Folder { Name = "A-Folder", DateAdded = DateTime.UtcNow });
-        _sut.Folders.Add(new Folder { Name = "Z-Folder", DateAdded = DateTime.UtcNow });
+        _sut.NewFolderName = "A-Folder";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+        _sut.NewFolderName = "Z-Folder";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
 
         _sut.ApplyFolderSort(SortField.Name, SortDirection.Descending);
 
@@ -106,15 +124,67 @@ public class LibraryViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ApplyFolderSort_DateAddedDescending_OrdersFoldersNewestFirst()
+    public async Task ApplyFolderSort_DateAddedDescending_OrdersFoldersNewestFirst()
     {
-        _sut.Folders.Add(new Folder { Name = "Older", DateAdded = DateTime.UtcNow.AddDays(-1) });
-        _sut.Folders.Add(new Folder { Name = "Newer", DateAdded = DateTime.UtcNow });
+        _sut.NewFolderName = "Older";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+        await Task.Delay(10);
+        _sut.NewFolderName = "Newer";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
 
         _sut.ApplyFolderSort(SortField.DateAdded, SortDirection.Descending);
 
         Assert.Equal("Newer", _sut.Folders[0].Name);
         Assert.Equal("Older", _sut.Folders[1].Name);
+    }
+
+    [Fact]
+    public async Task FolderSearchText_FiltersFoldersByNameCaseInsensitive()
+    {
+        _sut.NewFolderName = "Big Band";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+        _sut.NewFolderName = "Orchestra";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+
+        _sut.FolderSearchText = "big";
+
+        Assert.Single(_sut.Folders);
+        Assert.Equal("Big Band", _sut.Folders[0].Name);
+    }
+
+    [Fact]
+    public async Task FolderSearchText_NoMatches_KeepsHasFoldersTrue()
+    {
+        _sut.NewFolderName = "Big Band";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+
+        _sut.FolderSearchText = "nonexistent";
+
+        Assert.Empty(_sut.Folders);
+        Assert.True(_sut.HasFolders);
+    }
+
+    [Fact]
+    public async Task SheetSearchText_FiltersRootSheetsByTitleCaseInsensitive()
+    {
+        await ImportSheetAsync("Nocturne");
+        await ImportSheetAsync("Prelude");
+
+        _sut.SheetSearchText = "noct";
+
+        Assert.Single(_sut.RootSheets);
+        Assert.Equal("Nocturne", _sut.RootSheets[0].Title);
+    }
+
+    [Fact]
+    public async Task SheetSearchText_NoMatches_KeepsHasRootSheetsTrue()
+    {
+        await ImportSheetAsync("Nocturne");
+
+        _sut.SheetSearchText = "nonexistent";
+
+        Assert.Empty(_sut.RootSheets);
+        Assert.True(_sut.HasRootSheets);
     }
 
     [Fact]
@@ -124,14 +194,11 @@ public class LibraryViewModelTests : IDisposable
         await _sut.CreateFolderCommand.ExecuteAsync(null);
         var folder = _sut.Folders[0];
 
-        var sourcePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pdf");
-        await File.WriteAllTextAsync(sourcePath, "fake-pdf");
-        await _sut.ImportPdfCommand.ExecuteAsync(sourcePath);
+        await ImportSheetAsync("test-sheet");
         var sheet = _sut.RootSheets[0];
 
         await _sut.MoveSheetCommand.ExecuteAsync((sheet, (int?)folder.Id));
 
         Assert.Empty(_sut.RootSheets);
-        File.Delete(sourcePath);
     }
 }
