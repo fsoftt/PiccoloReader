@@ -33,14 +33,24 @@ public partial class LibraryPage : ContentPage
 
     private async void OnImportPdfClicked(object? sender, EventArgs e)
     {
-        var result = await FilePicker.Default.PickAsync(new PickOptions
+        var results = await FilePicker.Default.PickMultipleAsync(new PickOptions
         {
-            PickerTitle = "Select a PDF",
+            PickerTitle = "Select PDFs",
             FileTypes = FilePickerFileType.Pdf
         });
 
-        if (result is not null)
+        if (results is null)
         {
+            return;
+        }
+
+        foreach (var result in results)
+        {
+            if (result is null)
+            {
+                continue;
+            }
+
             await _viewModel.ImportPdfCommand.ExecuteAsync(result.FullPath);
         }
     }
@@ -58,10 +68,10 @@ public partial class LibraryPage : ContentPage
         await _viewModel.CreateFolderCommand.ExecuteAsync(null);
     }
 
-    private async void OnSortClicked(object? sender, EventArgs e)
+    private async void OnFolderSortClicked(object? sender, TappedEventArgs e)
     {
         var choice = await DisplayActionSheetAsync(
-            "Sort by",
+            "Sort folders by",
             "Cancel",
             null,
             "Name (A-Z)",
@@ -80,7 +90,33 @@ public partial class LibraryPage : ContentPage
 
         if (sort is { } selected)
         {
-            _viewModel.ApplySort(selected.Field, selected.Direction);
+            _viewModel.ApplyFolderSort(selected.Field, selected.Direction);
+        }
+    }
+
+    private async void OnSheetSortClicked(object? sender, TappedEventArgs e)
+    {
+        var choice = await DisplayActionSheetAsync(
+            "Sort sheets by",
+            "Cancel",
+            null,
+            "Name (A-Z)",
+            "Name (Z-A)",
+            "Date Added (Oldest First)",
+            "Date Added (Newest First)");
+
+        (SortField Field, SortDirection Direction)? sort = choice switch
+        {
+            "Name (A-Z)" => (SortField.Name, SortDirection.Ascending),
+            "Name (Z-A)" => (SortField.Name, SortDirection.Descending),
+            "Date Added (Oldest First)" => (SortField.DateAdded, SortDirection.Ascending),
+            "Date Added (Newest First)" => (SortField.DateAdded, SortDirection.Descending),
+            _ => null
+        };
+
+        if (sort is { } selected)
+        {
+            _viewModel.ApplySheetSort(selected.Field, selected.Direction);
         }
     }
 
