@@ -387,9 +387,8 @@
                             <Label Text="Width" FontSize="14" />
                             <skia:SKCanvasView
                                 x:Name="PencilWidthPreview"
-                                WidthRequest="140"
                                 HeightRequest="48"
-                                HorizontalOptions="Start"
+                                HorizontalOptions="Fill"
                                 Margin="0,4"
                                 PaintSurface="OnPencilWidthPreviewPaintSurface" />
                             <Slider x:Name="PencilWidthSlider" Minimum="0.003" Maximum="0.02" Value="{Binding PencilStrokeWidth}" ValueChanged="OnPencilWidthChanged" />
