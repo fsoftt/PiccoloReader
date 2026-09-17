@@ -12,4 +12,24 @@
         <ShellContent ContentTemplate="{DataTemplate views:LibraryPage}" />
     </FlyoutItem>
 
+    <Shell.FlyoutFooter>
+        <HorizontalStackLayout
+            Padding="0,0,0,20"
+            HorizontalOptions="Center"
+            Spacing="4">
+            <Label
+                Text="Made with love by"
+                FontSize="12"
+                TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray300}}" />
+            <Label
+                Text="@fsoftt"
+                FontSize="12"
+                TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnAboutLinkTapped" />
+                </Label.GestureRecognizers>
+            </Label>
+        </HorizontalStackLayout>
+    </Shell.FlyoutFooter>
+
 </Shell>
