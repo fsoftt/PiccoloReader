@@ -29,6 +29,7 @@
 
     <ContentPage.Resources>
         <converters:ByteArrayToImageSourceConverter x:Key="ByteArrayToImageSource" />
+        <converters:StringNotEmptyConverter x:Key="StringNotEmpty" />
     </ContentPage.Resources>
 
     <Grid BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
@@ -87,6 +88,7 @@
                 InputTransparent="False"
                 BackgroundColor="Transparent"
                 ShouldClearOnFinish="True"
+                DrawingLineStarted="OnPencilDrawingLineStarted"
                 DrawingLineCompleted="OnPencilDrawingLineCompleted" />
 
             <ctViews:DrawingView
@@ -398,6 +400,12 @@
                         <VerticalStackLayout x:Name="EraserSection" IsVisible="False" Spacing="8">
                             <Label Text="Eraser" FontAttributes="Bold" FontSize="16" />
                             <Label Text="Size" FontSize="14" />
+                            <skia:SKCanvasView
+                                x:Name="EraserSizePreview"
+                                HeightRequest="80"
+                                HorizontalOptions="Fill"
+                                Margin="0,4"
+                                PaintSurface="OnEraserSizePreviewPaintSurface" />
                             <Slider x:Name="EraserRadiusSlider" Minimum="0.02" Maximum="0.08" Value="{Binding EraserRadius}" ValueChanged="OnEraserRadiusChanged" />
                         </VerticalStackLayout>
 
@@ -405,6 +413,60 @@
                 </ScrollView>
             </Grid>
         </Border>
+
+        <Grid x:Name="AddBookmarkOverlay" IsVisible="False">
+            <BoxView BackgroundColor="Black" Opacity="0.4">
+                <BoxView.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnAddBookmarkCancelClicked" />
+                </BoxView.GestureRecognizers>
+            </BoxView>
+            <Border
+                BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
+                Padding="20"
+                Margin="32"
+                VerticalOptions="Center"
+                HorizontalOptions="Fill"
+                StrokeThickness="0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Add Bookmark" FontAttributes="Bold" FontSize="18" />
+
+                    <Label Text="Page number" FontSize="14" />
+                    <Entry x:Name="AddBookmarkPageEntry" Keyboard="Numeric" />
+
+                    <Label Text="Name (optional)" FontSize="14" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Entry x:Name="AddBookmarkNameEntry" Grid.Column="0" Placeholder="e.g. Coda" />
+                        <Border
+                            Grid.Column="1"
+                            Padding="6"
+                            StrokeThickness="0"
+                            BackgroundColor="Transparent"
+                            IsVisible="{Binding Source={x:Reference AddBookmarkNameEntry}, Path=Text, Converter={StaticResource StringNotEmpty}}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnAddBookmarkNameClearClicked" />
+                            </Border.GestureRecognizers>
+                            <Image>
+                                <Image.Source>
+                                    <FontImageSource
+                                        Glyph="&#xE5CD;"
+                                        FontFamily="MaterialOutlined"
+                                        Size="18"
+                                        Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                        </Border>
+                    </Grid>
+
+                    <HorizontalStackLayout Spacing="16" HorizontalOptions="End" Margin="0,8,0,0">
+                        <Button Text="Cancel" Clicked="OnAddBookmarkCancelClicked" BackgroundColor="Transparent" TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                        <Button Text="Add" Clicked="OnAddBookmarkConfirmClicked" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
 
     </Grid>
 </ContentPage>
