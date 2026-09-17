@@ -29,6 +29,8 @@ public partial class SheetViewerPage : ContentPage
     private double _moveStartX;
     private double _moveStartY;
 
+    private bool _isToolbarVisible = true;
+
     private SKTypeface? _bravuraTypeface;
     private readonly Dictionary<int, SKRect> _glyphBoundsCache = new();
     private readonly SKPaint _glyphPaint = new() { Color = SKColors.Black, IsAntialias = true };
@@ -74,6 +76,8 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnAppearing();
 
+        SetToolbarVisible(false);
+
         if (!int.TryParse(SheetId, out var sheetId))
         {
             return;
@@ -117,8 +121,22 @@ public partial class SheetViewerPage : ContentPage
     // Plan 2 - avoids the cross-element conflict entirely. All tap
     // handling (tool panel dismissal, icon hit-testing/selection, and the
     // fallback tap-to-turn-page) stays in this one handler.
+    // A tap now drives the toolbar's show/hide toggle instead of turning
+    // the page - page turning stays available via swipe (see
+    // PageTurnDragThreshold in OnPanUpdated), matching how most PDF/ebook
+    // readers separate "reveal chrome" (tap) from "navigate" (swipe). The
+    // very first tap while the toolbar is hidden only reveals it and does
+    // nothing else - it doesn't also fall through to icon
+    // selection/deselection - so a user reaching for the toolbar never
+    // accidentally selects whatever happens to be under their thumb.
     private void OnPageContainerTapped(object? sender, TappedEventArgs e)
     {
+        if (!_isToolbarVisible)
+        {
+            SetToolbarVisible(true);
+            return;
+        }
+
         if (ToolPanel.IsVisible)
         {
             ToolPanel.IsVisible = false;
@@ -152,20 +170,52 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        if (_currentScale > ZoomedInThreshold)
-        {
-            // Ignore tap-to-turn while zoomed in - the user is most likely
-            // trying to look around the page, not turn it.
-            return;
-        }
+        // No tool is active here - while Pencil/Eraser is active, the
+        // relevant DrawingView covers PageContainer and captures the touch
+        // stream itself (see UpdateToolSections), so this handler never
+        // runs in that state. That's what satisfies "hide again only when
+        // no tool is selected" - there's no extra check needed for it.
+        SetToolbarVisible(false);
+    }
 
-        if (position.Value.X < PageContainer.Width / 2)
+    // Toggling Shell.SetNavBarIsVisible was tried first and rejected -
+    // confirmed on-device that Android doesn't re-run window-inset
+    // dispatch when the nav bar is dynamically re-shown, so the whole bar
+    // rendered up under the status bar every time (title, back button and
+    // icons all overlapping the clock/battery icons) after the first
+    // hide/show cycle. Toggling the icon ToolbarItems in and out of the
+    // collection instead - the same technique DeactivateToolItem already
+    // uses for its own visibility (ToolbarItem has no bindable IsVisible in
+    // this MAUI version) - avoids that renderer bug entirely, at the cost
+    // of leaving the title/back button always visible; only the tool icons
+    // and the page indicator hide/show with this toggle.
+    private void SetToolbarVisible(bool visible)
+    {
+        _isToolbarVisible = visible;
+        PageIndicatorLabel.IsVisible = visible;
+
+        if (visible)
         {
-            TryGoToPreviousPage();
+            AddToolbarItemIfMissing(ToolPanelToggleItem);
+            AddToolbarItemIfMissing(BookmarksItem);
+            if (_viewModel.IsDrawingToolActive)
+            {
+                AddToolbarItemIfMissing(DeactivateToolItem);
+            }
         }
         else
         {
-            TryGoToNextPage();
+            ToolbarItems.Remove(ToolPanelToggleItem);
+            ToolbarItems.Remove(BookmarksItem);
+            ToolbarItems.Remove(DeactivateToolItem);
+        }
+    }
+
+    private void AddToolbarItemIfMissing(ToolbarItem item)
+    {
+        if (!ToolbarItems.Contains(item))
+        {
+            ToolbarItems.Add(item);
         }
     }
 
@@ -587,6 +637,7 @@ public partial class SheetViewerPage : ContentPage
     private void OnEraserDrawingLineCompleted(object? sender, DrawingLineCompletedEventArgs e)
     {
         EraserRadiusIndicator.IsVisible = false;
+        ToolPanel.IsVisible = false;
     }
 
     private void OnEraserDrawingLineCancelled(object? sender, EventArgs e)
@@ -619,6 +670,77 @@ public partial class SheetViewerPage : ContentPage
         {
             _viewModel.PreviousPageCommand.Execute(null);
             ResetZoom();
+        }
+    }
+
+    private async void OnPageIndicatorTapped(object? sender, TappedEventArgs e)
+    {
+        var input = await DisplayPromptAsync(
+            "Go to Page",
+            $"Enter a page number (1-{_viewModel.PageCount}):",
+            initialValue: _viewModel.CurrentPageDisplay.ToString(),
+            keyboard: Keyboard.Numeric);
+
+        if (input is null)
+        {
+            return;
+        }
+
+        if (int.TryParse(input, out var pageNumber) && pageNumber >= 1 && pageNumber <= _viewModel.PageCount)
+        {
+            await _viewModel.GoToPageAsync(pageNumber - 1);
+            ResetZoom();
+        }
+    }
+
+    // Single entry point for bookmarks, per explicit request - no separate
+    // "+" toolbar icon. "Add Bookmark" is always the last option in the
+    // same action sheet as the existing bookmarks, so the one button both
+    // lists what's there and lets you add to it.
+    private async void OnBookmarksClicked(object? sender, EventArgs e)
+    {
+        const string addBookmarkOption = "Add Bookmark";
+
+        var ordered = _viewModel.Bookmarks.OrderBy(b => b.PageIndex).ToList();
+        var options = ordered.Select(b => $"Page {b.PageIndex + 1}").Append(addBookmarkOption).ToArray();
+
+        var choice = await DisplayActionSheetAsync("Bookmarks", "Cancel", null, options);
+
+        if (choice is null || choice == "Cancel")
+        {
+            return;
+        }
+
+        if (choice == addBookmarkOption)
+        {
+            await AddBookmarkAsync();
+            return;
+        }
+
+        var index = Array.IndexOf(options, choice);
+        if (index >= 0 && index < ordered.Count)
+        {
+            await _viewModel.GoToPageAsync(ordered[index].PageIndex);
+            ResetZoom();
+        }
+    }
+
+    private async Task AddBookmarkAsync()
+    {
+        var input = await DisplayPromptAsync(
+            "Add Bookmark",
+            $"Page number (1-{_viewModel.PageCount}):",
+            initialValue: _viewModel.CurrentPageDisplay.ToString(),
+            keyboard: Keyboard.Numeric);
+
+        if (input is null)
+        {
+            return;
+        }
+
+        if (int.TryParse(input, out var pageNumber) && pageNumber >= 1 && pageNumber <= _viewModel.PageCount)
+        {
+            await _viewModel.AddBookmarkAsync(pageNumber - 1);
         }
     }
 
@@ -663,12 +785,9 @@ public partial class SheetViewerPage : ContentPage
         SetTabAppearance(PencilTabIcon, _viewModel.ActiveTool == AnnotationTool.Pencil);
         SetTabAppearance(EraserTabIcon, _viewModel.ActiveTool == AnnotationTool.Eraser);
 
-        if (_viewModel.IsDrawingToolActive)
+        if (_viewModel.IsDrawingToolActive && _isToolbarVisible)
         {
-            if (!ToolbarItems.Contains(DeactivateToolItem))
-            {
-                ToolbarItems.Add(DeactivateToolItem);
-            }
+            AddToolbarItemIfMissing(DeactivateToolItem);
         }
         else
         {
@@ -689,16 +808,61 @@ public partial class SheetViewerPage : ContentPage
         {
             PencilDrawingView.LineColor = Color.FromArgb(_viewModel.PencilColorHex);
             UpdatePencilDrawingViewLineWidth();
-            PencilWidthPreview.Color = Color.FromArgb(_viewModel.PencilColorHex);
-            UpdatePencilWidthPreview();
+            UpdatePencilColorSwatchSelection();
+            PencilWidthPreview.InvalidateSurface();
         }
 
-        EraserDrawingView.IsVisible = _viewModel.ActiveTool == AnnotationTool.Eraser;
+        var eraserActive = _viewModel.ActiveTool == AnnotationTool.Eraser;
+        EraserDrawingView.IsVisible = eraserActive;
+        if (eraserActive)
+        {
+            UpdateEraserDrawingViewLineWidth();
+        }
+    }
+
+    private void OnEraserRadiusChanged(object? sender, ValueChangedEventArgs e)
+    {
+        UpdateEraserDrawingViewLineWidth();
+    }
+
+    // The swipe trajectory line is just EraserDrawingView's own rendered
+    // path (never persisted - see EraseAt), so its default LineWidth reads
+    // as a thick, fixed-size stroke unrelated to how big an area is
+    // actually being erased. Scaling it off EraserRadius (0.02-0.08) onto a
+    // small 2-8dp range keeps it visibly thin while still tracking the
+    // selected eraser size, rather than tying it to the same page-width
+    // pixel conversion Pencil uses - that would make the trajectory line
+    // itself as wide as the eraser's hit-test radius, which is meant to be
+    // a generous forgiving target, not a thin line.
+    private void UpdateEraserDrawingViewLineWidth()
+    {
+        EraserDrawingView.LineWidth = (float)(_viewModel.EraserRadius * 100);
     }
 
     private static void SetTabAppearance(FontImageSource icon, bool active)
     {
         icon.Color = active ? TabActiveColor : TabInactiveIconColor;
+    }
+
+    // Highlights the ring around the swatch matching the current pencil
+    // color and clears the rest - a small drop shadow on the selected ring
+    // gives it a slight "lift" off the panel, on top of the stroke ring.
+    private void UpdatePencilColorSwatchSelection()
+    {
+        SetColorRingSelected(ColorRingBlack, "#000000");
+        SetColorRingSelected(ColorRingRed, "#FF0000");
+        SetColorRingSelected(ColorRingBlue, "#0000FF");
+        SetColorRingSelected(ColorRingGreen, "#008000");
+        SetColorRingSelected(ColorRingOrange, "#FFA500");
+    }
+
+    private void SetColorRingSelected(Border ring, string colorHex)
+    {
+        var isSelected = string.Equals(_viewModel.PencilColorHex, colorHex, StringComparison.OrdinalIgnoreCase);
+        ring.Stroke = isSelected ? (Color)Application.Current!.Resources["Primary"] : Colors.Transparent;
+        ring.Shadow = isSelected
+            ? new Shadow { Brush = Colors.Black, Opacity = 0.3f, Radius = 6, Offset = new Point(0, 2) }
+            : null!;
     }
 
     private void OnPencilColorTapped(object? sender, TappedEventArgs e)
@@ -707,14 +871,15 @@ public partial class SheetViewerPage : ContentPage
         {
             _viewModel.PencilColorHex = colorHex;
             PencilDrawingView.LineColor = Color.FromArgb(colorHex);
-            PencilWidthPreview.Color = Color.FromArgb(colorHex);
+            UpdatePencilColorSwatchSelection();
+            PencilWidthPreview.InvalidateSurface();
         }
     }
 
     private void OnPencilWidthChanged(object? sender, ValueChangedEventArgs e)
     {
         UpdatePencilDrawingViewLineWidth();
-        UpdatePencilWidthPreview();
+        PencilWidthPreview.InvalidateSurface();
     }
 
     private void UpdatePencilDrawingViewLineWidth()
@@ -725,15 +890,40 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    // Maps the normalized stroke width (a fraction of page width, per the
-    // spec's normalization rationale) to a preview bar height - purely a
-    // visual scale for a 140x~48 swatch, unrelated to actual page pixels,
-    // so the user can see roughly how thick a stroke will look before
-    // drawing one. PencilStrokeWidth's slider range is 0.003-0.02, mapped
-    // to a 3-40 device-independent-pixel bar height.
-    private void UpdatePencilWidthPreview()
+    // Draws an S-curve instead of a straight bar - a stroke preview reads
+    // more like an actual pencil mark when it curves, and it's a better
+    // showcase of StrokeCap.Round at small widths than a straight line's
+    // flat ends. PencilStrokeWidth's slider range is 0.003-0.02, mapped to
+    // the same 3-40 device-independent-pixel stroke width the old bar's
+    // height used, so the preview stays comparable to before.
+    private void OnPencilWidthPreviewPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
     {
-        PencilWidthPreview.HeightRequest = Math.Clamp(_viewModel.PencilStrokeWidth * 2000, 3, 40);
+        var canvas = e.Surface.Canvas;
+        canvas.Clear(SKColors.Transparent);
+
+        var info = e.Info;
+        var strokeWidth = (float)Math.Clamp(_viewModel.PencilStrokeWidth * 2000, 3, 40);
+
+        using var path = new SKPath();
+        var margin = info.Width * 0.08f;
+        var midY = info.Height / 2f;
+        path.MoveTo(margin, midY);
+        path.CubicTo(
+            info.Width * 0.35f, midY - info.Height * 0.35f,
+            info.Width * 0.65f, midY + info.Height * 0.35f,
+            info.Width - margin, midY);
+
+        using var paint = new SKPaint
+        {
+            Color = SKColor.Parse(_viewModel.PencilColorHex),
+            StrokeWidth = strokeWidth,
+            Style = SKPaintStyle.Stroke,
+            StrokeCap = SKStrokeCap.Round,
+            StrokeJoin = SKStrokeJoin.Round,
+            IsAntialias = true
+        };
+
+        canvas.DrawPath(path, paint);
     }
 
     private async void OnPencilDrawingLineCompleted(object? sender, DrawingLineCompletedEventArgs e)
@@ -755,6 +945,7 @@ public partial class SheetViewerPage : ContentPage
 
         await _viewModel.AddStrokeAsync(sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, normalizedPoints);
         AnnotationCanvas.InvalidateSurface();
+        ToolPanel.IsVisible = false;
     }
 
     private async Task EnsureBravuraTypefaceLoadedAsync()
@@ -792,7 +983,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         var info = e.Info;
-        DrawGlyphFitted(canvas, icon.Codepoint, new SKRect(0, 0, info.Width, info.Height));
+        DrawGlyphFitted(canvas, icon.Codepoint, new SKRect(0, 0, info.Width, info.Height), icon.VisualScale);
     }
 
     private void OnAnnotationCanvasPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
@@ -822,7 +1013,7 @@ public partial class SheetViewerPage : ContentPage
                 (float)((annotation.X + annotation.Width) * info.Width),
                 (float)((annotation.Y + annotation.Height) * info.Height));
 
-            DrawGlyphFitted(canvas, icon.Codepoint, targetRect);
+            DrawGlyphFitted(canvas, icon.Codepoint, targetRect, icon.VisualScale);
         }
     }
 
@@ -874,7 +1065,7 @@ public partial class SheetViewerPage : ContentPage
     // targetRect, so it's cached once per codepoint instead of remeasured
     // every repaint; _glyphPaint is similarly a single reused instance
     // instead of a fresh allocation per glyph per frame.
-    private void DrawGlyphFitted(SKCanvas canvas, int codepoint, SKRect targetRect)
+    private void DrawGlyphFitted(SKCanvas canvas, int codepoint, SKRect targetRect, double visualScale = 1.0)
     {
         if (_bravuraTypeface is null || targetRect.Width <= 0 || targetRect.Height <= 0)
         {
@@ -895,7 +1086,7 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        var scale = Math.Min(targetRect.Width / measuredBounds.Width, targetRect.Height / measuredBounds.Height) * 0.9f;
+        var scale = Math.Min(targetRect.Width / measuredBounds.Width, targetRect.Height / measuredBounds.Height) * 0.9f * (float)visualScale;
         using var font = new SKFont(_bravuraTypeface, 100f * scale);
         font.MeasureText(text, out var fittedBounds);
 
