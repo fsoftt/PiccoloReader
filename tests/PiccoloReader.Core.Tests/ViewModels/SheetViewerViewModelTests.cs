@@ -13,6 +13,7 @@ public class SheetViewerViewModelTests : IDisposable
     private readonly LibraryService _libraryService;
     private readonly FakePdfPageRenderer _renderer = new();
     private readonly AnnotationService _annotationService;
+    private readonly BookmarkService _bookmarkService;
     private readonly SheetViewerViewModel _sut;
 
     public SheetViewerViewModelTests()
@@ -22,7 +23,8 @@ public class SheetViewerViewModelTests : IDisposable
         _database.InitializeAsync().GetAwaiter().GetResult();
         _libraryService = new LibraryService(_database, _storage);
         _annotationService = new AnnotationService(_database);
-        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService);
+        _bookmarkService = new BookmarkService(_database);
+        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService);
     }
 
     public void Dispose() => _storage.Dispose();
@@ -305,5 +307,66 @@ public class SheetViewerViewModelTests : IDisposable
 
         _sut.ActiveTool = AnnotationTool.MusicIcons;
         Assert.False(_sut.IsDrawingToolActive);
+    }
+
+    [Fact]
+    public async Task GoToPageAsync_JumpsToPageAndRendersIt()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.GoToPageAsync(3);
+
+        Assert.Equal(3, _sut.CurrentPageIndex);
+        Assert.Equal(new byte[] { 3 }, _sut.CurrentPageImageBytes);
+    }
+
+    [Fact]
+    public async Task GoToPageAsync_PersistsLastViewedPage()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.GoToPageAsync(3);
+
+        var reloaded = await _libraryService.GetSheetAsync(sheet.Id);
+        Assert.Equal(3, reloaded.LastViewedPageIndex);
+    }
+
+    [Fact]
+    public async Task GoToPageAsync_OutOfRange_DoesNothing()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.GoToPageAsync(10);
+
+        Assert.Equal(0, _sut.CurrentPageIndex);
+    }
+
+    [Fact]
+    public async Task AddBookmarkAsync_AddsToCollectionAndPersists()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.AddBookmarkAsync(2);
+
+        Assert.Single(_sut.Bookmarks);
+        Assert.Equal(2, _sut.Bookmarks[0].PageIndex);
+        var persisted = await _bookmarkService.GetBookmarksAsync(sheet.Id);
+        Assert.Single(persisted);
+    }
+
+    [Fact]
+    public async Task LoadAsync_LoadsExistingBookmarksForSheet()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _bookmarkService.AddBookmarkAsync(sheet.Id, 1);
+        await _bookmarkService.AddBookmarkAsync(sheet.Id, 4);
+
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.Equal(2, _sut.Bookmarks.Count);
     }
 }

@@ -14,18 +14,25 @@ public partial class SheetViewerViewModel : ObservableObject
     private readonly IAppStorageProvider _storageProvider;
     private readonly IPdfPageRenderer _pdfPageRenderer;
     private readonly AnnotationService _annotationService;
+    private readonly BookmarkService _bookmarkService;
 
     private Sheet? _sheet;
     private string _filePath = string.Empty;
     private int _targetWidthPx;
     private int _targetHeightPx;
 
-    public SheetViewerViewModel(LibraryService libraryService, IAppStorageProvider storageProvider, IPdfPageRenderer pdfPageRenderer, AnnotationService annotationService)
+    public SheetViewerViewModel(
+        LibraryService libraryService,
+        IAppStorageProvider storageProvider,
+        IPdfPageRenderer pdfPageRenderer,
+        AnnotationService annotationService,
+        BookmarkService bookmarkService)
     {
         _libraryService = libraryService;
         _storageProvider = storageProvider;
         _pdfPageRenderer = pdfPageRenderer;
         _annotationService = annotationService;
+        _bookmarkService = bookmarkService;
     }
 
     [ObservableProperty]
@@ -70,6 +77,8 @@ public partial class SheetViewerViewModel : ObservableObject
 
     public ObservableCollection<Annotation> CurrentPageAnnotations { get; } = new();
 
+    public ObservableCollection<Bookmark> Bookmarks { get; } = new();
+
     public int CurrentPageDisplay => CurrentPageIndex + 1;
 
     public string PageIndicatorText => $"Page {CurrentPageDisplay} of {PageCount}";
@@ -99,12 +108,41 @@ public partial class SheetViewerViewModel : ObservableObject
                 ? Math.Clamp(sheet.LastViewedPageIndex, 0, pageCount - 1)
                 : 0;
 
+            Bookmarks.Clear();
+            foreach (var bookmark in await _bookmarkService.GetBookmarksAsync(sheetId))
+            {
+                Bookmarks.Add(bookmark);
+            }
+
             await LoadCurrentPageAsync();
         }
         finally
         {
             IsLoading = false;
         }
+    }
+
+    public async Task GoToPageAsync(int pageIndex)
+    {
+        if (pageIndex < 0 || pageIndex >= PageCount || pageIndex == CurrentPageIndex)
+        {
+            return;
+        }
+
+        CurrentPageIndex = pageIndex;
+        await LoadCurrentPageAsync();
+        await PersistLastViewedPageAsync();
+    }
+
+    public async Task AddBookmarkAsync(int pageIndex)
+    {
+        if (_sheet is null)
+        {
+            return;
+        }
+
+        var bookmark = await _bookmarkService.AddBookmarkAsync(_sheet.Id, pageIndex);
+        Bookmarks.Add(bookmark);
     }
 
     private bool CanGoToNextPage() => CurrentPageIndex < PageCount - 1;

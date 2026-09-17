@@ -1,6 +1,6 @@
 namespace PiccoloReader.Core.Services;
 
-public record MusicIcon(string Key, string DisplayName, int Codepoint, double AspectRatio);
+public record MusicIcon(string Key, string DisplayName, int Codepoint, double AspectRatio, double VisualScale = 1.0);
 
 public record MusicIconCategory(string Name, IReadOnlyList<MusicIcon> Icons);
 
@@ -18,7 +18,12 @@ public static class MusicIconCatalog
         }),
         new("Articulations", new List<MusicIcon>
         {
-            new("articStaccatoAbove", "Staccato", 0xE4A2, 1.00),
+            // Staccato's glyph is a small dot with tight ink bounds, so fitting
+            // it to the same box as every other icon (DrawGlyphFitted scales
+            // each glyph's own ink to nearly fill its target rect) blows it up
+            // far larger than the dot is meant to read - VisualScale reins
+            // that back in without affecting how any other icon renders.
+            new("articStaccatoAbove", "Staccato", 0xE4A2, 1.00, 0.4),
             new("articAccentAbove", "Accent", 0xE4A0, 1.39),
             new("articTenutoAbove", "Tenuto", 0xE4A4, 7.06),
             new("articMarcatoAbove", "Marcato", 0xE4AC, 0.93),
