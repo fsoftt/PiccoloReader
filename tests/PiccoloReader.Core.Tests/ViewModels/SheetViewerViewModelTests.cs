@@ -354,8 +354,23 @@ public class SheetViewerViewModelTests : IDisposable
 
         Assert.Single(_sut.Bookmarks);
         Assert.Equal(2, _sut.Bookmarks[0].PageIndex);
+        Assert.Null(_sut.Bookmarks[0].Name);
         var persisted = await _bookmarkService.GetBookmarksAsync(sheet.Id);
         Assert.Single(persisted);
+    }
+
+    [Fact]
+    public async Task AddBookmarkAsync_WithName_AddsToCollectionAndPersists()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.AddBookmarkAsync(2, "Coda");
+
+        Assert.Single(_sut.Bookmarks);
+        Assert.Equal("Coda", _sut.Bookmarks[0].Name);
+        var persisted = await _bookmarkService.GetBookmarksAsync(sheet.Id);
+        Assert.Equal("Coda", persisted[0].Name);
     }
 
     [Fact]

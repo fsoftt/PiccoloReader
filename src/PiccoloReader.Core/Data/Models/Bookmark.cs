@@ -11,5 +11,7 @@ public class Bookmark
 
     public int PageIndex { get; set; }
 
+    public string? Name { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }
