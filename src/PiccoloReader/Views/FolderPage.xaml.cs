@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows.Input;
 using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Services;
@@ -11,6 +12,8 @@ public partial class FolderPage : ContentPage
 {
     private readonly FolderViewModel _viewModel;
     private readonly LibraryService _libraryService;
+    private readonly ToolbarItem _searchToolbarItem;
+    private readonly ToolbarItem _sortToolbarItem;
 
     public FolderPage(FolderViewModel viewModel, LibraryService libraryService)
     {
@@ -20,6 +23,20 @@ public partial class FolderPage : ContentPage
         BindingContext = _viewModel;
 
         SheetLongPressCommand = new Command<Sheet>(async sheet => await OnSheetLongPressedAsync(sheet));
+
+        _searchToolbarItem = new ToolbarItem
+        {
+            IconImageSource = new FontImageSource { Glyph = "", FontFamily = "MaterialOutlined", Size = 24, Color = Colors.White }
+        };
+        _searchToolbarItem.Clicked += OnSearchClicked;
+
+        _sortToolbarItem = new ToolbarItem
+        {
+            IconImageSource = new FontImageSource { Glyph = "", FontFamily = "MaterialOutlined", Size = 24, Color = Colors.White }
+        };
+        _sortToolbarItem.Clicked += OnSortClicked;
+
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
 
     public ICommand SheetLongPressCommand { get; }
@@ -38,6 +55,36 @@ public partial class FolderPage : ContentPage
     {
         base.OnAppearing();
         await _viewModel.LoadAsync();
+        UpdateToolbarItems();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(FolderViewModel.HasSheets))
+        {
+            UpdateToolbarItems();
+        }
+    }
+
+    private void UpdateToolbarItems()
+    {
+        if (_viewModel.HasSheets)
+        {
+            if (!ToolbarItems.Contains(_searchToolbarItem))
+            {
+                ToolbarItems.Add(_searchToolbarItem);
+            }
+
+            if (!ToolbarItems.Contains(_sortToolbarItem))
+            {
+                ToolbarItems.Add(_sortToolbarItem);
+            }
+        }
+        else
+        {
+            ToolbarItems.Remove(_searchToolbarItem);
+            ToolbarItems.Remove(_sortToolbarItem);
+        }
     }
 
     private async void OnImportPdfClicked(object? sender, EventArgs e)
@@ -61,6 +108,16 @@ public partial class FolderPage : ContentPage
             }
 
             await _viewModel.ImportPdfCommand.ExecuteAsync(result.FullPath);
+        }
+    }
+
+    private void OnSearchClicked(object? sender, EventArgs e)
+    {
+        _viewModel.IsSearchVisible = !_viewModel.IsSearchVisible;
+
+        if (!_viewModel.IsSearchVisible)
+        {
+            _viewModel.SearchText = string.Empty;
         }
     }
 

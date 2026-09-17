@@ -68,6 +68,26 @@ public partial class LibraryPage : ContentPage
         await _viewModel.CreateFolderCommand.ExecuteAsync(null);
     }
 
+    private void OnFolderSearchClicked(object? sender, TappedEventArgs e)
+    {
+        _viewModel.IsFolderSearchVisible = !_viewModel.IsFolderSearchVisible;
+
+        if (!_viewModel.IsFolderSearchVisible)
+        {
+            _viewModel.FolderSearchText = string.Empty;
+        }
+    }
+
+    private void OnSheetSearchClicked(object? sender, TappedEventArgs e)
+    {
+        _viewModel.IsSheetSearchVisible = !_viewModel.IsSheetSearchVisible;
+
+        if (!_viewModel.IsSheetSearchVisible)
+        {
+            _viewModel.SheetSearchText = string.Empty;
+        }
+    }
+
     private async void OnFolderSortClicked(object? sender, TappedEventArgs e)
     {
         var choice = await DisplayActionSheetAsync(

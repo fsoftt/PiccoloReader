@@ -11,6 +11,8 @@ public partial class FolderViewModel : ObservableObject
     private readonly LibraryService _libraryService;
     private readonly PdfImportService _importService;
 
+    private List<Sheet> _allSheets = new();
+
     public FolderViewModel(LibraryService libraryService, PdfImportService importService)
     {
         _libraryService = libraryService;
@@ -21,6 +23,15 @@ public partial class FolderViewModel : ObservableObject
     private int _folderId;
 
     [ObservableProperty]
+    private bool _hasSheets;
+
+    [ObservableProperty]
+    private string _searchText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isSearchVisible;
+
+    [ObservableProperty]
     private SortField _sortField = SortField.Name;
 
     [ObservableProperty]
@@ -28,13 +39,13 @@ public partial class FolderViewModel : ObservableObject
 
     public ObservableCollection<Sheet> Sheets { get; } = new();
 
+    partial void OnSearchTextChanged(string value) => RefreshSheets();
+
     public async Task LoadAsync()
     {
-        Sheets.Clear();
-        foreach (var sheet in await _libraryService.GetSheetsAsync(FolderId))
-        {
-            Sheets.Add(sheet);
-        }
+        _allSheets = (await _libraryService.GetSheetsAsync(FolderId)).ToList();
+        HasSheets = _allSheets.Count > 0;
+        RefreshSheets();
     }
 
     [RelayCommand]
@@ -62,15 +73,23 @@ public partial class FolderViewModel : ObservableObject
     {
         SortField = field;
         SortDirection = direction;
+        RefreshSheets();
+    }
 
-        var sorted = field switch
+    private void RefreshSheets()
+    {
+        IEnumerable<Sheet> filtered = string.IsNullOrWhiteSpace(SearchText)
+            ? _allSheets
+            : _allSheets.Where(s => s.Title.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+
+        var sorted = SortField switch
         {
-            SortField.DateAdded => direction == SortDirection.Ascending
-                ? Sheets.OrderBy(s => s.DateAdded).ToList()
-                : Sheets.OrderByDescending(s => s.DateAdded).ToList(),
-            _ => direction == SortDirection.Ascending
-                ? Sheets.OrderBy(s => s.Title).ToList()
-                : Sheets.OrderByDescending(s => s.Title).ToList()
+            SortField.DateAdded => SortDirection == SortDirection.Ascending
+                ? filtered.OrderBy(s => s.DateAdded)
+                : filtered.OrderByDescending(s => s.DateAdded),
+            _ => SortDirection == SortDirection.Ascending
+                ? filtered.OrderBy(s => s.Title)
+                : filtered.OrderByDescending(s => s.Title)
         };
 
         Sheets.Clear();
