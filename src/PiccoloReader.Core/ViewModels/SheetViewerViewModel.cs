@@ -63,6 +63,9 @@ public partial class SheetViewerViewModel : ObservableObject
     [ObservableProperty]
     private double _pencilStrokeWidth = 0.008;
 
+    [ObservableProperty]
+    private double _eraserRadius = 0.05;
+
     public bool IsDrawingToolActive => ActiveTool != AnnotationTool.MusicIcons;
 
     public ObservableCollection<Annotation> CurrentPageAnnotations { get; } = new();
@@ -190,6 +193,16 @@ public partial class SheetViewerViewModel : ObservableObject
         await _annotationService.DeleteAnnotationAsync(SelectedAnnotation);
         CurrentPageAnnotations.Remove(SelectedAnnotation);
         SelectedAnnotation = null;
+    }
+
+    public async Task EraseAnnotationAsync(Annotation annotation)
+    {
+        await _annotationService.DeleteAnnotationAsync(annotation);
+        CurrentPageAnnotations.Remove(annotation);
+        if (SelectedAnnotation == annotation)
+        {
+            SelectedAnnotation = null;
+        }
     }
 
     private async Task LoadCurrentPageAsync()

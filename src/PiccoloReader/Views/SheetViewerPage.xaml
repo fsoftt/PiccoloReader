@@ -83,6 +83,15 @@
                 BackgroundColor="Transparent"
                 ShouldClearOnFinish="True"
                 DrawingLineCompleted="OnPencilDrawingLineCompleted" />
+
+            <Ellipse
+                x:Name="EraserRadiusIndicator"
+                IsVisible="False"
+                InputTransparent="True"
+                Fill="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                Opacity="0.3"
+                HorizontalOptions="Start"
+                VerticalOptions="Start" />
         </Grid>
 
         <Label
@@ -258,6 +267,8 @@
 
                         <VerticalStackLayout x:Name="EraserSection" IsVisible="False" Spacing="8">
                             <Label Text="Eraser" FontAttributes="Bold" FontSize="16" />
+                            <Label Text="Size" FontSize="14" />
+                            <Slider x:Name="EraserRadiusSlider" Minimum="0.02" Maximum="0.08" Value="{Binding EraserRadius}" />
                         </VerticalStackLayout>
 
                     </Grid>
