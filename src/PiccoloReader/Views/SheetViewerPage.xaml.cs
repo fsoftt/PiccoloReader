@@ -15,6 +15,7 @@ public partial class SheetViewerPage : ContentPage
     private const double PageTurnDragThreshold = 60;
     private const double SelectionHandlePadding = 20;
     private const double TrashHitTestRadius = 60;
+    private const double SideTapZoneFraction = 0.3;
 
     private readonly SheetViewerViewModel _viewModel;
 
@@ -121,22 +122,14 @@ public partial class SheetViewerPage : ContentPage
     // Plan 2 - avoids the cross-element conflict entirely. All tap
     // handling (tool panel dismissal, icon hit-testing/selection, and the
     // fallback tap-to-turn-page) stays in this one handler.
-    // A tap now drives the toolbar's show/hide toggle instead of turning
-    // the page - page turning stays available via swipe (see
-    // PageTurnDragThreshold in OnPanUpdated), matching how most PDF/ebook
-    // readers separate "reveal chrome" (tap) from "navigate" (swipe). The
-    // very first tap while the toolbar is hidden only reveals it and does
-    // nothing else - it doesn't also fall through to icon
-    // selection/deselection - so a user reaching for the toolbar never
-    // accidentally selects whatever happens to be under their thumb.
+    // Left/right 30% zones turn pages (the original behavior); the middle
+    // 40% toggles the toolbar. Matches standard reader apps: tap the edges
+    // to navigate, tap the middle to reveal/hide chrome. Side taps are
+    // ignored while zoomed in (ZoomedInThreshold) since the user is far
+    // more likely to be panning around than trying to turn the page; the
+    // center toggle isn't gated by zoom - it should always work.
     private void OnPageContainerTapped(object? sender, TappedEventArgs e)
     {
-        if (!_isToolbarVisible)
-        {
-            SetToolbarVisible(true);
-            return;
-        }
-
         if (ToolPanel.IsVisible)
         {
             ToolPanel.IsVisible = false;
@@ -170,46 +163,60 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        // No tool is active here - while Pencil/Eraser is active, the
-        // relevant DrawingView covers PageContainer and captures the touch
-        // stream itself (see UpdateToolSections), so this handler never
-        // runs in that state. That's what satisfies "hide again only when
-        // no tool is selected" - there's no extra check needed for it.
-        SetToolbarVisible(false);
-    }
-
-    // Toggling Shell.SetNavBarIsVisible was tried first and rejected -
-    // confirmed on-device that Android doesn't re-run window-inset
-    // dispatch when the nav bar is dynamically re-shown, so the whole bar
-    // rendered up under the status bar every time (title, back button and
-    // icons all overlapping the clock/battery icons) after the first
-    // hide/show cycle. Toggling the icon ToolbarItems in and out of the
-    // collection instead - the same technique DeactivateToolItem already
-    // uses for its own visibility (ToolbarItem has no bindable IsVisible in
-    // this MAUI version) - avoids that renderer bug entirely, at the cost
-    // of leaving the title/back button always visible; only the tool icons
-    // and the page indicator hide/show with this toggle.
-    private void SetToolbarVisible(bool visible)
-    {
-        _isToolbarVisible = visible;
-        PageIndicatorLabel.IsVisible = visible;
-
-        if (visible)
+        if (normalizedX < SideTapZoneFraction)
         {
-            AddToolbarItemIfMissing(ToolPanelToggleItem);
-            AddToolbarItemIfMissing(BookmarksItem);
-            if (_viewModel.IsDrawingToolActive)
+            if (_currentScale <= ZoomedInThreshold)
             {
-                AddToolbarItemIfMissing(DeactivateToolItem);
+                TryGoToPreviousPage();
+            }
+        }
+        else if (normalizedX > 1 - SideTapZoneFraction)
+        {
+            if (_currentScale <= ZoomedInThreshold)
+            {
+                TryGoToNextPage();
             }
         }
         else
         {
-            ToolbarItems.Remove(ToolPanelToggleItem);
-            ToolbarItems.Remove(BookmarksItem);
-            ToolbarItems.Remove(DeactivateToolItem);
+            // No tool is active here - while Pencil/Eraser is active, the
+            // relevant DrawingView covers PageContainer and captures the
+            // touch stream itself (see UpdateToolSections), so this handler
+            // never runs in that state. That's what satisfies "hide again
+            // only when no tool is selected" - no extra check needed here.
+            SetToolbarVisible(!_isToolbarVisible);
         }
     }
+
+    // Shell.SetNavBarIsVisible is the whole nav bar (title, back button and
+    // ToolbarItems together) - there's no separate "toolbar" element.
+    // Confirmed on-device (emulator) that Android doesn't automatically
+    // redo window-inset layout when the bar is dynamically re-shown after
+    // being hidden, leaving it rendered up under the status bar; a manual
+    // DecorView.RequestApplyInsets() call after showing it forces Android
+    // to redo that layout pass, which fixes it. PageIndicatorLabel follows
+    // the same visibility per its own spec.
+    private void SetToolbarVisible(bool visible)
+    {
+        _isToolbarVisible = visible;
+        PageIndicatorLabel.IsVisible = visible;
+        Shell.SetNavBarIsVisible(this, visible);
+
+        if (visible)
+        {
+#if ANDROID
+            RequestAndroidWindowInsetsRefresh();
+#endif
+        }
+    }
+
+#if ANDROID
+    private static void RequestAndroidWindowInsetsRefresh()
+    {
+        var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+        activity?.Window?.DecorView?.RequestApplyInsets();
+    }
+#endif
 
     private void AddToolbarItemIfMissing(ToolbarItem item)
     {
@@ -626,6 +633,10 @@ public partial class SheetViewerPage : ContentPage
     // hit-testing and deleting live via EraseAt at every point.
     private void OnEraserDrawingLineStarted(object? sender, DrawingLineStartedEventArgs e)
     {
+        // Closes on the initial touch-down, not when the finger lifts, so
+        // the panel gets out of the way as soon as the user starts erasing
+        // instead of staying open over the page for the whole drag.
+        ToolPanel.IsVisible = false;
         EraseAtDrawingViewPoint(e.Point);
     }
 
@@ -637,7 +648,6 @@ public partial class SheetViewerPage : ContentPage
     private void OnEraserDrawingLineCompleted(object? sender, DrawingLineCompletedEventArgs e)
     {
         EraserRadiusIndicator.IsVisible = false;
-        ToolPanel.IsVisible = false;
     }
 
     private void OnEraserDrawingLineCancelled(object? sender, EventArgs e)
@@ -702,7 +712,7 @@ public partial class SheetViewerPage : ContentPage
         const string addBookmarkOption = "Add Bookmark";
 
         var ordered = _viewModel.Bookmarks.OrderBy(b => b.PageIndex).ToList();
-        var options = ordered.Select(b => $"Page {b.PageIndex + 1}").Append(addBookmarkOption).ToArray();
+        var options = ordered.Select(BookmarkOptionLabel).Append(addBookmarkOption).ToArray();
 
         var choice = await DisplayActionSheetAsync("Bookmarks", "Cancel", null, options);
 
@@ -713,7 +723,7 @@ public partial class SheetViewerPage : ContentPage
 
         if (choice == addBookmarkOption)
         {
-            await AddBookmarkAsync();
+            ShowAddBookmarkOverlay();
             return;
         }
 
@@ -725,22 +735,35 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    private async Task AddBookmarkAsync()
+    private static string BookmarkOptionLabel(Bookmark bookmark) =>
+        string.IsNullOrWhiteSpace(bookmark.Name)
+            ? $"Page {bookmark.PageIndex + 1}"
+            : $"{bookmark.Name} (Page {bookmark.PageIndex + 1})";
+
+    private void ShowAddBookmarkOverlay()
     {
-        var input = await DisplayPromptAsync(
-            "Add Bookmark",
-            $"Page number (1-{_viewModel.PageCount}):",
-            initialValue: _viewModel.CurrentPageDisplay.ToString(),
-            keyboard: Keyboard.Numeric);
+        AddBookmarkPageEntry.Text = _viewModel.CurrentPageDisplay.ToString();
+        AddBookmarkNameEntry.Text = string.Empty;
+        AddBookmarkOverlay.IsVisible = true;
+    }
 
-        if (input is null)
-        {
-            return;
-        }
+    private void OnAddBookmarkNameClearClicked(object? sender, TappedEventArgs e)
+    {
+        AddBookmarkNameEntry.Text = string.Empty;
+    }
 
-        if (int.TryParse(input, out var pageNumber) && pageNumber >= 1 && pageNumber <= _viewModel.PageCount)
+    private void OnAddBookmarkCancelClicked(object? sender, EventArgs e)
+    {
+        AddBookmarkOverlay.IsVisible = false;
+    }
+
+    private async void OnAddBookmarkConfirmClicked(object? sender, EventArgs e)
+    {
+        if (int.TryParse(AddBookmarkPageEntry.Text, out var pageNumber) && pageNumber >= 1 && pageNumber <= _viewModel.PageCount)
         {
-            await _viewModel.AddBookmarkAsync(pageNumber - 1);
+            var name = string.IsNullOrWhiteSpace(AddBookmarkNameEntry.Text) ? null : AddBookmarkNameEntry.Text.Trim();
+            await _viewModel.AddBookmarkAsync(pageNumber - 1, name);
+            AddBookmarkOverlay.IsVisible = false;
         }
     }
 
@@ -785,7 +808,7 @@ public partial class SheetViewerPage : ContentPage
         SetTabAppearance(PencilTabIcon, _viewModel.ActiveTool == AnnotationTool.Pencil);
         SetTabAppearance(EraserTabIcon, _viewModel.ActiveTool == AnnotationTool.Eraser);
 
-        if (_viewModel.IsDrawingToolActive && _isToolbarVisible)
+        if (_viewModel.IsDrawingToolActive)
         {
             AddToolbarItemIfMissing(DeactivateToolItem);
         }
@@ -817,12 +840,55 @@ public partial class SheetViewerPage : ContentPage
         if (eraserActive)
         {
             UpdateEraserDrawingViewLineWidth();
+            EraserSizePreview.InvalidateSurface();
         }
     }
 
     private void OnEraserRadiusChanged(object? sender, ValueChangedEventArgs e)
     {
         UpdateEraserDrawingViewLineWidth();
+        EraserSizePreview.InvalidateSurface();
+    }
+
+    // Mirrors the pencil width preview - a visual swatch of roughly how
+    // big an area the eraser will cover before you touch the page, using
+    // the same translucent circle style as EraserRadiusIndicator (the
+    // live on-page indicator shown while erasing) so the two read as the
+    // same affordance. EraserRadius's slider range (0.02-0.08) maps to a
+    // 10-40dp on-screen radius, comfortably inside the 80dp-tall canvas.
+    private void OnEraserSizePreviewPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
+    {
+        var canvas = e.Surface.Canvas;
+        canvas.Clear(SKColors.Transparent);
+
+        var info = e.Info;
+        var radius = (float)Math.Clamp(_viewModel.EraserRadius * 500, 10, 40);
+        var cx = info.Width / 2f;
+        var cy = info.Height / 2f;
+        var color = CurrentPrimarySkColor();
+
+        using var fillPaint = new SKPaint
+        {
+            Color = color.WithAlpha(80),
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true
+        };
+        canvas.DrawCircle(cx, cy, radius, fillPaint);
+
+        using var strokePaint = new SKPaint
+        {
+            Color = color,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 2,
+            IsAntialias = true
+        };
+        canvas.DrawCircle(cx, cy, radius, strokePaint);
+    }
+
+    private static SKColor CurrentPrimarySkColor()
+    {
+        var color = TabActiveColor;
+        return new SKColor((byte)(color.Red * 255), (byte)(color.Green * 255), (byte)(color.Blue * 255));
     }
 
     // The swipe trajectory line is just EraserDrawingView's own rendered
@@ -926,6 +992,14 @@ public partial class SheetViewerPage : ContentPage
         canvas.DrawPath(path, paint);
     }
 
+    // Closes on the initial touch-down, not when the finger lifts, so the
+    // panel gets out of the way as soon as the user starts drawing instead
+    // of staying open over the page for the whole stroke.
+    private void OnPencilDrawingLineStarted(object? sender, DrawingLineStartedEventArgs e)
+    {
+        ToolPanel.IsVisible = false;
+    }
+
     private async void OnPencilDrawingLineCompleted(object? sender, DrawingLineCompletedEventArgs e)
     {
         if (PageContainer.Width <= 0 || PageContainer.Height <= 0 || !int.TryParse(SheetId, out var sheetId))
@@ -945,7 +1019,6 @@ public partial class SheetViewerPage : ContentPage
 
         await _viewModel.AddStrokeAsync(sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, normalizedPoints);
         AnnotationCanvas.InvalidateSurface();
-        ToolPanel.IsVisible = false;
     }
 
     private async Task EnsureBravuraTypefaceLoadedAsync()

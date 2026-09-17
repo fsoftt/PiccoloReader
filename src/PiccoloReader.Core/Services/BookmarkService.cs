@@ -18,12 +18,13 @@ public class BookmarkService
             .OrderBy(b => b.PageIndex)
             .ToListAsync();
 
-    public async Task<Bookmark> AddBookmarkAsync(int sheetId, int pageIndex)
+    public async Task<Bookmark> AddBookmarkAsync(int sheetId, int pageIndex, string? name = null)
     {
         var bookmark = new Bookmark
         {
             SheetId = sheetId,
             PageIndex = pageIndex,
+            Name = name,
             CreatedAt = DateTime.UtcNow
         };
 
