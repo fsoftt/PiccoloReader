@@ -4,8 +4,13 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    xmlns:converters="clr-namespace:PiccoloReader.Converters"
     x:Name="ThisPage"
     Title="Library">
+
+    <ContentPage.Resources>
+        <converters:StringNotEmptyConverter x:Key="StringNotEmpty" />
+    </ContentPage.Resources>
 
     <Shell.TitleView>
         <Label
@@ -38,7 +43,12 @@
                 <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,4">
                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
                         <Label Grid.Column="0" Text="Folders" FontAttributes="Bold" VerticalOptions="Center" />
-                        <Border Grid.Column="1" Padding="6" StrokeThickness="0" BackgroundColor="Transparent">
+                        <Border
+                            Grid.Column="1"
+                            Padding="6"
+                            StrokeThickness="0"
+                            BackgroundColor="Transparent"
+                            IsVisible="{Binding HasMultipleFolders}">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnFolderSearchClicked" />
                             </Border.GestureRecognizers>
@@ -52,7 +62,12 @@
                                 </Image.Source>
                             </Image>
                         </Border>
-                        <Border Grid.Column="2" Padding="6" StrokeThickness="0" BackgroundColor="Transparent">
+                        <Border
+                            Grid.Column="2"
+                            Padding="6"
+                            StrokeThickness="0"
+                            BackgroundColor="Transparent"
+                            IsVisible="{Binding HasMultipleFolders}">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnFolderSortClicked" />
                             </Border.GestureRecognizers>
@@ -67,12 +82,35 @@
                             </Image>
                         </Border>
                     </Grid>
-                    <Entry
+                    <Grid
                         Grid.Row="1"
-                        Placeholder="Search folders"
-                        Text="{Binding FolderSearchText}"
-                        IsVisible="{Binding IsFolderSearchVisible}"
-                        Margin="0,8,0,0" />
+                        ColumnDefinitions="*,Auto"
+                        Margin="0,8,0,0"
+                        IsVisible="{Binding IsFolderSearchVisible}">
+                        <Entry
+                            Grid.Column="0"
+                            Placeholder="Search folders"
+                            Text="{Binding FolderSearchText}" />
+                        <Border
+                            Grid.Column="1"
+                            Padding="6"
+                            StrokeThickness="0"
+                            BackgroundColor="Transparent"
+                            IsVisible="{Binding FolderSearchText, Converter={StaticResource StringNotEmpty}}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnFolderSearchClearClicked" />
+                            </Border.GestureRecognizers>
+                            <Image>
+                                <Image.Source>
+                                    <FontImageSource
+                                        Glyph="&#xE5CD;"
+                                        FontFamily="MaterialOutlined"
+                                        Size="18"
+                                        Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                        </Border>
+                    </Grid>
                 </Grid>
             </CollectionView.Header>
             <CollectionView.ItemTemplate>
@@ -110,7 +148,12 @@
                 <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,4">
                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
                         <Label Grid.Column="0" Text="Sheets" FontAttributes="Bold" VerticalOptions="Center" />
-                        <Border Grid.Column="1" Padding="6" StrokeThickness="0" BackgroundColor="Transparent">
+                        <Border
+                            Grid.Column="1"
+                            Padding="6"
+                            StrokeThickness="0"
+                            BackgroundColor="Transparent"
+                            IsVisible="{Binding HasMultipleRootSheets}">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnSheetSearchClicked" />
                             </Border.GestureRecognizers>
@@ -124,7 +167,12 @@
                                 </Image.Source>
                             </Image>
                         </Border>
-                        <Border Grid.Column="2" Padding="6" StrokeThickness="0" BackgroundColor="Transparent">
+                        <Border
+                            Grid.Column="2"
+                            Padding="6"
+                            StrokeThickness="0"
+                            BackgroundColor="Transparent"
+                            IsVisible="{Binding HasMultipleRootSheets}">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnSheetSortClicked" />
                             </Border.GestureRecognizers>
@@ -139,12 +187,35 @@
                             </Image>
                         </Border>
                     </Grid>
-                    <Entry
+                    <Grid
                         Grid.Row="1"
-                        Placeholder="Search sheets"
-                        Text="{Binding SheetSearchText}"
-                        IsVisible="{Binding IsSheetSearchVisible}"
-                        Margin="0,8,0,0" />
+                        ColumnDefinitions="*,Auto"
+                        Margin="0,8,0,0"
+                        IsVisible="{Binding IsSheetSearchVisible}">
+                        <Entry
+                            Grid.Column="0"
+                            Placeholder="Search sheets"
+                            Text="{Binding SheetSearchText}" />
+                        <Border
+                            Grid.Column="1"
+                            Padding="6"
+                            StrokeThickness="0"
+                            BackgroundColor="Transparent"
+                            IsVisible="{Binding SheetSearchText, Converter={StaticResource StringNotEmpty}}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnSheetSearchClearClicked" />
+                            </Border.GestureRecognizers>
+                            <Image>
+                                <Image.Source>
+                                    <FontImageSource
+                                        Glyph="&#xE5CD;"
+                                        FontFamily="MaterialOutlined"
+                                        Size="18"
+                                        Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                        </Border>
+                    </Grid>
                 </Grid>
             </CollectionView.Header>
             <CollectionView.ItemTemplate>

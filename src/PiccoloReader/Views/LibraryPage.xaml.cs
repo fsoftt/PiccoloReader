@@ -88,6 +88,16 @@ public partial class LibraryPage : ContentPage
         }
     }
 
+    private void OnFolderSearchClearClicked(object? sender, TappedEventArgs e)
+    {
+        _viewModel.FolderSearchText = string.Empty;
+    }
+
+    private void OnSheetSearchClearClicked(object? sender, TappedEventArgs e)
+    {
+        _viewModel.SheetSearchText = string.Empty;
+    }
+
     private async void OnFolderSortClicked(object? sender, TappedEventArgs e)
     {
         var choice = await DisplayActionSheetAsync(

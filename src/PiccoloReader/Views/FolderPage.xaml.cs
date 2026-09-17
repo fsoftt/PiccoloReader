@@ -60,7 +60,7 @@ public partial class FolderPage : ContentPage
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(FolderViewModel.HasSheets))
+        if (e.PropertyName == nameof(FolderViewModel.HasMultipleSheets))
         {
             UpdateToolbarItems();
         }
@@ -68,7 +68,7 @@ public partial class FolderPage : ContentPage
 
     private void UpdateToolbarItems()
     {
-        if (_viewModel.HasSheets)
+        if (_viewModel.HasMultipleSheets)
         {
             if (!ToolbarItems.Contains(_searchToolbarItem))
             {
@@ -119,6 +119,11 @@ public partial class FolderPage : ContentPage
         {
             _viewModel.SearchText = string.Empty;
         }
+    }
+
+    private void OnSearchClearClicked(object? sender, TappedEventArgs e)
+    {
+        _viewModel.SearchText = string.Empty;
     }
 
     private async void OnSortClicked(object? sender, EventArgs e)

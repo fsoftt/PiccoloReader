@@ -49,6 +49,18 @@ public class LibraryViewModelTests : IDisposable
         Assert.Equal("Big Band", _sut.Folders[0].Name);
         Assert.Equal(string.Empty, _sut.NewFolderName);
         Assert.True(_sut.HasFolders);
+        Assert.False(_sut.HasMultipleFolders);
+    }
+
+    [Fact]
+    public async Task CreateFolderCommand_TwoFolders_HasMultipleFoldersTrue()
+    {
+        _sut.NewFolderName = "Big Band";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+        _sut.NewFolderName = "Orchestra";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+
+        Assert.True(_sut.HasMultipleFolders);
     }
 
     [Fact]
@@ -69,6 +81,16 @@ public class LibraryViewModelTests : IDisposable
 
         Assert.Single(_sut.RootSheets);
         Assert.True(_sut.HasRootSheets);
+        Assert.False(_sut.HasMultipleRootSheets);
+    }
+
+    [Fact]
+    public async Task ImportPdfCommand_TwoSheets_HasMultipleRootSheetsTrue()
+    {
+        await ImportSheetAsync("A-Piece");
+        await ImportSheetAsync("Z-Piece");
+
+        Assert.True(_sut.HasMultipleRootSheets);
     }
 
     [Fact]
@@ -153,6 +175,25 @@ public class LibraryViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteFolderCommand_DownToOneFolder_ClosesFolderSearch()
+    {
+        _sut.NewFolderName = "Big Band";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+        _sut.NewFolderName = "Orchestra";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+        _sut.IsFolderSearchVisible = true;
+        _sut.FolderSearchText = "big";
+        var toDelete = _sut.Folders[0];
+
+        await _sut.DeleteFolderCommand.ExecuteAsync(toDelete);
+
+        Assert.False(_sut.HasMultipleFolders);
+        Assert.False(_sut.IsFolderSearchVisible);
+        Assert.Equal(string.Empty, _sut.FolderSearchText);
+        Assert.Single(_sut.Folders);
+    }
+
+    [Fact]
     public async Task FolderSearchText_NoMatches_KeepsHasFoldersTrue()
     {
         _sut.NewFolderName = "Big Band";
@@ -162,6 +203,20 @@ public class LibraryViewModelTests : IDisposable
 
         Assert.Empty(_sut.Folders);
         Assert.True(_sut.HasFolders);
+    }
+
+    [Fact]
+    public async Task FolderSearchText_NoMatchesWithTwoFolders_KeepsHasMultipleFoldersTrue()
+    {
+        _sut.NewFolderName = "Big Band";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+        _sut.NewFolderName = "Orchestra";
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+
+        _sut.FolderSearchText = "nonexistent";
+
+        Assert.Empty(_sut.Folders);
+        Assert.True(_sut.HasMultipleFolders);
     }
 
     [Fact]
@@ -185,6 +240,35 @@ public class LibraryViewModelTests : IDisposable
 
         Assert.Empty(_sut.RootSheets);
         Assert.True(_sut.HasRootSheets);
+    }
+
+    [Fact]
+    public async Task SheetSearchText_NoMatchesWithTwoSheets_KeepsHasMultipleRootSheetsTrue()
+    {
+        await ImportSheetAsync("Nocturne");
+        await ImportSheetAsync("Prelude");
+
+        _sut.SheetSearchText = "nonexistent";
+
+        Assert.Empty(_sut.RootSheets);
+        Assert.True(_sut.HasMultipleRootSheets);
+    }
+
+    [Fact]
+    public async Task DeleteSheetCommand_DownToOneSheet_ClosesSheetSearch()
+    {
+        await ImportSheetAsync("Nocturne");
+        await ImportSheetAsync("Prelude");
+        _sut.IsSheetSearchVisible = true;
+        _sut.SheetSearchText = "noct";
+        var toDelete = _sut.RootSheets[0];
+
+        await _sut.DeleteSheetCommand.ExecuteAsync(toDelete);
+
+        Assert.False(_sut.HasMultipleRootSheets);
+        Assert.False(_sut.IsSheetSearchVisible);
+        Assert.Equal(string.Empty, _sut.SheetSearchText);
+        Assert.Single(_sut.RootSheets);
     }
 
     [Fact]
