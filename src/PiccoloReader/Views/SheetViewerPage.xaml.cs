@@ -66,6 +66,10 @@ public partial class SheetViewerPage : ContentPage
         // managed by adding/removing it from ToolbarItems instead - starts
         // removed since ActiveTool defaults to MusicIcons.
         ToolbarItems.Remove(DeactivateToolItem);
+
+#if ANDROID
+        AttachAndroidPageContainerTouchListener();
+#endif
     }
 
     public string SheetId { get; set; } = string.Empty;
@@ -140,9 +144,17 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        var normalizedX = position.Value.X / PageContainer.Width;
-        var normalizedY = position.Value.Y / PageContainer.Height;
+        HandleContainerTap(position.Value.X / PageContainer.Width, position.Value.Y / PageContainer.Height);
+    }
 
+    // Shared by OnPageContainerTapped (iOS) and the Android touch
+    // listener's tap path - see ApplyPinchTranslation for why the
+    // platforms split here. ToolPanel-dismissal is handled by each
+    // caller before this, same as the original single handler did, since
+    // the Android listener needs to skip its own hit-slop/tap-vs-pan
+    // classification in that case too.
+    private void HandleContainerTap(double normalizedX, double normalizedY)
+    {
         var hit = _viewModel.CurrentPageAnnotations.FirstOrDefault(a =>
             normalizedX >= a.X && normalizedX <= a.X + a.Width &&
             normalizedY >= a.Y && normalizedY <= a.Y + a.Height);
@@ -510,27 +522,36 @@ public partial class SheetViewerPage : ContentPage
             var previousScale = _currentScale;
             _currentScale += e.Scale - 1;
             _currentScale = Math.Max(1, _currentScale);
-
-            var previousTranslationX = PageContainer.TranslationX;
-            var previousTranslationY = PageContainer.TranslationY;
-
-            var localX = e.ScaleOrigin.X * PageContainer.Width;
-            var localY = e.ScaleOrigin.Y * PageContainer.Height;
-            var scaleDelta = _currentScale - previousScale;
-
-            var targetX = previousTranslationX - localX * scaleDelta;
-            var targetY = previousTranslationY - localY * scaleDelta;
-
-            PageContainer.TranslationX = Math.Clamp(targetX, -PageContainer.Width * (_currentScale - 1), 0);
-            PageContainer.TranslationY = Math.Clamp(targetY, -PageContainer.Height * (_currentScale - 1), 0);
-            PageContainer.Scale = _currentScale;
-            UpdateResizeHandleScale();
+            ApplyPinchTranslation(previousScale, e.ScaleOrigin.X, e.ScaleOrigin.Y);
         }
         else if (e.Status is GestureStatus.Completed or GestureStatus.Canceled)
         {
             _xOffset = PageContainer.TranslationX;
             _yOffset = PageContainer.TranslationY;
         }
+    }
+
+    // Shared by OnPinchUpdated (iOS, via the MAUI PinchGestureRecognizer -
+    // see AttachAndroidPageContainerTouchListener for why Android doesn't
+    // use that path) and the Android touch listener - both have already
+    // updated _currentScale by this point using their own platform's scale
+    // semantics; this just applies the resulting translation.
+    private void ApplyPinchTranslation(double previousScale, double originXFraction, double originYFraction)
+    {
+        var previousTranslationX = PageContainer.TranslationX;
+        var previousTranslationY = PageContainer.TranslationY;
+
+        var localX = originXFraction * PageContainer.Width;
+        var localY = originYFraction * PageContainer.Height;
+        var scaleDelta = _currentScale - previousScale;
+
+        var targetX = previousTranslationX - localX * scaleDelta;
+        var targetY = previousTranslationY - localY * scaleDelta;
+
+        PageContainer.TranslationX = Math.Clamp(targetX, -PageContainer.Width * (_currentScale - 1), 0);
+        PageContainer.TranslationY = Math.Clamp(targetY, -PageContainer.Height * (_currentScale - 1), 0);
+        PageContainer.Scale = _currentScale;
+        UpdateResizeHandleScale();
     }
 
     // Handles both panning around a zoomed-in page and swipe-to-turn-pages
@@ -569,35 +590,162 @@ public partial class SheetViewerPage : ContentPage
         switch (e.StatusType)
         {
             case GestureStatus.Running:
-                if (_currentScale > ZoomedInThreshold)
-                {
-                    PageContainer.TranslationX = Math.Clamp(_xOffset + e.TotalX, -PageContainer.Width * (_currentScale - 1), 0);
-                    PageContainer.TranslationY = Math.Clamp(_yOffset + e.TotalY, -PageContainer.Height * (_currentScale - 1), 0);
-                }
-
-                _panTotalX = e.TotalX;
+                ApplyPanRunning(e.TotalX, e.TotalY);
                 break;
 
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
-                if (_currentScale > ZoomedInThreshold)
-                {
-                    _xOffset = PageContainer.TranslationX;
-                    _yOffset = PageContainer.TranslationY;
-                }
-                else if (_panTotalX <= -PageTurnDragThreshold)
-                {
-                    TryGoToNextPage();
-                }
-                else if (_panTotalX >= PageTurnDragThreshold)
-                {
-                    TryGoToPreviousPage();
-                }
-
-                _panTotalX = 0;
+                ApplyPanEnded();
                 break;
         }
     }
+
+    // Shared by OnPanUpdated (iOS) and the Android touch listener's pan
+    // path - see ApplyPinchTranslation for why the platforms split here.
+    private void ApplyPanRunning(double totalX, double totalY)
+    {
+        if (_currentScale > ZoomedInThreshold)
+        {
+            PageContainer.TranslationX = Math.Clamp(_xOffset + totalX, -PageContainer.Width * (_currentScale - 1), 0);
+            PageContainer.TranslationY = Math.Clamp(_yOffset + totalY, -PageContainer.Height * (_currentScale - 1), 0);
+        }
+
+        _panTotalX = totalX;
+    }
+
+    private void ApplyPanEnded()
+    {
+        if (_currentScale > ZoomedInThreshold)
+        {
+            _xOffset = PageContainer.TranslationX;
+            _yOffset = PageContainer.TranslationY;
+        }
+        else if (_panTotalX <= -PageTurnDragThreshold)
+        {
+            TryGoToNextPage();
+        }
+        else if (_panTotalX >= PageTurnDragThreshold)
+        {
+            TryGoToPreviousPage();
+        }
+
+        _panTotalX = 0;
+    }
+
+#if ANDROID
+    // Entry points for PageContainerTouchListener (Platforms/Android), the
+    // unified 1-finger-pan-vs-2-finger-pinch touch handler that replaces
+    // PageContainer's MAUI GestureRecognizers on Android only - see
+    // AttachAndroidPageContainerTouchListener for why. These mirror
+    // OnPinchUpdated/OnPanUpdated/OnPageContainerTapped's own guard
+    // clauses (ToolPanel dismissal, Eraser bailout) so behavior matches
+    // the iOS path exactly; only the gesture *source* differs.
+
+    private void AndroidHandlePinchStarted()
+    {
+        PageContainer.AnchorX = 0;
+        PageContainer.AnchorY = 0;
+    }
+
+    // rawScaleFactor is Android's own ScaleGestureDetector.ScaleFactor -
+    // the raw per-frame span ratio, with none of MAUI's PinchGestureHandler
+    // pre-multiplication (that class is bypassed entirely on Android now).
+    // Composing it multiplicatively (_currentScale *= rawScaleFactor) is
+    // the exact, not approximated, equivalent of the +(e.Scale-1) summation
+    // OnPinchUpdated uses - and avoids that formula's small approximation
+    // error, though it was never the source of the gesture-arena bug this
+    // listener exists to fix.
+    private void AndroidHandlePinchRunning(double rawScaleFactor, double originXFraction, double originYFraction)
+    {
+        var previousScale = _currentScale;
+        _currentScale = Math.Max(1, _currentScale * rawScaleFactor);
+        ApplyPinchTranslation(previousScale, originXFraction, originYFraction);
+    }
+
+    private void AndroidHandlePinchEnded()
+    {
+        _xOffset = PageContainer.TranslationX;
+        _yOffset = PageContainer.TranslationY;
+    }
+
+    private void AndroidHandlePanRunning(double totalXDp, double totalYDp)
+    {
+        if (ToolPanel.IsVisible || _viewModel.ActiveTool == AnnotationTool.Eraser)
+        {
+            return;
+        }
+
+        ApplyPanRunning(totalXDp, totalYDp);
+    }
+
+    private void AndroidHandlePanEnded()
+    {
+        if (ToolPanel.IsVisible)
+        {
+            ToolPanel.IsVisible = false;
+            return;
+        }
+
+        if (_viewModel.ActiveTool == AnnotationTool.Eraser)
+        {
+            return;
+        }
+
+        ApplyPanEnded();
+    }
+
+    private void AndroidHandleTap(double normalizedX, double normalizedY)
+    {
+        if (ToolPanel.IsVisible)
+        {
+            ToolPanel.IsVisible = false;
+            return;
+        }
+
+        if (PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return;
+        }
+
+        HandleContainerTap(normalizedX, normalizedY);
+    }
+
+    // PageContainer keeps its XAML-declared Tap/Pinch/PanGestureRecognizers
+    // for iOS (OnPinchUpdated/OnPanUpdated/OnPageContainerTapped above),
+    // where this bug wasn't reported. On Android, stacking Pinch and Pan on
+    // the same element is a known gesture-arena race - see the
+    // OnPanUpdated/Swipe comment for the same problem with a different
+    // recognizer pair - and unlike that fix (just deleting Swipe), MAUI's
+    // Pinch/PanGestureRecognizer give no way to set recognition priority or
+    // even see how many fingers are down, so it can't be solved from C#
+    // alone. Clearing GestureRecognizers here stops MAUI from installing
+    // its own Android touch listener on PageContainer at all, so the
+    // listener attached below - built on Android's own ScaleGestureDetector
+    // plus manual pointer-count tracking - is the sole source of touch
+    // handling for this element on Android, routing 1-finger-throughout
+    // sequences to pan/tap and 2-finger sequences to pinch deterministically.
+    private PiccoloReader.Platforms.Android.PageContainerTouchListener? _pageContainerTouchListener;
+
+    private void AttachAndroidPageContainerTouchListener()
+    {
+        PageContainer.GestureRecognizers.Clear();
+        PageContainer.HandlerChanged += (_, _) =>
+        {
+            if (PageContainer.Handler?.PlatformView is global::Android.Views.View platformView)
+            {
+                _pageContainerTouchListener = new PiccoloReader.Platforms.Android.PageContainerTouchListener(
+                    platformView.Context!,
+                    onTap: AndroidHandleTap,
+                    onPinchStart: AndroidHandlePinchStarted,
+                    onPinchUpdate: AndroidHandlePinchRunning,
+                    onPinchEnd: AndroidHandlePinchEnded,
+                    onPanUpdate: AndroidHandlePanRunning,
+                    onPanEnd: AndroidHandlePanEnded);
+                platformView.SetOnTouchListener(_pageContainerTouchListener);
+            }
+        };
+    }
+#endif
 
     // Shows the eraser's hit-test radius centered on the current touch
     // point, hiding itself 350ms after the most recent call - during a
