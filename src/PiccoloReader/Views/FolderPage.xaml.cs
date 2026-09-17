@@ -42,14 +42,24 @@ public partial class FolderPage : ContentPage
 
     private async void OnImportPdfClicked(object? sender, EventArgs e)
     {
-        var result = await FilePicker.Default.PickAsync(new PickOptions
+        var results = await FilePicker.Default.PickMultipleAsync(new PickOptions
         {
-            PickerTitle = "Select a PDF",
+            PickerTitle = "Select PDFs",
             FileTypes = FilePickerFileType.Pdf
         });
 
-        if (result is not null)
+        if (results is null)
         {
+            return;
+        }
+
+        foreach (var result in results)
+        {
+            if (result is null)
+            {
+                continue;
+            }
+
             await _viewModel.ImportPdfCommand.ExecuteAsync(result.FullPath);
         }
     }

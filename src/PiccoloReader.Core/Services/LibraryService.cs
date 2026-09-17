@@ -40,7 +40,7 @@ public class LibraryService
 
     public async Task<Folder> CreateFolderAsync(string name)
     {
-        var folder = new Folder { Name = name };
+        var folder = new Folder { Name = name, DateAdded = DateTime.UtcNow };
         await _database.Connection.InsertAsync(folder);
         return folder;
     }

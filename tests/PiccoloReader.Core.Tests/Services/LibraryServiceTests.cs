@@ -32,6 +32,17 @@ public class LibraryServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateFolderAsync_SetsDateAdded()
+    {
+        var before = DateTime.UtcNow;
+
+        var folder = await _sut.CreateFolderAsync("Orchestra");
+
+        Assert.True(folder.DateAdded >= before);
+        Assert.True(folder.DateAdded <= DateTime.UtcNow);
+    }
+
+    [Fact]
     public async Task GetSheetsAsync_NullFolderId_ReturnsOnlyRootSheets()
     {
         var folder = await _sut.CreateFolderAsync("Orchestra");
