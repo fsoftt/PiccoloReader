@@ -134,14 +134,14 @@ public partial class SheetViewerViewModel : ObservableObject
         await PersistLastViewedPageAsync();
     }
 
-    public async Task AddBookmarkAsync(int pageIndex)
+    public async Task AddBookmarkAsync(int pageIndex, string? name = null)
     {
         if (_sheet is null)
         {
             return;
         }
 
-        var bookmark = await _bookmarkService.AddBookmarkAsync(_sheet.Id, pageIndex);
+        var bookmark = await _bookmarkService.AddBookmarkAsync(_sheet.Id, pageIndex, name);
         Bookmarks.Add(bookmark);
     }
 
