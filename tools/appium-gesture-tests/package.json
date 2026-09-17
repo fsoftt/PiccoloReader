@@ -1,0 +1,14 @@
+{
+  "name": "appium-gesture-tests",
+  "version": "1.0.0",
+  "description": "Appium-driven multi-touch gesture checks for the sheet viewer, since adb shell input can't simulate real two-finger pinch",
+  "private": true,
+  "scripts": {
+    "check:zoom-pan": "node zoom-pan-gesture-check.js"
+  },
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "dependencies": {
+    "webdriverio": "^9.31.9"
+  }
+}
