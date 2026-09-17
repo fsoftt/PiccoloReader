@@ -69,6 +69,7 @@ public partial class SheetViewerPage : ContentPage
 
 #if ANDROID
         AttachAndroidPageContainerTouchListener();
+        AttachAndroidSelectionDragListeners();
 #endif
     }
 
@@ -324,7 +325,52 @@ public partial class SheetViewerPage : ContentPage
         ResizeHandle.IsVisible = visible;
     }
 
-    private async void OnSelectionMovePanUpdated(object? sender, PanUpdatedEventArgs e)
+    private void OnSelectionMovePanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                HandleSelectionMoveStarted();
+                break;
+
+            case GestureStatus.Running:
+                HandleSelectionMoveRunning(e.TotalX, e.TotalY);
+                break;
+
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                _ = HandleSelectionMoveEndedAsync();
+                break;
+        }
+    }
+
+    private void HandleSelectionMoveStarted()
+    {
+        var annotation = _viewModel.SelectedAnnotation;
+        if (annotation is null)
+        {
+            return;
+        }
+
+        _moveStartX = annotation.X;
+        _moveStartY = annotation.Y;
+        SetDragControlsVisible(false);
+    }
+
+    // totalX/totalY are raw screen-pixel deltas (DP), unaffected by
+    // PageContainer's own zoom Scale - true on iOS via MAUI's
+    // PanGestureRecognizer, and true on Android via
+    // SingleDragTouchListener's use of MotionEvent.RawX/RawY (see that
+    // class's comment - confirmed on a real device that PanUpdatedEventArgs.
+    // TotalX/TotalY do NOT hold, despite the name, since SelectionBorder is
+    // nested inside PageContainer's live Scale transform). At zoom S, the
+    // same screen-pixel drag covers 1/S as much of the page, so the delta
+    // must be scaled down by _currentScale before normalizing - dividing by
+    // PageContainer.Width*_currentScale (the page's actual on-screen size)
+    // instead of just PageContainer.Width (its unscaled size) does that in
+    // one step. At the default zoom (_currentScale == 1) this is identical
+    // to just dividing by PageContainer.Width.
+    private void HandleSelectionMoveRunning(double totalX, double totalY)
     {
         var annotation = _viewModel.SelectedAnnotation;
         if (annotation is null || PageContainer.Width <= 0 || PageContainer.Height <= 0)
@@ -332,60 +378,37 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        switch (e.StatusType)
+        annotation.X = _moveStartX + totalX / (PageContainer.Width * _currentScale);
+        annotation.Y = _moveStartY + totalY / (PageContainer.Height * _currentScale);
+        RepositionSelectionOverlay();
+        AnnotationCanvas.InvalidateSurface();
+    }
+
+    private async Task HandleSelectionMoveEndedAsync()
+    {
+        var annotation = _viewModel.SelectedAnnotation;
+        if (annotation is null)
         {
-            case GestureStatus.Started:
-                _moveStartX = annotation.X;
-                _moveStartY = annotation.Y;
-                SetDragControlsVisible(false);
-                break;
+            return;
+        }
 
-            case GestureStatus.Running:
-                // e.TotalX/TotalY are raw screen-pixel deltas, unaffected
-                // by PageContainer's own zoom Scale (confirmed on a real
-                // device: a modest finger drag while zoomed in produced a
-                // wildly larger move/resize than the finger's visual
-                // travel suggested, and got jumpier/more "shaky" the more
-                // zoomed in the page was - both are the signature of a
-                // screen-pixel delta being normalized against the page's
-                // *unscaled* width/height without first dividing out the
-                // zoom factor). At zoom S, the same screen-pixel drag
-                // covers 1/S as much of the page, so the delta must be
-                // scaled down by _currentScale before normalizing -
-                // dividing by PageContainer.Width*_currentScale (the
-                // page's actual on-screen size) instead of just
-                // PageContainer.Width (its unscaled size) does that in
-                // one step. At the default zoom (_currentScale == 1) this
-                // is identical to the previous formula.
-                annotation.X = _moveStartX + e.TotalX / (PageContainer.Width * _currentScale);
-                annotation.Y = _moveStartY + e.TotalY / (PageContainer.Height * _currentScale);
-                RepositionSelectionOverlay();
-                AnnotationCanvas.InvalidateSurface();
-                break;
-
-            case GestureStatus.Completed:
-            case GestureStatus.Canceled:
-                SetDragControlsVisible(true);
-                if (IsOverTrashTarget(annotation))
-                {
-                    // Must be awaited, not fire-and-forget, before
-                    // UpdateSelectionOverlay() runs - otherwise the
-                    // overlay reads SelectedAnnotation's still-live
-                    // (pre-delete) state and repositions itself at the
-                    // drop point instead of hiding, leaving a stale
-                    // border/handle behind once the delete actually lands
-                    // a moment later (confirmed on-device: the icon
-                    // itself vanished from the page - the delete worked -
-                    // but its selection border stayed stuck at the drop
-                    // point).
-                    await _viewModel.DeleteSelectedAnnotationCommand.ExecuteAsync(null);
-                    UpdateSelectionOverlay();
-                }
-                else
-                {
-                    _ = _viewModel.MoveSelectedAnnotationAsync(annotation.X, annotation.Y);
-                }
-                break;
+        SetDragControlsVisible(true);
+        if (IsOverTrashTarget(annotation))
+        {
+            // Must be awaited, not fire-and-forget, before
+            // UpdateSelectionOverlay() runs - otherwise the overlay reads
+            // SelectedAnnotation's still-live (pre-delete) state and
+            // repositions itself at the drop point instead of hiding,
+            // leaving a stale border/handle behind once the delete
+            // actually lands a moment later (confirmed on-device: the
+            // icon itself vanished from the page - the delete worked -
+            // but its selection border stayed stuck at the drop point).
+            await _viewModel.DeleteSelectedAnnotationCommand.ExecuteAsync(null);
+            UpdateSelectionOverlay();
+        }
+        else
+        {
+            _ = _viewModel.MoveSelectedAnnotationAsync(annotation.X, annotation.Y);
         }
     }
 
@@ -427,39 +450,64 @@ public partial class SheetViewerPage : ContentPage
 
     private void OnSelectionResizePanUpdated(object? sender, PanUpdatedEventArgs e)
     {
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                HandleSelectionResizeStarted();
+                break;
+
+            case GestureStatus.Running:
+                HandleSelectionResizeRunning(e.TotalX, e.TotalY);
+                break;
+
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                HandleSelectionResizeEnded();
+                break;
+        }
+    }
+
+    private void HandleSelectionResizeStarted()
+    {
+        var annotation = _viewModel.SelectedAnnotation;
+        if (annotation is null)
+        {
+            return;
+        }
+
+        _resizeStartWidth = annotation.Width;
+        _resizeStartHeight = annotation.Height;
+        SetDragControlsVisible(false);
+    }
+
+    // See the matching comment on HandleSelectionMoveRunning - totalX/
+    // totalY need dividing by _currentScale before normalizing, or a
+    // resize drag while zoomed in ends up several times larger than the
+    // finger's own travel.
+    private void HandleSelectionResizeRunning(double totalX, double totalY)
+    {
         var annotation = _viewModel.SelectedAnnotation;
         if (annotation is null || PageContainer.Width <= 0 || PageContainer.Height <= 0)
         {
             return;
         }
 
-        switch (e.StatusType)
+        annotation.Width = Math.Max(0.02, _resizeStartWidth + totalX / (PageContainer.Width * _currentScale));
+        annotation.Height = Math.Max(0.02, _resizeStartHeight + totalY / (PageContainer.Height * _currentScale));
+        RepositionSelectionOverlay();
+        AnnotationCanvas.InvalidateSurface();
+    }
+
+    private void HandleSelectionResizeEnded()
+    {
+        var annotation = _viewModel.SelectedAnnotation;
+        if (annotation is null)
         {
-            case GestureStatus.Started:
-                _resizeStartWidth = annotation.Width;
-                _resizeStartHeight = annotation.Height;
-                SetDragControlsVisible(false);
-                break;
-
-            case GestureStatus.Running:
-                // See the matching comment in OnSelectionMovePanUpdated -
-                // e.TotalX/TotalY are raw screen pixels, so they need
-                // dividing by _currentScale (via PageContainer.Width/Height
-                // * _currentScale, its actual on-screen size) before
-                // normalizing, or a resize drag while zoomed in ends up
-                // several times larger than the finger's own travel.
-                annotation.Width = Math.Max(0.02, _resizeStartWidth + e.TotalX / (PageContainer.Width * _currentScale));
-                annotation.Height = Math.Max(0.02, _resizeStartHeight + e.TotalY / (PageContainer.Height * _currentScale));
-                RepositionSelectionOverlay();
-                AnnotationCanvas.InvalidateSurface();
-                break;
-
-            case GestureStatus.Completed:
-            case GestureStatus.Canceled:
-                SetDragControlsVisible(true);
-                _ = _viewModel.ResizeSelectedAnnotationAsync(annotation.Width, annotation.Height);
-                break;
+            return;
         }
+
+        SetDragControlsVisible(true);
+        _ = _viewModel.ResizeSelectedAnnotationAsync(annotation.Width, annotation.Height);
     }
 
     private async void OnTrashTargetTapped(object? sender, TappedEventArgs e)
@@ -741,6 +789,53 @@ public partial class SheetViewerPage : ContentPage
                     onPanUpdate: AndroidHandlePanRunning,
                     onPanEnd: AndroidHandlePanEnded);
                 platformView.SetOnTouchListener(_pageContainerTouchListener);
+            }
+        };
+    }
+
+    // SelectionBorder (icon move) and ResizeHandle (icon resize) are both
+    // nested inside PageContainer's live zoom transform - and, one level
+    // closer, inside SelectionOverlay's own TranslationX/Y, which is
+    // itself repositioned every Running frame to follow the drag. MAUI's
+    // PanGestureRecognizer.TotalX/TotalY, despite the "raw screen pixels"
+    // assumption the original (pre-fix) code and comments here relied on,
+    // turned out not to hold on Android for a recognizer this deeply
+    // nested - confirmed on a real device (icon dragging felt
+    // significantly slower than the finger once zoomed in) and reproduced
+    // with instrumented logging (the same physical drag measured smaller
+    // as zoom increased). SingleDragTouchListener replaces it with
+    // MotionEvent.RawX/RawY, which are always true screen coordinates
+    // regardless of transform nesting depth - see that class's comment.
+    private PiccoloReader.Platforms.Android.SingleDragTouchListener? _selectionMoveTouchListener;
+    private PiccoloReader.Platforms.Android.SingleDragTouchListener? _selectionResizeTouchListener;
+
+    private void AttachAndroidSelectionDragListeners()
+    {
+        SelectionBorder.GestureRecognizers.Clear();
+        SelectionBorder.HandlerChanged += (_, _) =>
+        {
+            if (SelectionBorder.Handler?.PlatformView is global::Android.Views.View platformView)
+            {
+                _selectionMoveTouchListener = new PiccoloReader.Platforms.Android.SingleDragTouchListener(
+                    platformView.Context!,
+                    onStarted: HandleSelectionMoveStarted,
+                    onRunning: HandleSelectionMoveRunning,
+                    onEnded: () => _ = HandleSelectionMoveEndedAsync());
+                platformView.SetOnTouchListener(_selectionMoveTouchListener);
+            }
+        };
+
+        ResizeHandle.GestureRecognizers.Clear();
+        ResizeHandle.HandlerChanged += (_, _) =>
+        {
+            if (ResizeHandle.Handler?.PlatformView is global::Android.Views.View platformView)
+            {
+                _selectionResizeTouchListener = new PiccoloReader.Platforms.Android.SingleDragTouchListener(
+                    platformView.Context!,
+                    onStarted: HandleSelectionResizeStarted,
+                    onRunning: HandleSelectionResizeRunning,
+                    onEnded: HandleSelectionResizeEnded);
+                platformView.SetOnTouchListener(_selectionResizeTouchListener);
             }
         };
     }
