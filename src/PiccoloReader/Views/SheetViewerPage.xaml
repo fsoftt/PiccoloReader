@@ -10,14 +10,9 @@
     Title="{Binding Title}">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem x:Name="ToolPanelToggleItem" Clicked="OnToggleToolPanelClicked">
+        <ToolbarItem x:Name="ToolConfigItem" Clicked="OnToolConfigClicked">
             <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="24" Color="White" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
-        <ToolbarItem x:Name="DeactivateToolItem" Clicked="OnDeactivateToolClicked">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE14C;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+                <FontImageSource Glyph="&#xE429;" FontFamily="MaterialOutlined" Size="24" Color="White" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
         <ToolbarItem x:Name="BookmarksItem" Clicked="OnBookmarksClicked">
@@ -163,49 +158,9 @@
             VerticalOptions="Fill"
             BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
             StrokeThickness="0">
-            <Grid RowDefinitions="Auto,*">
+            <Grid>
 
-                <Grid Grid.Row="0" RowDefinitions="Auto,1">
-
-                    <Grid Grid.Row="0" ColumnDefinitions="*,*,*">
-                        <Grid Grid.Column="0" Padding="0,16" BackgroundColor="Transparent">
-                            <Grid.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="MusicIcons" />
-                            </Grid.GestureRecognizers>
-                            <Image HeightRequest="24" HorizontalOptions="Center">
-                                <Image.Source>
-                                    <FontImageSource x:Name="MusicIconsTabIcon" Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Primary}" />
-                                </Image.Source>
-                            </Image>
-                        </Grid>
-
-                        <Grid Grid.Column="1" Padding="0,16" BackgroundColor="Transparent">
-                            <Grid.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="Pencil" />
-                            </Grid.GestureRecognizers>
-                            <Image HeightRequest="24" HorizontalOptions="Center">
-                                <Image.Source>
-                                    <FontImageSource x:Name="PencilTabIcon" Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Gray500}" />
-                                </Image.Source>
-                            </Image>
-                        </Grid>
-
-                        <Grid Grid.Column="2" Padding="0,16" BackgroundColor="Transparent">
-                            <Grid.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnToolTabTapped" CommandParameter="Eraser" />
-                            </Grid.GestureRecognizers>
-                            <Image HeightRequest="24" HorizontalOptions="Center">
-                                <Image.Source>
-                                    <FontImageSource x:Name="EraserTabIcon" Glyph="&#xE6D0;" FontFamily="MaterialOutlined" Size="22" Color="{StaticResource Gray500}" />
-                                </Image.Source>
-                            </Image>
-                        </Grid>
-                    </Grid>
-
-                    <BoxView Grid.Row="1" HeightRequest="1" HorizontalOptions="Fill" Color="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray500}}" />
-                </Grid>
-
-                <ScrollView Grid.Row="1">
+                <ScrollView>
                     <Grid Padding="12">
 
                         <VerticalStackLayout x:Name="MusicIconsSection" Spacing="4">
@@ -411,6 +366,106 @@
                     </Grid>
                 </ScrollView>
             </Grid>
+        </Border>
+
+        <!-- Tool speed-dial FAB: main FAB toggles 3 mini FABs above it (Icons/Pencil/Eraser). -->
+        <Border
+            x:Name="IconsFab"
+            IsVisible="False"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Margin="0,0,24,200"
+            WidthRequest="40"
+            HeightRequest="40"
+            Padding="0"
+            StrokeThickness="0"
+            StrokeShape="RoundRectangle 20"
+            BackgroundColor="{StaticResource Primary}">
+            <Border.Shadow>
+                <Shadow Brush="{StaticResource Black}" Opacity="0.3" Radius="6" Offset="0,3" />
+            </Border.Shadow>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnFabIconsClicked" />
+            </Border.GestureRecognizers>
+            <Image HorizontalOptions="Center" VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="18" Color="{StaticResource White}" />
+                </Image.Source>
+            </Image>
+        </Border>
+
+        <Border
+            x:Name="PencilFab"
+            IsVisible="False"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Margin="0,0,24,144"
+            WidthRequest="40"
+            HeightRequest="40"
+            Padding="0"
+            StrokeThickness="0"
+            StrokeShape="RoundRectangle 20"
+            BackgroundColor="{StaticResource Primary}">
+            <Border.Shadow>
+                <Shadow Brush="{StaticResource Black}" Opacity="0.3" Radius="6" Offset="0,3" />
+            </Border.Shadow>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnFabPencilClicked" />
+            </Border.GestureRecognizers>
+            <Image HorizontalOptions="Center" VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="18" Color="{StaticResource White}" />
+                </Image.Source>
+            </Image>
+        </Border>
+
+        <Border
+            x:Name="EraserFab"
+            IsVisible="False"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Margin="0,0,24,88"
+            WidthRequest="40"
+            HeightRequest="40"
+            Padding="0"
+            StrokeThickness="0"
+            StrokeShape="RoundRectangle 20"
+            BackgroundColor="{StaticResource Primary}">
+            <Border.Shadow>
+                <Shadow Brush="{StaticResource Black}" Opacity="0.3" Radius="6" Offset="0,3" />
+            </Border.Shadow>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnFabEraserClicked" />
+            </Border.GestureRecognizers>
+            <Image HorizontalOptions="Center" VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xE6D0;" FontFamily="MaterialOutlined" Size="18" Color="{StaticResource White}" />
+                </Image.Source>
+            </Image>
+        </Border>
+
+        <Border
+            x:Name="MainToolFab"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Margin="0,0,16,16"
+            WidthRequest="56"
+            HeightRequest="56"
+            Padding="0"
+            StrokeThickness="0"
+            StrokeShape="RoundRectangle 28"
+            BackgroundColor="{StaticResource Primary}">
+            <Border.Shadow>
+                <Shadow Brush="{StaticResource Black}" Opacity="0.3" Radius="8" Offset="0,4" />
+            </Border.Shadow>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnMainToolFabClicked" />
+            </Border.GestureRecognizers>
+            <Image x:Name="MainToolFabIcon" HorizontalOptions="Center" VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="24" Color="{StaticResource White}" />
+                </Image.Source>
+            </Image>
         </Border>
 
         <Grid x:Name="AddBookmarkOverlay" IsVisible="False">
