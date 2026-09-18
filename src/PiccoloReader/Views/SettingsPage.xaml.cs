@@ -17,50 +17,30 @@ public partial class SettingsPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        UpdateLanguageSelectionVisuals();
+        LanguagePicker.SelectedIndex = Array.IndexOf(_viewModel.LanguageCodes, _viewModel.SelectedLanguageCode);
     }
 
-    private async void OnEnglishTapped(object? sender, TappedEventArgs e)
+    // Fires both for user selection AND the OnAppearing sync above (MAUI's
+    // Picker raises this whenever SelectedIndex changes, programmatically
+    // or not) - the SelectedLanguageCode equality check below is what
+    // makes the sync-on-appear a no-op instead of popping the restart
+    // dialog every time the page loads.
+    private async void OnLanguagePickerSelectedIndexChanged(object? sender, EventArgs e)
     {
-        await SelectLanguageAsync("en");
-    }
+        var index = LanguagePicker.SelectedIndex;
+        if (index < 0)
+        {
+            return;
+        }
 
-    private async void OnSpanishTapped(object? sender, TappedEventArgs e)
-    {
-        await SelectLanguageAsync("es");
-    }
-
-    private async Task SelectLanguageAsync(string code)
-    {
+        var code = _viewModel.LanguageCodes[index];
         if (_viewModel.SelectedLanguageCode == code)
         {
             return;
         }
 
         _viewModel.SetLanguageCommand.Execute(code);
-        UpdateLanguageSelectionVisuals();
 
         await DisplayAlertAsync(AppStrings.RestartRequiredTitle, AppStrings.RestartRequiredMessage, AppStrings.OK);
-    }
-
-    // Mirrors SheetViewerPage's SetColorRingSelected pattern: the selected
-    // row gets a colored stroke + a small drop shadow, the other reverts
-    // to the plain ListItemCard style - same selection convention already
-    // used elsewhere in this app, no new converter/binding machinery.
-    private void UpdateLanguageSelectionVisuals()
-    {
-        SetRowSelected(EnglishRow, _viewModel.SelectedLanguageCode == "en");
-        SetRowSelected(SpanishRow, _viewModel.SelectedLanguageCode == "es");
-    }
-
-    private void SetRowSelected(Border row, bool isSelected)
-    {
-        row.StrokeThickness = isSelected ? 2 : 1;
-        row.Stroke = isSelected
-            ? (Color)Application.Current!.Resources["Primary"]
-            : (Color)Application.Current!.Resources["Gray200"];
-        row.Shadow = isSelected
-            ? new Shadow { Brush = Colors.Black, Opacity = 0.3f, Radius = 6, Offset = new Point(0, 2) }
-            : null!;
     }
 }
