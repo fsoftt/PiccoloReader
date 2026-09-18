@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PiccoloReader.Core.Data.Models;
+using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 
 namespace PiccoloReader.Core.ViewModels;
@@ -81,7 +82,7 @@ public partial class SheetViewerViewModel : ObservableObject
 
     public int CurrentPageDisplay => CurrentPageIndex + 1;
 
-    public string PageIndicatorText => $"Page {CurrentPageDisplay} of {PageCount}";
+    public string PageIndicatorText => string.Format(AppStrings.PageIndicatorFormat, CurrentPageDisplay, PageCount);
 
     public async Task LoadAsync(int sheetId, int targetWidthPx, int targetHeightPx)
     {
