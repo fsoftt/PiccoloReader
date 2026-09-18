@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows.Input;
 using PiccoloReader.Core.Data.Models;
+using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.ViewModels;
 
@@ -91,7 +92,7 @@ public partial class FolderPage : ContentPage
     {
         var results = await FilePicker.Default.PickMultipleAsync(new PickOptions
         {
-            PickerTitle = "Select PDFs",
+            PickerTitle = AppStrings.SelectPdfsPickerTitle,
             FileTypes = FilePickerFileType.Pdf
         });
 
@@ -129,20 +130,20 @@ public partial class FolderPage : ContentPage
     private async void OnSortClicked(object? sender, EventArgs e)
     {
         var choice = await DisplayActionSheetAsync(
-            "Sort by",
-            "Cancel",
+            AppStrings.SortByTitle,
+            AppStrings.Cancel,
             null,
-            "Name (A-Z)",
-            "Name (Z-A)",
-            "Date Added (Oldest First)",
-            "Date Added (Newest First)");
+            AppStrings.SortNameAscending,
+            AppStrings.SortNameDescending,
+            AppStrings.SortDateAddedAscending,
+            AppStrings.SortDateAddedDescending);
 
         (SortField Field, SortDirection Direction)? sort = choice switch
         {
-            "Name (A-Z)" => (SortField.Name, SortDirection.Ascending),
-            "Name (Z-A)" => (SortField.Name, SortDirection.Descending),
-            "Date Added (Oldest First)" => (SortField.DateAdded, SortDirection.Ascending),
-            "Date Added (Newest First)" => (SortField.DateAdded, SortDirection.Descending),
+            var c when c == AppStrings.SortNameAscending => (SortField.Name, SortDirection.Ascending),
+            var c when c == AppStrings.SortNameDescending => (SortField.Name, SortDirection.Descending),
+            var c when c == AppStrings.SortDateAddedAscending => (SortField.DateAdded, SortDirection.Ascending),
+            var c when c == AppStrings.SortDateAddedDescending => (SortField.DateAdded, SortDirection.Descending),
             _ => null
         };
 
@@ -162,36 +163,36 @@ public partial class FolderPage : ContentPage
 
     private async Task OnSheetLongPressedAsync(Sheet sheet)
     {
-        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", "Cancel", null, "Move", "Delete");
+        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, AppStrings.Move, AppStrings.Delete);
 
-        if (choice == "Delete")
+        if (choice == AppStrings.Delete)
         {
             var confirmed = await DisplayAlertAsync(
-                "Delete sheet",
-                $"Delete \"{sheet.Title}\"? This cannot be undone.",
-                "Delete",
-                "Cancel");
+                AppStrings.DeleteSheetTitle,
+                string.Format(AppStrings.DeleteSheetMessageFormat, sheet.Title),
+                AppStrings.Delete,
+                AppStrings.Cancel);
 
             if (confirmed)
             {
                 await _viewModel.DeleteSheetCommand.ExecuteAsync(sheet);
             }
         }
-        else if (choice == "Move")
+        else if (choice == AppStrings.Move)
         {
             var folders = await _libraryService.GetFoldersAsync();
 
-            var options = new List<string> { "Root" };
+            var options = new List<string> { AppStrings.RootOption };
             options.AddRange(folders.Where(f => f.Id != _viewModel.FolderId).Select(f => f.Name));
 
-            var target = await DisplayActionSheetAsync("Move to…", "Cancel", null, options.ToArray());
+            var target = await DisplayActionSheetAsync(AppStrings.MoveToTitle, AppStrings.Cancel, null, options.ToArray());
 
-            if (target is null || target == "Cancel")
+            if (target is null || target == AppStrings.Cancel)
             {
                 return;
             }
 
-            int? targetFolderId = target == "Root"
+            int? targetFolderId = target == AppStrings.RootOption
                 ? null
                 : folders.First(f => f.Name == target).Id;
 
