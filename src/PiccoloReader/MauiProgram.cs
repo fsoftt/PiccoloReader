@@ -82,10 +82,12 @@ public static class MauiProgram
 		builder.Services.AddTransient<LibraryViewModel>();
 		builder.Services.AddTransient<FolderViewModel>();
 		builder.Services.AddTransient<SheetViewerViewModel>();
+		builder.Services.AddTransient<SettingsViewModel>();
 
 		builder.Services.AddTransient<LibraryPage>();
 		builder.Services.AddTransient<FolderPage>();
 		builder.Services.AddTransient<SheetViewerPage>();
+		builder.Services.AddTransient<SettingsPage>();
 
 		return builder.Build();
 	}
