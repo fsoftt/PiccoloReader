@@ -87,7 +87,7 @@ public partial class FolderPage : ContentPage
         }
     }
 
-    private async void OnImportPdfClicked(object? sender, EventArgs e)
+    private async void OnImportPdfClicked(object? sender, TappedEventArgs e)
     {
         var results = await FilePicker.Default.PickMultipleAsync(new PickOptions
         {
