@@ -67,7 +67,7 @@
             HorizontalOptions="Center"
             Spacing="4">
             <Label
-                Text="Made with love by"
+                Text="{x:Static strings:AppStrings.MadeWithLoveBy}"
                 FontSize="12"
                 TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray300}}" />
             <Label
