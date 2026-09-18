@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Maui;
+﻿using System.Globalization;
+using CommunityToolkit.Maui;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using SkiaSharp.Views.Maui.Controls.Hosting;
@@ -36,7 +37,23 @@ public static class MauiProgram
 
 		Batteries_V2.Init();
 
+		var savedLanguageCode = Preferences.Default.Get("AppLanguage", (string?)null);
+		var deviceLanguageCode = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+		var resolvedLanguageCode = LanguageResolver.ResolveLanguageCode(savedLanguageCode, deviceLanguageCode);
+
+		if (savedLanguageCode is null)
+		{
+			Preferences.Default.Set("AppLanguage", resolvedLanguageCode);
+		}
+
+		var resolvedCulture = new CultureInfo(resolvedLanguageCode);
+		CultureInfo.CurrentCulture = resolvedCulture;
+		CultureInfo.CurrentUICulture = resolvedCulture;
+		CultureInfo.DefaultThreadCurrentCulture = resolvedCulture;
+		CultureInfo.DefaultThreadCurrentUICulture = resolvedCulture;
+
 		builder.Services.AddSingleton<IAppStorageProvider, MauiAppStorageProvider>();
+		builder.Services.AddSingleton<ILanguagePreferenceService, MauiLanguagePreferenceService>();
 #if ANDROID
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.Android.PdfPageRenderer>();
 #elif IOS
