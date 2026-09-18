@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:views="clr-namespace:PiccoloReader.Views"
+    xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
     FlyoutBehavior="Flyout"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
     Title="PiccoloReader">
@@ -38,7 +39,7 @@
         </Grid>
     </Shell.FlyoutHeader>
 
-    <FlyoutItem Title="Library" Route="library">
+    <FlyoutItem Title="{x:Static strings:AppStrings.Library}" Route="library">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource
                 Glyph="&#xE2C7;"
@@ -47,6 +48,17 @@
                 Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate views:LibraryPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="{x:Static strings:AppStrings.Settings}" Route="settings">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource
+                Glyph="&#xE429;"
+                FontFamily="MaterialOutlined"
+                Size="24"
+                Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" />
     </FlyoutItem>
 
     <Shell.FlyoutFooter>
