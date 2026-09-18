@@ -30,28 +30,23 @@ public partial class SheetViewerPage : ContentPage
     private double _moveStartY;
 
     private bool _isToolbarVisible = true;
+    private bool _isToolFabExpanded;
 
     private SKTypeface? _bravuraTypeface;
     private readonly Dictionary<int, SKRect> _glyphBoundsCache = new();
     private readonly SKPaint _glyphPaint = new() { Color = SKColors.Black, IsAntialias = true };
 
-    // Both computed per-call, not static fields, so they reflect the
-    // theme at the moment each tab redraw happens. Active uses the same
-    // Primary/PrimaryDark pairing the Library page already uses for
-    // icons - plain Primary (#512BD4) reads fine on the light panel
-    // background but nearly disappears against the dark one (Gray600,
-    // #404040), so dark mode swaps to PrimaryDark (#ac99ea), a lighter
-    // tint meant for exactly this case. Inactive uses dark grey against
-    // the light panel and white against the dark one.
-    private static Color TabActiveColor =>
+    // Computed per-call, not a static field, so it reflects the theme at
+    // the moment each preview redraw happens. Uses the same Primary/
+    // PrimaryDark pairing the Library page already uses for icons - plain
+    // Primary (#512BD4) reads fine on the light panel background but
+    // nearly disappears against the dark one (Gray600, #404040), so dark
+    // mode swaps to PrimaryDark (#ac99ea), a lighter tint meant for
+    // exactly this case.
+    private static Color AccentColor =>
         Application.Current!.RequestedTheme == AppTheme.Dark
             ? (Color)Application.Current!.Resources["PrimaryDark"]
             : (Color)Application.Current!.Resources["Primary"];
-
-    private static Color TabInactiveIconColor =>
-        Application.Current!.RequestedTheme == AppTheme.Dark
-            ? Colors.White
-            : (Color)Application.Current!.Resources["Gray600"];
 
     public SheetViewerPage(SheetViewerViewModel viewModel)
     {
@@ -65,7 +60,7 @@ public partial class SheetViewerPage : ContentPage
         // derives from Element, not VisualElement), so visibility is
         // managed by adding/removing it from ToolbarItems instead - starts
         // removed since ActiveTool defaults to MusicIcons.
-        ToolbarItems.Remove(DeactivateToolItem);
+        ToolbarItems.Remove(ToolConfigItem);
 
 #if ANDROID
         AttachAndroidPageContainerTouchListener();
@@ -136,6 +131,12 @@ public partial class SheetViewerPage : ContentPage
         if (ToolPanel.IsVisible)
         {
             ToolPanel.IsVisible = false;
+            return;
+        }
+
+        if (_isToolFabExpanded)
+        {
+            SetToolFabExpanded(false);
             return;
         }
 
@@ -212,6 +213,17 @@ public partial class SheetViewerPage : ContentPage
         _isToolbarVisible = visible;
         PageIndicatorLabel.IsVisible = visible;
         Shell.SetNavBarIsVisible(this, visible);
+
+        // MainToolFab is the replacement for what used to be a toolbar
+        // button, so it follows the same visibility - collapsing the
+        // speed-dial menu first if it happened to be open when the chrome
+        // is hidden, rather than leaving orphaned mini FABs on screen.
+        if (!visible)
+        {
+            SetToolFabExpanded(false);
+        }
+
+        MainToolFab.IsVisible = visible;
 
         if (visible)
         {
@@ -624,6 +636,16 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
+        if (_isToolFabExpanded)
+        {
+            if (e.StatusType == GestureStatus.Completed)
+            {
+                SetToolFabExpanded(false);
+            }
+
+            return;
+        }
+
         // While Eraser is active, EraserDrawingView covers PageContainer
         // and captures the entire touch stream for drag-to-erase (see its
         // handlers below) the same way PencilDrawingView already does for
@@ -717,7 +739,7 @@ public partial class SheetViewerPage : ContentPage
 
     private void AndroidHandlePanRunning(double totalXDp, double totalYDp)
     {
-        if (ToolPanel.IsVisible || _viewModel.ActiveTool == AnnotationTool.Eraser)
+        if (ToolPanel.IsVisible || _isToolFabExpanded || _viewModel.ActiveTool == AnnotationTool.Eraser)
         {
             return;
         }
@@ -730,6 +752,12 @@ public partial class SheetViewerPage : ContentPage
         if (ToolPanel.IsVisible)
         {
             ToolPanel.IsVisible = false;
+            return;
+        }
+
+        if (_isToolFabExpanded)
+        {
+            SetToolFabExpanded(false);
             return;
         }
 
@@ -746,6 +774,12 @@ public partial class SheetViewerPage : ContentPage
         if (ToolPanel.IsVisible)
         {
             ToolPanel.IsVisible = false;
+            return;
+        }
+
+        if (_isToolFabExpanded)
+        {
+            SetToolFabExpanded(false);
             return;
         }
 
@@ -1035,7 +1069,12 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    private async void OnToggleToolPanelClicked(object? sender, EventArgs e)
+    // Opens the config sidebar for whichever tool is active - reachable
+    // only while Pencil or Eraser is active (see UpdateToolSections),
+    // since Icons opens its own sidebar directly via OnFabIconsClicked.
+    // Toggles like the old single toolbar button did, so tapping it again
+    // closes the panel instead of being a one-way "open" action.
+    private async void OnToolConfigClicked(object? sender, EventArgs e)
     {
         if (!ToolPanel.IsVisible)
         {
@@ -1049,21 +1088,63 @@ public partial class SheetViewerPage : ContentPage
         ToolPanel.IsVisible = !ToolPanel.IsVisible;
     }
 
-    private void OnToolTabTapped(object? sender, TappedEventArgs e)
+    // If the config sidebar happens to be open, closing it takes priority
+    // over expanding the speed-dial - opening both at once stacked the
+    // mini FABs visually on top of the sidebar's own content, confirmed
+    // on-device while testing this feature.
+    private void OnMainToolFabClicked(object? sender, TappedEventArgs e)
     {
-        if (e.Parameter is not string toolName || !Enum.TryParse<AnnotationTool>(toolName, out var tool))
+        if (ToolPanel.IsVisible)
         {
+            ToolPanel.IsVisible = false;
             return;
         }
 
-        _viewModel.ActiveTool = tool;
-        UpdateToolSections();
+        SetToolFabExpanded(!_isToolFabExpanded);
     }
 
-    private void OnDeactivateToolClicked(object? sender, EventArgs e)
+    private async void OnFabIconsClicked(object? sender, TappedEventArgs e)
     {
         _viewModel.ActiveTool = AnnotationTool.MusicIcons;
         UpdateToolSections();
+        SetToolFabExpanded(false);
+
+        await EnsureBravuraTypefaceLoadedAsync();
+        ToolPanel.IsVisible = true;
+    }
+
+    private void OnFabPencilClicked(object? sender, TappedEventArgs e)
+    {
+        _viewModel.ActiveTool = AnnotationTool.Pencil;
+        UpdateToolSections();
+        SetToolFabExpanded(false);
+    }
+
+    private void OnFabEraserClicked(object? sender, TappedEventArgs e)
+    {
+        _viewModel.ActiveTool = AnnotationTool.Eraser;
+        UpdateToolSections();
+        SetToolFabExpanded(false);
+    }
+
+    // Shows/hides the 3 mini FABs above the main FAB and swaps its own
+    // icon between the pencil glyph (collapsed) and a close glyph
+    // (expanded) - the collapsed/expanded state is independent of which
+    // tool is active, it only tracks whether the speed-dial menu itself
+    // is open.
+    private void SetToolFabExpanded(bool expanded)
+    {
+        _isToolFabExpanded = expanded;
+        IconsFab.IsVisible = expanded;
+        PencilFab.IsVisible = expanded;
+        EraserFab.IsVisible = expanded;
+        MainToolFabIcon.Source = new FontImageSource
+        {
+            Glyph = expanded ? "" : "",
+            FontFamily = "MaterialOutlined",
+            Size = 24,
+            Color = Colors.White
+        };
     }
 
     private void UpdateToolSections()
@@ -1072,17 +1153,13 @@ public partial class SheetViewerPage : ContentPage
         PencilSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Pencil;
         EraserSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Eraser;
 
-        SetTabAppearance(MusicIconsTabIcon, _viewModel.ActiveTool == AnnotationTool.MusicIcons);
-        SetTabAppearance(PencilTabIcon, _viewModel.ActiveTool == AnnotationTool.Pencil);
-        SetTabAppearance(EraserTabIcon, _viewModel.ActiveTool == AnnotationTool.Eraser);
-
         if (_viewModel.IsDrawingToolActive)
         {
-            AddToolbarItemIfMissing(DeactivateToolItem);
+            AddToolbarItemIfMissing(ToolConfigItem);
         }
         else
         {
-            ToolbarItems.Remove(DeactivateToolItem);
+            ToolbarItems.Remove(ToolConfigItem);
         }
 
         // InputTransparent is left False permanently in XAML (never toggled
@@ -1155,7 +1232,7 @@ public partial class SheetViewerPage : ContentPage
 
     private static SKColor CurrentPrimarySkColor()
     {
-        var color = TabActiveColor;
+        var color = AccentColor;
         return new SKColor((byte)(color.Red * 255), (byte)(color.Green * 255), (byte)(color.Blue * 255));
     }
 
@@ -1171,11 +1248,6 @@ public partial class SheetViewerPage : ContentPage
     private void UpdateEraserDrawingViewLineWidth()
     {
         EraserDrawingView.LineWidth = (float)(_viewModel.EraserRadius * 100);
-    }
-
-    private static void SetTabAppearance(FontImageSource icon, bool active)
-    {
-        icon.Color = active ? TabActiveColor : TabInactiveIconColor;
     }
 
     // Highlights the ring around the swatch matching the current pencil
