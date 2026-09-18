@@ -12,14 +12,6 @@
         <converters:StringNotEmptyConverter x:Key="StringNotEmpty" />
     </ContentPage.Resources>
 
-    <ContentPage.ToolbarItems>
-        <ToolbarItem Clicked="OnImportPdfClicked">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE2C6;" FontFamily="MaterialOutlined" Size="24" Color="White" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
-    </ContentPage.ToolbarItems>
-
     <Grid RowDefinitions="Auto,*" Padding="16">
         <Grid
             Grid.Row="0"
@@ -50,7 +42,7 @@
                 </Image>
             </Border>
         </Grid>
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Sheets}">
+        <CollectionView Grid.Row="1" Margin="0,0,0,72" ItemsSource="{Binding Sheets}">
             <CollectionView.ItemTemplate>
                 <DataTemplate>
                     <Border x:Name="SheetItemRoot" Style="{StaticResource ListItemCard}">
@@ -78,5 +70,29 @@
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
+
+        <Border
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            WidthRequest="56"
+            HeightRequest="56"
+            Padding="0"
+            StrokeThickness="0"
+            StrokeShape="RoundRectangle 28"
+            BackgroundColor="{StaticResource Primary}">
+            <Border.Shadow>
+                <Shadow Brush="{StaticResource Black}" Opacity="0.3" Radius="8" Offset="0,4" />
+            </Border.Shadow>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnImportPdfClicked" />
+            </Border.GestureRecognizers>
+            <Image HorizontalOptions="Center" VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xE2C6;" FontFamily="MaterialOutlined" Size="24" Color="{StaticResource White}" />
+                </Image.Source>
+            </Image>
+        </Border>
     </Grid>
 </ContentPage>
