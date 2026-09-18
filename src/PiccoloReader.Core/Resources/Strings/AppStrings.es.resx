@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Library" xml:space="preserve"><value>Biblioteca</value></data>
+  <data name="Settings" xml:space="preserve"><value>Ajustes</value></data>
+  <data name="MadeWithLoveBy" xml:space="preserve"><value>Hecho con amor por</value></data>
+  <data name="Folders" xml:space="preserve"><value>Carpetas</value></data>
+  <data name="Sheets" xml:space="preserve"><value>Partituras</value></data>
+  <data name="SearchFoldersPlaceholder" xml:space="preserve"><value>Buscar carpetas</value></data>
+  <data name="SearchSheetsPlaceholder" xml:space="preserve"><value>Buscar partituras</value></data>
+  <data name="SelectPdfsPickerTitle" xml:space="preserve"><value>Seleccionar PDFs</value></data>
+  <data name="CreateFolderTitle" xml:space="preserve"><value>Crear carpeta</value></data>
+  <data name="FolderNamePrompt" xml:space="preserve"><value>Nombre de la carpeta:</value></data>
+  <data name="SortFoldersByTitle" xml:space="preserve"><value>Ordenar carpetas por</value></data>
+  <data name="SortSheetsByTitle" xml:space="preserve"><value>Ordenar partituras por</value></data>
+  <data name="SortByTitle" xml:space="preserve"><value>Ordenar por</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancelar</value></data>
+  <data name="SortNameAscending" xml:space="preserve"><value>Nombre (A-Z)</value></data>
+  <data name="SortNameDescending" xml:space="preserve"><value>Nombre (Z-A)</value></data>
+  <data name="SortDateAddedAscending" xml:space="preserve"><value>Fecha de adición (más antiguas primero)</value></data>
+  <data name="SortDateAddedDescending" xml:space="preserve"><value>Fecha de adición (más recientes primero)</value></data>
+  <data name="DeleteSheetsOption" xml:space="preserve"><value>Eliminar partituras</value></data>
+  <data name="KeepSheetsOption" xml:space="preserve"><value>Conservar partituras</value></data>
+  <data name="Move" xml:space="preserve"><value>Mover</value></data>
+  <data name="Delete" xml:space="preserve"><value>Eliminar</value></data>
+  <data name="DeleteSheetTitle" xml:space="preserve"><value>Eliminar partitura</value></data>
+  <data name="DeleteSheetMessageFormat" xml:space="preserve"><value>¿Eliminar "{0}"? Esta acción no se puede deshacer.</value></data>
+  <data name="RootOption" xml:space="preserve"><value>Raíz</value></data>
+  <data name="MoveToTitle" xml:space="preserve"><value>Mover a…</value></data>
+  <data name="NoFoldersToMoveMessage" xml:space="preserve"><value>Primero crea una carpeta para poder mover partituras a ella.</value></data>
+  <data name="OK" xml:space="preserve"><value>Aceptar</value></data>
+  <data name="Folder" xml:space="preserve"><value>Carpeta</value></data>
+  <data name="GoToPageTitle" xml:space="preserve"><value>Ir a la página</value></data>
+  <data name="GoToPageMessageFormat" xml:space="preserve"><value>Ingresa un número de página (1-{0}):</value></data>
+  <data name="BookmarksTitle" xml:space="preserve"><value>Marcadores</value></data>
+  <data name="AddBookmarkOption" xml:space="preserve"><value>Añadir marcador</value></data>
+  <data name="BookmarkPageLabelFormat" xml:space="preserve"><value>Página {0}</value></data>
+  <data name="BookmarkNamedPageLabelFormat" xml:space="preserve"><value>{0} (Página {1})</value></data>
+  <data name="PageNumberLabel" xml:space="preserve"><value>Número de página</value></data>
+  <data name="NameOptionalLabel" xml:space="preserve"><value>Nombre (opcional)</value></data>
+  <data name="NamePlaceholderExample" xml:space="preserve"><value>p. ej. Coda</value></data>
+  <data name="Add" xml:space="preserve"><value>Añadir</value></data>
+  <data name="MusicIcons" xml:space="preserve"><value>Iconos musicales</value></data>
+  <data name="Pencil" xml:space="preserve"><value>Lápiz</value></data>
+  <data name="Color" xml:space="preserve"><value>Color</value></data>
+  <data name="Width" xml:space="preserve"><value>Grosor</value></data>
+  <data name="Eraser" xml:space="preserve"><value>Borrador</value></data>
+  <data name="Size" xml:space="preserve"><value>Tamaño</value></data>
+  <data name="PageIndicatorFormat" xml:space="preserve"><value>Página {0} de {1}</value></data>
+  <data name="CategoryDynamics" xml:space="preserve"><value>Dinámica</value></data>
+  <data name="CategoryArticulations" xml:space="preserve"><value>Articulaciones</value></data>
+  <data name="CategoryFermataBreath" xml:space="preserve"><value>Calderón y respiración</value></data>
+  <data name="CategoryHairpins" xml:space="preserve"><value>Reguladores</value></data>
+  <data name="IconStaccato" xml:space="preserve"><value>Staccato</value></data>
+  <data name="IconAccent" xml:space="preserve"><value>Acento</value></data>
+  <data name="IconTenuto" xml:space="preserve"><value>Tenuto</value></data>
+  <data name="IconMarcato" xml:space="preserve"><value>Marcato</value></data>
+  <data name="IconFermata" xml:space="preserve"><value>Calderón</value></data>
+  <data name="IconBreathMark" xml:space="preserve"><value>Marca de respiración</value></data>
+  <data name="IconCrescendo" xml:space="preserve"><value>Crescendo</value></data>
+  <data name="IconDecrescendo" xml:space="preserve"><value>Decrescendo</value></data>
+  <data name="LanguageSectionHeader" xml:space="preserve"><value>Idioma</value></data>
+  <data name="RestartRequiredTitle" xml:space="preserve"><value>Reinicio necesario</value></data>
+  <data name="RestartRequiredMessage" xml:space="preserve"><value>Reinicia PiccoloReader para que el nuevo idioma tenga efecto.</value></data>
+</root>
