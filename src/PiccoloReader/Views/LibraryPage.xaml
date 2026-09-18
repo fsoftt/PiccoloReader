@@ -235,11 +235,11 @@
         </CollectionView>
         </VerticalStackLayout>
 
-        <!-- Mini FAB: secondary action (Import), stacked above the main FAB. -->
+        <!-- Mini FAB: secondary action (Import), stacked above the main FAB and centered on the same axis (24 = 16 + (56-40)/2, so both FABs share a center line rather than a right edge). -->
         <Border
             HorizontalOptions="End"
             VerticalOptions="End"
-            Margin="0,0,16,88"
+            Margin="0,0,24,88"
             WidthRequest="40"
             HeightRequest="40"
             Padding="0"
