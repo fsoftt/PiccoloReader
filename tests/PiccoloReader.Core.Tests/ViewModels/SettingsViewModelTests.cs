@@ -35,4 +35,14 @@ public class SettingsViewModelTests
         Assert.Equal("es", fake.SavedCode);
         Assert.Equal("es", sut.SelectedLanguageCode);
     }
+
+    [Fact]
+    public void LanguageDisplayNames_And_LanguageCodes_AreParallelArrays()
+    {
+        var sut = new SettingsViewModel(new FakeLanguagePreferenceService());
+
+        Assert.Equal(sut.LanguageDisplayNames.Length, sut.LanguageCodes.Length);
+        Assert.Equal("English", sut.LanguageDisplayNames[Array.IndexOf(sut.LanguageCodes, "en")]);
+        Assert.Equal("Español", sut.LanguageDisplayNames[Array.IndexOf(sut.LanguageCodes, "es")]);
+    }
 }

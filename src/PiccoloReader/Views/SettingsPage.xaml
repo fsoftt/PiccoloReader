@@ -10,22 +10,11 @@
 
         <Label Text="{x:Static strings:AppStrings.LanguageSectionHeader}" FontAttributes="Bold" FontSize="16" />
 
-        <Border
-            x:Name="EnglishRow"
-            Style="{StaticResource ListItemCard}">
-            <Border.GestureRecognizers>
-                <TapGestureRecognizer Tapped="OnEnglishTapped" />
-            </Border.GestureRecognizers>
-            <Label Text="English" VerticalOptions="Center" FontSize="16" />
-        </Border>
-
-        <Border
-            x:Name="SpanishRow"
-            Style="{StaticResource ListItemCard}">
-            <Border.GestureRecognizers>
-                <TapGestureRecognizer Tapped="OnSpanishTapped" />
-            </Border.GestureRecognizers>
-            <Label Text="Español" VerticalOptions="Center" FontSize="16" />
+        <Border Style="{StaticResource ListItemCard}">
+            <Picker
+                x:Name="LanguagePicker"
+                ItemsSource="{Binding LanguageDisplayNames}"
+                SelectedIndexChanged="OnLanguagePickerSelectedIndexChanged" />
         </Border>
 
     </VerticalStackLayout>
