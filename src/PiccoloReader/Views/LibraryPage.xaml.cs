@@ -31,7 +31,7 @@ public partial class LibraryPage : ContentPage
         await _viewModel.LoadAsync();
     }
 
-    private async void OnImportPdfClicked(object? sender, EventArgs e)
+    private async void OnImportPdfClicked(object? sender, TappedEventArgs e)
     {
         var results = await FilePicker.Default.PickMultipleAsync(new PickOptions
         {
@@ -55,7 +55,7 @@ public partial class LibraryPage : ContentPage
         }
     }
 
-    private async void OnCreateFolderClicked(object? sender, EventArgs e)
+    private async void OnCreateFolderClicked(object? sender, TappedEventArgs e)
     {
         var name = await DisplayPromptAsync("Create Folder", "Folder name:");
 
