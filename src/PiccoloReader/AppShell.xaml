@@ -8,7 +8,44 @@
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
     Title="PiccoloReader">
 
+    <Shell.FlyoutHeader>
+        <Grid HeightRequest="160" BackgroundColor="{StaticResource Primary}">
+            <VerticalStackLayout
+                HorizontalOptions="Center"
+                VerticalOptions="Center"
+                Spacing="8">
+                <Border
+                    WidthRequest="72"
+                    HeightRequest="72"
+                    Padding="0"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 36"
+                    BackgroundColor="{StaticResource White}">
+                    <Image
+                        Source="piccolo_mark"
+                        WidthRequest="44"
+                        HeightRequest="44"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center" />
+                </Border>
+                <Label
+                    Text="Piccolo"
+                    FontFamily="Pacifico"
+                    FontSize="22"
+                    TextColor="{StaticResource White}"
+                    HorizontalOptions="Center" />
+            </VerticalStackLayout>
+        </Grid>
+    </Shell.FlyoutHeader>
+
     <FlyoutItem Title="Library" Route="library">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource
+                Glyph="&#xE2C7;"
+                FontFamily="MaterialOutlined"
+                Size="24"
+                Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate views:LibraryPage}" />
     </FlyoutItem>
 
