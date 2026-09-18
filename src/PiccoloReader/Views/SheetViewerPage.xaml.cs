@@ -61,6 +61,7 @@ public partial class SheetViewerPage : ContentPage
         // managed by adding/removing it from ToolbarItems instead - starts
         // removed since ActiveTool defaults to MusicIcons.
         ToolbarItems.Remove(ToolConfigItem);
+        ToolbarItems.Remove(DeactivateToolItem);
 
 #if ANDROID
         AttachAndroidPageContainerTouchListener();
@@ -1088,6 +1089,17 @@ public partial class SheetViewerPage : ContentPage
         ToolPanel.IsVisible = !ToolPanel.IsVisible;
     }
 
+    // Quick one-tap way back to passive/MusicIcons mode without opening
+    // the icon sidebar - reachable only while Pencil or Eraser is active
+    // (see UpdateToolSections). The Icons mini-FAB also deactivates the
+    // current tool, but always drags the sidebar open with it; this is
+    // the "just stop" action.
+    private void OnDeactivateToolClicked(object? sender, EventArgs e)
+    {
+        _viewModel.ActiveTool = AnnotationTool.MusicIcons;
+        UpdateToolSections();
+    }
+
     // If the config sidebar happens to be open, closing it takes priority
     // over expanding the speed-dial - opening both at once stacked the
     // mini FABs visually on top of the sidebar's own content, confirmed
@@ -1156,10 +1168,12 @@ public partial class SheetViewerPage : ContentPage
         if (_viewModel.IsDrawingToolActive)
         {
             AddToolbarItemIfMissing(ToolConfigItem);
+            AddToolbarItemIfMissing(DeactivateToolItem);
         }
         else
         {
             ToolbarItems.Remove(ToolConfigItem);
+            ToolbarItems.Remove(DeactivateToolItem);
         }
 
         // InputTransparent is left False permanently in XAML (never toggled
