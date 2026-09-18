@@ -21,20 +21,8 @@
             VerticalOptions="Center" />
     </Shell.TitleView>
 
-    <ContentPage.ToolbarItems>
-        <ToolbarItem Clicked="OnImportPdfClicked">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE2C6;" FontFamily="MaterialOutlined" Size="24" Color="White" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
-        <ToolbarItem Clicked="OnCreateFolderClicked">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE2CC;" FontFamily="MaterialOutlined" Size="24" Color="White" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
-    </ContentPage.ToolbarItems>
-
-    <VerticalStackLayout Padding="16" Spacing="12">
+    <Grid>
+        <VerticalStackLayout Padding="16,16,16,144" Spacing="12">
 
         <CollectionView
             ItemsSource="{Binding Folders}"
@@ -245,5 +233,54 @@
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
-    </VerticalStackLayout>
+        </VerticalStackLayout>
+
+        <!-- Mini FAB: secondary action (Import), stacked above the main FAB and centered on the same axis (24 = 16 + (56-40)/2, so both FABs share a center line rather than a right edge). -->
+        <Border
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Margin="0,0,24,88"
+            WidthRequest="40"
+            HeightRequest="40"
+            Padding="0"
+            StrokeThickness="0"
+            StrokeShape="RoundRectangle 20"
+            BackgroundColor="{StaticResource Primary}">
+            <Border.Shadow>
+                <Shadow Brush="{StaticResource Black}" Opacity="0.3" Radius="6" Offset="0,3" />
+            </Border.Shadow>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnImportPdfClicked" />
+            </Border.GestureRecognizers>
+            <Image HorizontalOptions="Center" VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xE2C6;" FontFamily="MaterialOutlined" Size="18" Color="{StaticResource White}" />
+                </Image.Source>
+            </Image>
+        </Border>
+
+        <!-- Main FAB: primary action (Add Folder). -->
+        <Border
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Margin="0,0,16,16"
+            WidthRequest="56"
+            HeightRequest="56"
+            Padding="0"
+            StrokeThickness="0"
+            StrokeShape="RoundRectangle 28"
+            BackgroundColor="{StaticResource Primary}">
+            <Border.Shadow>
+                <Shadow Brush="{StaticResource Black}" Opacity="0.3" Radius="8" Offset="0,4" />
+            </Border.Shadow>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnCreateFolderClicked" />
+            </Border.GestureRecognizers>
+            <Image HorizontalOptions="Center" VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xE2CC;" FontFamily="MaterialOutlined" Size="24" Color="{StaticResource White}" />
+                </Image.Source>
+            </Image>
+        </Border>
+    </Grid>
 </ContentPage>
