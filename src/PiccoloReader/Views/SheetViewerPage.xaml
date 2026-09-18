@@ -15,6 +15,11 @@
                 <FontImageSource Glyph="&#xE429;" FontFamily="MaterialOutlined" Size="24" Color="White" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
+        <ToolbarItem x:Name="DeactivateToolItem" Clicked="OnDeactivateToolClicked">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xE5CD;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
         <ToolbarItem x:Name="BookmarksItem" Clicked="OnBookmarksClicked">
             <ToolbarItem.IconImageSource>
                 <FontImageSource Glyph="&#xE98B;" FontFamily="MaterialOutlined" Size="24" Color="White" />
