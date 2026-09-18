@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using PiccoloReader.Core.Data.Models;
+using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.ViewModels;
 
@@ -35,7 +36,7 @@ public partial class LibraryPage : ContentPage
     {
         var results = await FilePicker.Default.PickMultipleAsync(new PickOptions
         {
-            PickerTitle = "Select PDFs",
+            PickerTitle = AppStrings.SelectPdfsPickerTitle,
             FileTypes = FilePickerFileType.Pdf
         });
 
@@ -57,7 +58,7 @@ public partial class LibraryPage : ContentPage
 
     private async void OnCreateFolderClicked(object? sender, TappedEventArgs e)
     {
-        var name = await DisplayPromptAsync("Create Folder", "Folder name:");
+        var name = await DisplayPromptAsync(AppStrings.CreateFolderTitle, AppStrings.FolderNamePrompt, accept: AppStrings.OK, cancel: AppStrings.Cancel);
 
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -101,20 +102,20 @@ public partial class LibraryPage : ContentPage
     private async void OnFolderSortClicked(object? sender, TappedEventArgs e)
     {
         var choice = await DisplayActionSheetAsync(
-            "Sort folders by",
-            "Cancel",
+            AppStrings.SortFoldersByTitle,
+            AppStrings.Cancel,
             null,
-            "Name (A-Z)",
-            "Name (Z-A)",
-            "Date Added (Oldest First)",
-            "Date Added (Newest First)");
+            AppStrings.SortNameAscending,
+            AppStrings.SortNameDescending,
+            AppStrings.SortDateAddedAscending,
+            AppStrings.SortDateAddedDescending);
 
         (SortField Field, SortDirection Direction)? sort = choice switch
         {
-            "Name (A-Z)" => (SortField.Name, SortDirection.Ascending),
-            "Name (Z-A)" => (SortField.Name, SortDirection.Descending),
-            "Date Added (Oldest First)" => (SortField.DateAdded, SortDirection.Ascending),
-            "Date Added (Newest First)" => (SortField.DateAdded, SortDirection.Descending),
+            var c when c == AppStrings.SortNameAscending => (SortField.Name, SortDirection.Ascending),
+            var c when c == AppStrings.SortNameDescending => (SortField.Name, SortDirection.Descending),
+            var c when c == AppStrings.SortDateAddedAscending => (SortField.DateAdded, SortDirection.Ascending),
+            var c when c == AppStrings.SortDateAddedDescending => (SortField.DateAdded, SortDirection.Descending),
             _ => null
         };
 
@@ -127,20 +128,20 @@ public partial class LibraryPage : ContentPage
     private async void OnSheetSortClicked(object? sender, TappedEventArgs e)
     {
         var choice = await DisplayActionSheetAsync(
-            "Sort sheets by",
-            "Cancel",
+            AppStrings.SortSheetsByTitle,
+            AppStrings.Cancel,
             null,
-            "Name (A-Z)",
-            "Name (Z-A)",
-            "Date Added (Oldest First)",
-            "Date Added (Newest First)");
+            AppStrings.SortNameAscending,
+            AppStrings.SortNameDescending,
+            AppStrings.SortDateAddedAscending,
+            AppStrings.SortDateAddedDescending);
 
         (SortField Field, SortDirection Direction)? sort = choice switch
         {
-            "Name (A-Z)" => (SortField.Name, SortDirection.Ascending),
-            "Name (Z-A)" => (SortField.Name, SortDirection.Descending),
-            "Date Added (Oldest First)" => (SortField.DateAdded, SortDirection.Ascending),
-            "Date Added (Newest First)" => (SortField.DateAdded, SortDirection.Descending),
+            var c when c == AppStrings.SortNameAscending => (SortField.Name, SortDirection.Ascending),
+            var c when c == AppStrings.SortNameDescending => (SortField.Name, SortDirection.Descending),
+            var c when c == AppStrings.SortDateAddedAscending => (SortField.DateAdded, SortDirection.Ascending),
+            var c when c == AppStrings.SortDateAddedDescending => (SortField.DateAdded, SortDirection.Descending),
             _ => null
         };
 
@@ -168,49 +169,48 @@ public partial class LibraryPage : ContentPage
 
     private async Task OnFolderLongPressedAsync(Folder folder)
     {
-        var choice = await DisplayActionSheetAsync($"\"{folder.Name}\"", "Cancel", null, "Delete Sheets", "Keep Sheets");
+        var choice = await DisplayActionSheetAsync($"\"{folder.Name}\"", AppStrings.Cancel, null, AppStrings.DeleteSheetsOption, AppStrings.KeepSheetsOption);
 
-        switch (choice)
+        if (choice == AppStrings.DeleteSheetsOption)
         {
-            case "Delete Sheets":
-                await _viewModel.DeleteFolderCommand.ExecuteAsync(folder);
-                break;
-            case "Keep Sheets":
-                await _viewModel.DeleteFolderKeepSheetsCommand.ExecuteAsync(folder);
-                break;
+            await _viewModel.DeleteFolderCommand.ExecuteAsync(folder);
+        }
+        else if (choice == AppStrings.KeepSheetsOption)
+        {
+            await _viewModel.DeleteFolderKeepSheetsCommand.ExecuteAsync(folder);
         }
     }
 
     private async Task OnSheetLongPressedAsync(Sheet sheet)
     {
-        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", "Cancel", null, "Move", "Delete");
+        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, AppStrings.Move, AppStrings.Delete);
 
-        if (choice == "Delete")
+        if (choice == AppStrings.Delete)
         {
             var confirmed = await DisplayAlertAsync(
-                "Delete sheet",
-                $"Delete \"{sheet.Title}\"? This cannot be undone.",
-                "Delete",
-                "Cancel");
+                AppStrings.DeleteSheetTitle,
+                string.Format(AppStrings.DeleteSheetMessageFormat, sheet.Title),
+                AppStrings.Delete,
+                AppStrings.Cancel);
 
             if (confirmed)
             {
                 await _viewModel.DeleteSheetCommand.ExecuteAsync(sheet);
             }
         }
-        else if (choice == "Move")
+        else if (choice == AppStrings.Move)
         {
             var folders = await _libraryService.GetFoldersAsync();
 
             if (folders.Count == 0)
             {
-                await DisplayAlertAsync("Move", "Create a folder first to move sheets into.", "OK");
+                await DisplayAlertAsync(AppStrings.Move, AppStrings.NoFoldersToMoveMessage, AppStrings.OK);
                 return;
             }
 
-            var target = await DisplayActionSheetAsync("Move to…", "Cancel", null, folders.Select(f => f.Name).ToArray());
+            var target = await DisplayActionSheetAsync(AppStrings.MoveToTitle, AppStrings.Cancel, null, folders.Select(f => f.Name).ToArray());
 
-            if (target is null || target == "Cancel")
+            if (target is null || target == AppStrings.Cancel)
             {
                 return;
             }
