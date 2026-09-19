@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="PiccoloReader.Views.DonatePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:admob="clr-namespace:Plugin.AdMob;assembly=Plugin.AdMob"
+    xmlns:converters="clr-namespace:PiccoloReader.Converters"
+    xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
+    Title="{x:Static strings:AppStrings.DonatePageTitle}">
+
+    <ContentPage.Resources>
+        <converters:InvertedBoolConverter x:Key="InvertedBool" />
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="*,Auto">
+
+        <VerticalStackLayout Grid.Row="0" Padding="16" Spacing="16" VerticalOptions="Center">
+            <Label Text="{x:Static strings:AppStrings.DonateExplanation}" FontSize="16" />
+            <Button
+                Text="{x:Static strings:AppStrings.SeeAdButton}"
+                Command="{Binding SeeAdCommand}"
+                IsEnabled="{Binding IsAdLoading, Converter={StaticResource InvertedBool}}" />
+        </VerticalStackLayout>
+
+        <admob:BannerAd Grid.Row="1" />
+
+    </Grid>
+</ContentPage>

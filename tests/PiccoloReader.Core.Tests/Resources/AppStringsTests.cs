@@ -65,4 +65,49 @@ public class AppStringsTests
             CultureInfo.CurrentUICulture = original;
         }
     }
+
+    [Fact]
+    public void DonateMenuItem_SpanishCulture_ReturnsSpanishValue()
+    {
+        var original = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = new CultureInfo("es");
+            Assert.Equal("Donar", AppStrings.DonateMenuItem);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
+
+    [Fact]
+    public void SeeAdButton_EnglishCulture_ReturnsEnglishValue()
+    {
+        var original = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = new CultureInfo("en");
+            Assert.Equal("See ad", AppStrings.SeeAdButton);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
+
+    [Fact]
+    public void DonateExplanation_SpanishCulture_ContainsSpanishText()
+    {
+        var original = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = new CultureInfo("es");
+            Assert.Contains("propina", AppStrings.DonateExplanation);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
 }
