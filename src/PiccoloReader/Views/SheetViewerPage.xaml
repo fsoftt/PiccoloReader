@@ -11,6 +11,16 @@
     Title="{Binding Title}">
 
     <ContentPage.ToolbarItems>
+        <ToolbarItem x:Name="UndoItem" Clicked="OnUndoClicked" IsEnabled="{Binding CanUndo}">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xE166;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
+        <ToolbarItem x:Name="RedoItem" Clicked="OnRedoClicked" IsEnabled="{Binding CanRedo}">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xE15A;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
         <ToolbarItem x:Name="ToolConfigItem" Clicked="OnToolConfigClicked">
             <ToolbarItem.IconImageSource>
                 <FontImageSource Glyph="&#xE429;" FontFamily="MaterialOutlined" Size="24" Color="White" />

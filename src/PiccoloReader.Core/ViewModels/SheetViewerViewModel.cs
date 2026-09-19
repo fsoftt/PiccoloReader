@@ -17,6 +17,10 @@ public partial class SheetViewerViewModel : ObservableObject
     private readonly AnnotationService _annotationService;
     private readonly BookmarkService _bookmarkService;
 
+    private readonly Stack<IUndoableAction> _undoStack = new();
+    private readonly Stack<IUndoableAction> _redoStack = new();
+    private List<IUndoableAction>? _eraseBatch;
+
     private Sheet? _sheet;
     private string _filePath = string.Empty;
     private int _targetWidthPx;
@@ -73,6 +77,12 @@ public partial class SheetViewerViewModel : ObservableObject
 
     [ObservableProperty]
     private double _eraserRadius = 0.05;
+
+    [ObservableProperty]
+    private bool _canUndo;
+
+    [ObservableProperty]
+    private bool _canRedo;
 
     public bool IsDrawingToolActive => ActiveTool != AnnotationTool.MusicIcons;
 
@@ -187,6 +197,7 @@ public partial class SheetViewerViewModel : ObservableObject
         var annotation = await _annotationService.AddIconAsync(_sheet.Id, CurrentPageIndex, iconKey, x, y, width, height);
 
         CurrentPageAnnotations.Add(annotation);
+        RecordAction(new AddAnnotationAction(_annotationService, CurrentPageAnnotations, annotation));
         SelectedAnnotation = annotation;
     }
 
@@ -194,44 +205,120 @@ public partial class SheetViewerViewModel : ObservableObject
     {
         var annotation = await _annotationService.AddStrokeAsync(sheetId, CurrentPageIndex, colorHex, strokeWidth, points);
         CurrentPageAnnotations.Add(annotation);
+        RecordAction(new AddAnnotationAction(_annotationService, CurrentPageAnnotations, annotation));
         return annotation;
     }
 
-    public async Task MoveSelectedAnnotationAsync(double newX, double newY)
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private async Task UndoAsync()
     {
-        if (SelectedAnnotation is null)
+        if (_undoStack.Count == 0)
         {
             return;
         }
 
-        SelectedAnnotation.X = newX;
-        SelectedAnnotation.Y = newY;
-        await _annotationService.UpdateAnnotationAsync(SelectedAnnotation);
+        var action = _undoStack.Pop();
+        await action.UndoAsync();
+        _redoStack.Push(action);
+        ClearSelectionIfNoLongerPresent();
+        RefreshUndoRedoState();
     }
 
-    public async Task ResizeSelectedAnnotationAsync(double newWidth, double newHeight)
+    [RelayCommand(CanExecute = nameof(CanRedo))]
+    private async Task RedoAsync()
     {
-        if (SelectedAnnotation is null)
+        if (_redoStack.Count == 0)
         {
             return;
         }
 
-        SelectedAnnotation.Width = newWidth;
-        SelectedAnnotation.Height = newHeight;
-        await _annotationService.UpdateAnnotationAsync(SelectedAnnotation);
+        var action = _redoStack.Pop();
+        await action.RedoAsync();
+        _undoStack.Push(action);
+        ClearSelectionIfNoLongerPresent();
+        RefreshUndoRedoState();
+    }
+
+    private void RecordAction(IUndoableAction action)
+    {
+        _undoStack.Push(action);
+        _redoStack.Clear();
+        RefreshUndoRedoState();
+    }
+
+    private void RefreshUndoRedoState()
+    {
+        CanUndo = _undoStack.Count > 0;
+        CanRedo = _redoStack.Count > 0;
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+    }
+
+    private void ClearSelectionIfNoLongerPresent()
+    {
+        if (SelectedAnnotation is not null && !CurrentPageAnnotations.Contains(SelectedAnnotation))
+        {
+            SelectedAnnotation = null;
+        }
+    }
+
+    public async Task MoveSelectedAnnotationAsync(double oldX, double oldY, double newX, double newY)
+    {
+        var annotation = SelectedAnnotation;
+        if (annotation is null)
+        {
+            return;
+        }
+
+        annotation.X = newX;
+        annotation.Y = newY;
+        await _annotationService.UpdateAnnotationAsync(annotation);
+
+        if (oldX != newX || oldY != newY)
+        {
+            RecordAction(new UpdateAnnotationAction(
+                _annotationService,
+                annotation,
+                before: (oldX, oldY, annotation.Width, annotation.Height),
+                after: (newX, newY, annotation.Width, annotation.Height)));
+        }
+    }
+
+    public async Task ResizeSelectedAnnotationAsync(double oldWidth, double oldHeight, double newWidth, double newHeight)
+    {
+        var annotation = SelectedAnnotation;
+        if (annotation is null)
+        {
+            return;
+        }
+
+        annotation.Width = newWidth;
+        annotation.Height = newHeight;
+        await _annotationService.UpdateAnnotationAsync(annotation);
+
+        if (oldWidth != newWidth || oldHeight != newHeight)
+        {
+            RecordAction(new UpdateAnnotationAction(
+                _annotationService,
+                annotation,
+                before: (annotation.X, annotation.Y, oldWidth, oldHeight),
+                after: (annotation.X, annotation.Y, newWidth, newHeight)));
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanDeleteSelectedAnnotation))]
     private async Task DeleteSelectedAnnotationAsync()
     {
-        if (SelectedAnnotation is null)
+        var annotation = SelectedAnnotation;
+        if (annotation is null)
         {
             return;
         }
 
-        await _annotationService.DeleteAnnotationAsync(SelectedAnnotation);
-        CurrentPageAnnotations.Remove(SelectedAnnotation);
+        await _annotationService.DeleteAnnotationAsync(annotation);
+        CurrentPageAnnotations.Remove(annotation);
         SelectedAnnotation = null;
+        RecordAction(new DeleteAnnotationAction(_annotationService, CurrentPageAnnotations, annotation));
     }
 
     public async Task EraseAnnotationAsync(Annotation annotation)
@@ -241,6 +328,32 @@ public partial class SheetViewerViewModel : ObservableObject
         if (SelectedAnnotation == annotation)
         {
             SelectedAnnotation = null;
+        }
+
+        var action = new DeleteAnnotationAction(_annotationService, CurrentPageAnnotations, annotation);
+        if (_eraseBatch is not null)
+        {
+            _eraseBatch.Add(action);
+        }
+        else
+        {
+            RecordAction(action);
+        }
+    }
+
+    public void BeginEraseBatch()
+    {
+        _eraseBatch = new List<IUndoableAction>();
+    }
+
+    public void EndEraseBatch()
+    {
+        var batch = _eraseBatch;
+        _eraseBatch = null;
+
+        if (batch is { Count: > 0 })
+        {
+            RecordAction(new CompositeUndoAction(batch));
         }
     }
 
@@ -258,6 +371,10 @@ public partial class SheetViewerViewModel : ObservableObject
                 CurrentPageAnnotations.Add(annotation);
             }
         }
+
+        _undoStack.Clear();
+        _redoStack.Clear();
+        RefreshUndoRedoState();
     }
 
     private async Task PersistLastViewedPageAsync()

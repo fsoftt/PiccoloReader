@@ -422,7 +422,7 @@ public partial class SheetViewerPage : ContentPage
         }
         else
         {
-            _ = _viewModel.MoveSelectedAnnotationAsync(annotation.X, annotation.Y);
+            _ = _viewModel.MoveSelectedAnnotationAsync(_moveStartX, _moveStartY, annotation.X, annotation.Y);
         }
     }
 
@@ -521,7 +521,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         SetDragControlsVisible(true);
-        _ = _viewModel.ResizeSelectedAnnotationAsync(annotation.Width, annotation.Height);
+        _ = _viewModel.ResizeSelectedAnnotationAsync(_resizeStartWidth, _resizeStartHeight, annotation.Width, annotation.Height);
     }
 
     private async void OnTrashTargetTapped(object? sender, TappedEventArgs e)
@@ -937,6 +937,8 @@ public partial class SheetViewerPage : ContentPage
     // hit-testing and deleting live via EraseAt at every point.
     private void OnEraserDrawingLineStarted(object? sender, DrawingLineStartedEventArgs e)
     {
+        _viewModel.BeginEraseBatch();
+
         // Closes on the initial touch-down, not when the finger lifts, so
         // the panel gets out of the way as soon as the user starts erasing
         // instead of staying open over the page for the whole drag.
@@ -951,11 +953,13 @@ public partial class SheetViewerPage : ContentPage
 
     private void OnEraserDrawingLineCompleted(object? sender, DrawingLineCompletedEventArgs e)
     {
+        _viewModel.EndEraseBatch();
         EraserRadiusIndicator.IsVisible = false;
     }
 
     private void OnEraserDrawingLineCancelled(object? sender, EventArgs e)
     {
+        _viewModel.EndEraseBatch();
         EraserRadiusIndicator.IsVisible = false;
     }
 
@@ -1007,6 +1011,18 @@ public partial class SheetViewerPage : ContentPage
             await _viewModel.GoToPageAsync(pageNumber - 1);
             ResetZoom();
         }
+    }
+
+    private async void OnUndoClicked(object? sender, EventArgs e)
+    {
+        await _viewModel.UndoCommand.ExecuteAsync(null);
+        UpdateSelectionOverlay();
+    }
+
+    private async void OnRedoClicked(object? sender, EventArgs e)
+    {
+        await _viewModel.RedoCommand.ExecuteAsync(null);
+        UpdateSelectionOverlay();
     }
 
     // Single entry point for bookmarks, per explicit request - no separate
