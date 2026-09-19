@@ -38,7 +38,14 @@ public static class MauiProgram
 		Batteries_V2.Init();
 
 		var savedLanguageCode = Preferences.Default.Get("AppLanguage", (string?)null);
+#if ANDROID
+		// CultureInfo.CurrentUICulture does not sync with the Android device
+		// locale on this runtime (it stays Invariant) - read the OS locale
+		// directly via the Java API instead.
+		var deviceLanguageCode = Java.Util.Locale.Default?.Language ?? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+#else
 		var deviceLanguageCode = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+#endif
 		var resolvedLanguageCode = LanguageResolver.ResolveLanguageCode(savedLanguageCode, deviceLanguageCode);
 
 		if (savedLanguageCode is null)
