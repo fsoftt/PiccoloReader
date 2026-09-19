@@ -129,4 +129,6 @@
 
 If you'd like to give me a tip, tap the button below — it'll show a short ad.</value></data>
   <data name="SeeAdButton" xml:space="preserve"><value>See ad</value></data>
+  <data name="SupportWithAdsOption" xml:space="preserve"><value>Support with ads</value></data>
+  <data name="DonateSupportWithAdsExplanation" xml:space="preserve"><value>There's also a "Support with ads" option in Settings — turn it on and a small ad banner will show up while you use the app. It helps me out.</value></data>
 </root>
