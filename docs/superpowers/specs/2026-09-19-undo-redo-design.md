@@ -131,14 +131,18 @@ position), no action is pushed — an undo step should never be a no-op.
 
 ### Selection after undo/redo
 
-Whenever `AddAnnotationAction.UndoAsync()` or
-`DeleteAnnotationAction.RedoAsync()` removes an annotation that is
-currently `SelectedAnnotation`, the ViewModel clears the selection —
-mirroring what `DeleteSelectedAnnotationAsync`/`EraseAnnotationAsync`
-already do today when deleting the selected annotation directly.
-Re-adding an annotation (via `AddAnnotationAction.RedoAsync()` or
-`DeleteAnnotationAction.UndoAsync()`) does not automatically select
-it.
+The action types themselves only know about `AnnotationService` and
+the page's `ObservableCollection<Annotation>` — they don't have (and
+shouldn't need) a reference to the ViewModel's `SelectedAnnotation`.
+Instead, `SheetViewerViewModel.UndoAsync()`/`RedoAsync()` do one
+generic check after calling `action.UndoAsync()`/`RedoAsync()`: if
+`SelectedAnnotation` is non-null and no longer present in
+`CurrentPageAnnotations`, clear it. This handles every action type
+uniformly (including a multi-item `CompositeUndoAction`) with no
+per-action-type special-casing, and mirrors what
+`DeleteSelectedAnnotationAsync`/`EraseAnnotationAsync` already do today
+when deleting the selected annotation directly. Re-adding an
+annotation does not automatically select it.
 
 ### Eraser batching
 
