@@ -129,4 +129,6 @@
 
 Si quieres darme una propina, toca el botón de abajo — se mostrará un anuncio corto.</value></data>
   <data name="SeeAdButton" xml:space="preserve"><value>Ver anuncio</value></data>
+  <data name="SupportWithAdsOption" xml:space="preserve"><value>Apoyar con anuncios</value></data>
+  <data name="DonateSupportWithAdsExplanation" xml:space="preserve"><value>También existe la opción "Apoyar con anuncios" en Ajustes — actívala y aparecerá un pequeño banner de anuncios mientras usas la app. Es una gran ayuda.</value></data>
 </root>

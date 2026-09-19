@@ -69,6 +69,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IAppStorageProvider, MauiAppStorageProvider>();
 		builder.Services.AddSingleton<ILanguagePreferenceService, MauiLanguagePreferenceService>();
 		builder.Services.AddSingleton<IDonateAdService, MauiDonateAdService>();
+		builder.Services.AddSingleton<IAdsPreferenceService, MauiAdsPreferenceService>();
 #if ANDROID
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.Android.PdfPageRenderer>();
 #elif IOS

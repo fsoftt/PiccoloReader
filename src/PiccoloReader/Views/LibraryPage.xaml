@@ -6,6 +6,8 @@
     xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
     xmlns:converters="clr-namespace:PiccoloReader.Converters"
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
+    xmlns:admob="clr-namespace:Plugin.AdMob;assembly=Plugin.AdMob"
+    xmlns:local="clr-namespace:PiccoloReader"
     x:Name="ThisPage"
     Title="{x:Static strings:AppStrings.Library}">
 
@@ -22,7 +24,8 @@
             VerticalOptions="Center" />
     </Shell.TitleView>
 
-    <Grid>
+    <Grid RowDefinitions="*,Auto">
+    <Grid Grid.Row="0">
         <VerticalStackLayout Padding="16,16,16,144" Spacing="12">
 
         <CollectionView
@@ -283,5 +286,10 @@
                 </Image.Source>
             </Image>
         </Border>
+    </Grid>
+
+    <Grid Grid.Row="1" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
+        <admob:BannerAd IsVisible="{Binding ShowAdsBanner}" />
+    </Grid>
     </Grid>
 </ContentPage>

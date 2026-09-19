@@ -19,7 +19,7 @@ public class LibraryViewModelTests : IDisposable
         database.InitializeAsync().GetAwaiter().GetResult();
         var libraryService = new LibraryService(database, _storage);
         var importService = new PdfImportService(database, _storage);
-        _sut = new LibraryViewModel(libraryService, importService);
+        _sut = new LibraryViewModel(libraryService, importService, new FakeAdsPreferenceService());
 
         _tempDir = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);

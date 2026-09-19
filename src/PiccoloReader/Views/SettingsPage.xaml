@@ -17,5 +17,12 @@
                 SelectedIndexChanged="OnLanguagePickerSelectedIndexChanged" />
         </Border>
 
+        <Border Style="{StaticResource ListItemCard}">
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Grid.Column="0" Text="{x:Static strings:AppStrings.SupportWithAdsOption}" VerticalOptions="Center" />
+                <Switch Grid.Column="1" IsToggled="{Binding SupportWithAdsEnabled}" />
+            </Grid>
+        </Border>
+
     </VerticalStackLayout>
 </ContentPage>

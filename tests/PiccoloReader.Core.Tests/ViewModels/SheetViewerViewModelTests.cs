@@ -24,7 +24,7 @@ public class SheetViewerViewModelTests : IDisposable
         _libraryService = new LibraryService(_database, _storage);
         _annotationService = new AnnotationService(_database);
         _bookmarkService = new BookmarkService(_database);
-        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService);
+        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService());
     }
 
     public void Dispose() => _storage.Dispose();
