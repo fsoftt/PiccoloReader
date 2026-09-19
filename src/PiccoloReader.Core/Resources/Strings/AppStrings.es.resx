@@ -83,4 +83,10 @@
   <data name="LanguageSectionHeader" xml:space="preserve"><value>Idioma</value></data>
   <data name="RestartRequiredTitle" xml:space="preserve"><value>Reinicio necesario</value></data>
   <data name="RestartRequiredMessage" xml:space="preserve"><value>Reinicia PiccoloReader para que el nuevo idioma tenga efecto.</value></data>
+  <data name="DonateMenuItem" xml:space="preserve"><value>Donar</value></data>
+  <data name="DonatePageTitle" xml:space="preserve"><value>Donar</value></data>
+  <data name="DonateExplanation" xml:space="preserve"><value>No me gustan las suscripciones. Hice esta app gratis porque es lo correcto.
+
+Si quieres darme una propina, toca el botón de abajo — se mostrará un anuncio corto.</value></data>
+  <data name="SeeAdButton" xml:space="preserve"><value>Ver anuncio</value></data>
 </root>

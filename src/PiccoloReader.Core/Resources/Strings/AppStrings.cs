@@ -69,6 +69,10 @@ public static class AppStrings
     public static string LanguageSectionHeader => Get(nameof(LanguageSectionHeader));
     public static string RestartRequiredTitle => Get(nameof(RestartRequiredTitle));
     public static string RestartRequiredMessage => Get(nameof(RestartRequiredMessage));
+    public static string DonateMenuItem => Get(nameof(DonateMenuItem));
+    public static string DonatePageTitle => Get(nameof(DonatePageTitle));
+    public static string DonateExplanation => Get(nameof(DonateExplanation));
+    public static string SeeAdButton => Get(nameof(SeeAdButton));
 
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;

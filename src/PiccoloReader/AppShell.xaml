@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:views="clr-namespace:PiccoloReader.Views"
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
+    xmlns:local="clr-namespace:PiccoloReader"
     FlyoutBehavior="Flyout"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
     Title="PiccoloReader">
@@ -48,6 +49,20 @@
                 Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate views:LibraryPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem
+        Title="{x:Static strings:AppStrings.DonateMenuItem}"
+        Route="donate"
+        IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource
+                Glyph="&#xE87E;"
+                FontFamily="MaterialOutlined"
+                Size="24"
+                Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate views:DonatePage}" />
     </FlyoutItem>
 
     <FlyoutItem Title="{x:Static strings:AppStrings.Settings}" Route="settings">
