@@ -54,6 +54,9 @@ public class AnnotationService
         return annotation;
     }
 
+    public Task InsertAnnotationAsync(Annotation annotation) =>
+        _database.Connection.InsertAsync(annotation);
+
     public Task UpdateAnnotationAsync(Annotation annotation) =>
         _database.Connection.UpdateAsync(annotation);
 
