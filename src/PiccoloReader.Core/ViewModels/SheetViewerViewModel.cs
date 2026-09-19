@@ -17,6 +17,9 @@ public partial class SheetViewerViewModel : ObservableObject
     private readonly AnnotationService _annotationService;
     private readonly BookmarkService _bookmarkService;
 
+    private readonly Stack<IUndoableAction> _undoStack = new();
+    private readonly Stack<IUndoableAction> _redoStack = new();
+
     private Sheet? _sheet;
     private string _filePath = string.Empty;
     private int _targetWidthPx;
@@ -73,6 +76,12 @@ public partial class SheetViewerViewModel : ObservableObject
 
     [ObservableProperty]
     private double _eraserRadius = 0.05;
+
+    [ObservableProperty]
+    private bool _canUndo;
+
+    [ObservableProperty]
+    private bool _canRedo;
 
     public bool IsDrawingToolActive => ActiveTool != AnnotationTool.MusicIcons;
 
@@ -187,6 +196,7 @@ public partial class SheetViewerViewModel : ObservableObject
         var annotation = await _annotationService.AddIconAsync(_sheet.Id, CurrentPageIndex, iconKey, x, y, width, height);
 
         CurrentPageAnnotations.Add(annotation);
+        RecordAction(new AddAnnotationAction(_annotationService, CurrentPageAnnotations, annotation));
         SelectedAnnotation = annotation;
     }
 
@@ -194,7 +204,61 @@ public partial class SheetViewerViewModel : ObservableObject
     {
         var annotation = await _annotationService.AddStrokeAsync(sheetId, CurrentPageIndex, colorHex, strokeWidth, points);
         CurrentPageAnnotations.Add(annotation);
+        RecordAction(new AddAnnotationAction(_annotationService, CurrentPageAnnotations, annotation));
         return annotation;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private async Task UndoAsync()
+    {
+        if (_undoStack.Count == 0)
+        {
+            return;
+        }
+
+        var action = _undoStack.Pop();
+        await action.UndoAsync();
+        _redoStack.Push(action);
+        ClearSelectionIfNoLongerPresent();
+        RefreshUndoRedoState();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRedo))]
+    private async Task RedoAsync()
+    {
+        if (_redoStack.Count == 0)
+        {
+            return;
+        }
+
+        var action = _redoStack.Pop();
+        await action.RedoAsync();
+        _undoStack.Push(action);
+        ClearSelectionIfNoLongerPresent();
+        RefreshUndoRedoState();
+    }
+
+    private void RecordAction(IUndoableAction action)
+    {
+        _undoStack.Push(action);
+        _redoStack.Clear();
+        RefreshUndoRedoState();
+    }
+
+    private void RefreshUndoRedoState()
+    {
+        CanUndo = _undoStack.Count > 0;
+        CanRedo = _redoStack.Count > 0;
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+    }
+
+    private void ClearSelectionIfNoLongerPresent()
+    {
+        if (SelectedAnnotation is not null && !CurrentPageAnnotations.Contains(SelectedAnnotation))
+        {
+            SelectedAnnotation = null;
+        }
     }
 
     public async Task MoveSelectedAnnotationAsync(double newX, double newY)
@@ -258,6 +322,10 @@ public partial class SheetViewerViewModel : ObservableObject
                 CurrentPageAnnotations.Add(annotation);
             }
         }
+
+        _undoStack.Clear();
+        _redoStack.Clear();
+        RefreshUndoRedoState();
     }
 
     private async Task PersistLastViewedPageAsync()

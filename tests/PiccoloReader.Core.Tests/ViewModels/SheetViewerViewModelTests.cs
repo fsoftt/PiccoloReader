@@ -386,6 +386,86 @@ public class SheetViewerViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task UndoCommand_InitiallyCannotExecute()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.False(_sut.CanUndo);
+        Assert.False(_sut.UndoCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task UndoCommand_AfterPlaceIcon_RemovesTheIconAndEnablesRedo()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Empty(_sut.CurrentPageAnnotations);
+        Assert.Empty(await _annotationService.GetAnnotationsAsync(sheet.Id, 0));
+        Assert.False(_sut.CanUndo);
+        Assert.True(_sut.CanRedo);
+    }
+
+    [Fact]
+    public async Task RedoCommand_AfterUndoingPlaceIcon_RestoresTheIcon()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        await _sut.RedoCommand.ExecuteAsync(null);
+
+        Assert.Single(_sut.CurrentPageAnnotations);
+        Assert.Equal("dynamicForte", _sut.CurrentPageAnnotations[0].IconKey);
+        Assert.True(_sut.CanUndo);
+        Assert.False(_sut.CanRedo);
+    }
+
+    [Fact]
+    public async Task PlaceIconCommand_AfterUndo_NewActionClearsRedoStack()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicPiano");
+
+        Assert.False(_sut.CanRedo);
+    }
+
+    [Fact]
+    public async Task UndoCommand_AfterAddStroke_RemovesTheStroke()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        var points = new List<StrokePoint> { new(0.1, 0.1), new(0.2, 0.2) };
+        await _sut.AddStrokeAsync(sheet.Id, "#000000", 0.01, points);
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Empty(_sut.CurrentPageAnnotations);
+    }
+
+    [Fact]
+    public async Task NextPageCommand_ResetsUndoRedoStacks()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        await _sut.NextPageCommand.ExecuteAsync(null);
+
+        Assert.False(_sut.CanUndo);
+        Assert.False(_sut.CanRedo);
+    }
+
+    [Fact]
     public void PageIndicatorText_SpanishCulture_UsesSpanishFormat()
     {
         var original = System.Globalization.CultureInfo.CurrentUICulture;
