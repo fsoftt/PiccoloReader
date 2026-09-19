@@ -37,6 +37,17 @@
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+
+		<!-- Pin a persistent, repo-committed debug keystore instead of each
+		     machine/CI runner auto-generating its own random one. Without
+		     this, an APK built on one machine can't be installed over an
+		     APK built on another (Android rejects the update as a signature
+		     mismatch). Fine to commit - this app isn't published to the
+		     Play Store, it's sideload-only (see .github/workflows/build-apk.yml). -->
+		<AndroidSigningKeyStore Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">debug.keystore</AndroidSigningKeyStore>
+		<AndroidSigningKeyAlias Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">androiddebugkey</AndroidSigningKeyAlias>
+		<AndroidSigningKeyPass Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android</AndroidSigningKeyPass>
+		<AndroidSigningStorePass Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android</AndroidSigningStorePass>
 	</PropertyGroup>
 
 	<ItemGroup>
