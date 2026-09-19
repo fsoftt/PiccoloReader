@@ -2,6 +2,8 @@
 using CommunityToolkit.Maui;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
+using Plugin.AdMob;
+using Plugin.AdMob.Configuration;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 using UraniumUI;
 using PiccoloReader.Core.Data;
@@ -22,6 +24,12 @@ public static class MauiProgram
 			.UseMauiApp<App>()
 			.UseMauiCommunityToolkit()
 			.UseSkiaSharp()
+			// Placeholder ad unit IDs - inert while AdConfig.UseTestAdUnitIds is
+			// true (see below). Swap these for real ones from the AdMob console
+			// once the account/ad units exist, alongside flipping that flag.
+			.UseAdMob(
+				androidDefaultBannerAdUnitId: "ca-app-pub-8091715200642863/1000000001",
+				androidDefaultRewardedAdUnitId: "ca-app-pub-8091715200642863/1000000002")
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -36,6 +44,13 @@ public static class MauiProgram
 #endif
 
 		Batteries_V2.Init();
+
+		// No AdMob account/ad units exist yet - this makes the plugin
+		// substitute Google's official test ad unit IDs regardless of what
+		// was passed to .UseAdMob() above. Flip to false once real ad units
+		// exist (see docs/play-store-release.md for the equivalent Play
+		// Store "test now, real config later" pattern).
+		AdConfig.UseTestAdUnitIds = true;
 
 		var savedLanguageCode = Preferences.Default.Get("AppLanguage", (string?)null);
 #if ANDROID

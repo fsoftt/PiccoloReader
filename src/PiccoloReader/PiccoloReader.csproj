@@ -36,7 +36,10 @@
 		<ApplicationVersion>1</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		<!-- 23 (Android 6.0), not 21 - the Google Mobile Ads SDK's's transitive
+		     androidx.lifecycle dependency (pulled in via Plugin.AdMob) requires
+		     minSdk 23. Android 21-22 devices are vanishingly rare at this point. -->
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
 
 		<!-- Pin a persistent, repo-committed debug keystore instead of each
 		     machine/CI runner auto-generating its own random one. Without
@@ -70,9 +73,10 @@
 
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.90" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.20" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.90" />
+		<PackageReference Include="Plugin.AdMob" Version="10.0.90" />
 		<PackageReference Include="SkiaSharp.Extended.UI.Maui" Version="3.0.0" />
 		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
 		<PackageReference Include="UraniumUI.Icons.MaterialSymbols" Version="3.0.0" />
