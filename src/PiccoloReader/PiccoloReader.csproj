@@ -51,6 +51,13 @@
 		<AndroidSigningKeyAlias Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">androiddebugkey</AndroidSigningKeyAlias>
 		<AndroidSigningKeyPass Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android</AndroidSigningKeyPass>
 		<AndroidSigningStorePass Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android</AndroidSigningStorePass>
+		<!-- Without this, the four properties above are silently ignored and
+		     the build falls back to its own auto-managed default debug
+		     keystore instead - stable/cached on a given machine (masking the
+		     problem locally) but freshly regenerated on every ephemeral CI
+		     runner, which is what was actually causing the recurring
+		     "no se pudo instalar la app" error on every new CI build. -->
+		<AndroidKeyStore Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">True</AndroidKeyStore>
 	</PropertyGroup>
 
 	<ItemGroup>
