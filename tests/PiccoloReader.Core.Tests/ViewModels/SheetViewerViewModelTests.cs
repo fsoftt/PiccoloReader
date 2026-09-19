@@ -247,8 +247,10 @@ public class SheetViewerViewModelTests : IDisposable
         var sheet = await InsertSheetAsync(pageCount: 3);
         await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
         await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var oldX = _sut.SelectedAnnotation!.X;
+        var oldY = _sut.SelectedAnnotation!.Y;
 
-        await _sut.MoveSelectedAnnotationAsync(0.2, 0.3);
+        await _sut.MoveSelectedAnnotationAsync(oldX, oldY, 0.2, 0.3);
 
         Assert.Equal(0.2, _sut.SelectedAnnotation!.X);
         Assert.Equal(0.3, _sut.SelectedAnnotation!.Y);
@@ -262,8 +264,10 @@ public class SheetViewerViewModelTests : IDisposable
         var sheet = await InsertSheetAsync(pageCount: 3);
         await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
         await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var oldWidth = _sut.SelectedAnnotation!.Width;
+        var oldHeight = _sut.SelectedAnnotation!.Height;
 
-        await _sut.ResizeSelectedAnnotationAsync(0.2, 0.18);
+        await _sut.ResizeSelectedAnnotationAsync(oldWidth, oldHeight, 0.2, 0.18);
 
         Assert.Equal(0.2, _sut.SelectedAnnotation!.Width);
         Assert.Equal(0.18, _sut.SelectedAnnotation!.Height);
@@ -463,6 +467,58 @@ public class SheetViewerViewModelTests : IDisposable
 
         Assert.False(_sut.CanUndo);
         Assert.False(_sut.CanRedo);
+    }
+
+    [Fact]
+    public async Task UndoCommand_AfterMove_RestoresOriginalPosition()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var oldX = _sut.SelectedAnnotation!.X;
+        var oldY = _sut.SelectedAnnotation!.Y;
+        await _sut.MoveSelectedAnnotationAsync(oldX, oldY, 0.2, 0.3);
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Equal(oldX, _sut.SelectedAnnotation!.X);
+        Assert.Equal(oldY, _sut.SelectedAnnotation!.Y);
+        var persisted = await _annotationService.GetAnnotationsAsync(sheet.Id, 0);
+        Assert.Equal(oldX, persisted[0].X);
+    }
+
+    [Fact]
+    public async Task UndoCommand_AfterResize_RestoresOriginalSize()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var oldWidth = _sut.SelectedAnnotation!.Width;
+        var oldHeight = _sut.SelectedAnnotation!.Height;
+        await _sut.ResizeSelectedAnnotationAsync(oldWidth, oldHeight, 0.2, 0.18);
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Equal(oldWidth, _sut.SelectedAnnotation!.Width);
+        Assert.Equal(oldHeight, _sut.SelectedAnnotation!.Height);
+    }
+
+    [Fact]
+    public async Task MoveSelectedAnnotationAsync_NoActualChange_DoesNotPushUndoAction()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var x = _sut.SelectedAnnotation!.X;
+        var y = _sut.SelectedAnnotation!.Y;
+
+        await _sut.MoveSelectedAnnotationAsync(x, y, x, y);
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        // Only the earlier PlaceIcon action should have been on the stack -
+        // undoing once removes the icon entirely rather than just resetting
+        // a position that never actually changed.
+        Assert.Empty(_sut.CurrentPageAnnotations);
     }
 
     [Fact]
