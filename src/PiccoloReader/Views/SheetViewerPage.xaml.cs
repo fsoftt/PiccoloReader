@@ -1016,11 +1016,13 @@ public partial class SheetViewerPage : ContentPage
     private async void OnUndoClicked(object? sender, EventArgs e)
     {
         await _viewModel.UndoCommand.ExecuteAsync(null);
+        UpdateSelectionOverlay();
     }
 
     private async void OnRedoClicked(object? sender, EventArgs e)
     {
         await _viewModel.RedoCommand.ExecuteAsync(null);
+        UpdateSelectionOverlay();
     }
 
     // Single entry point for bookmarks, per explicit request - no separate
