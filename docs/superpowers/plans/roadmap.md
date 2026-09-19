@@ -135,10 +135,68 @@ Bounded UI/bug fixes on the Library page, done outside the numbered plans above.
 | Item | Status | PR |
 |---|---|---|
 | Toolbar title "Piccolo" in Pacifico font, independent Folder/Sheet sort buttons (folder sort was previously broken — only root sheets sorted), Folder.DateAdded, multi-select PDF import, blank-gap layout fix when no folders exist | Merged | [#52](https://github.com/fsoftt/PiccoloReader/pull/52) |
+| Search icons on Library and Folder pages, hide sort/search controls when the list is empty | Merged | [#54](https://github.com/fsoftt/PiccoloReader/pull/54) |
+
+## Sheet Viewer Polish
+
+Bookmarks, page navigation, and toolbar behavior added/refined on the Sheet Viewer, outside the numbered plans above.
+
+| Item | Status | PR |
+|---|---|---|
+| Tap-to-toggle toolbar, bookmarks, page jump, tool panel polish | Merged | [#55](https://github.com/fsoftt/PiccoloReader/pull/55) |
+| Pencil width preview: fill available panel width | Merged | [#56](https://github.com/fsoftt/PiccoloReader/pull/56) |
+| Full toolbar hide/show, tap zones, bookmark names, press-not-release closing, eraser preview | Merged | [#57](https://github.com/fsoftt/PiccoloReader/pull/57) |
+
+## Gesture & Interaction Fixes
+
+Pinch/pan/drag bug fixes affecting the Sheet Viewer's zoom and annotation gestures.
+
+| Item | Status | PR |
+|---|---|---|
+| Fix compounding pinch-zoom translation drift | Merged | [#58](https://github.com/fsoftt/PiccoloReader/pull/58) |
+| Fix Android pinch/pan gesture-arena race | Merged | [#59](https://github.com/fsoftt/PiccoloReader/pull/59) |
+| Fix Android icon drag/resize coordinate contamination | Merged | [#60](https://github.com/fsoftt/PiccoloReader/pull/60) |
+
+## Material Design Polish
+
+Flyout, FAB, and toolbar restyling toward Material Design conventions.
+
+| Item | Status | PR |
+|---|---|---|
+| Add credit footer to flyout menu | Merged | [#61](https://github.com/fsoftt/PiccoloReader/pull/61) |
+| Convert Folder page Import button to a Material FAB | Merged | [#62](https://github.com/fsoftt/PiccoloReader/pull/62) |
+| Convert Library page Add Folder and Import buttons to a stacked Material FAB pair | Merged | [#63](https://github.com/fsoftt/PiccoloReader/pull/63) |
+| Restyle the Shell flyout with a branded header (app icon + wordmark) and a Library menu icon | Merged | [#64](https://github.com/fsoftt/PiccoloReader/pull/64) |
+| Convert Sheet Viewer's tool selector into a speed-dial FAB | Merged | [#65](https://github.com/fsoftt/PiccoloReader/pull/65) |
+| Add back a dedicated deactivate (X) toolbar icon to the Sheet Viewer | Merged | [#66](https://github.com/fsoftt/PiccoloReader/pull/66) |
+
+## Plan: Multi-language Support
+
+Spec: [`2026-09-18-localization-design.md`](../specs/2026-09-18-localization-design.md)
+Plan: [`2026-09-18-localization.md`](../plans/2026-09-18-localization.md)
+
+English + Spanish localization across the whole app (resx-backed `AppStrings`), a Settings page with a language picker (restart required to apply), and first-launch device-locale detection. Includes a fix found via manual verification of the device-locale fallback: `CultureInfo.CurrentUICulture` doesn't sync with the Android device locale on this runtime, so the fallback now reads it via `Java.Util.Locale.Default` instead.
+
+| Item | Status | PR |
+|---|---|---|
+| Full app localization, Settings page, device-locale fallback (+ Android locale-detection fix) | Merged | [#67](https://github.com/fsoftt/PiccoloReader/pull/67) |
+
+## Housekeeping (continued)
+
+| Item | Status | PR |
+|---|---|---|
+| Pin a persistent, repo-committed debug keystore so local and CI builds always sign identically (fixes `INSTALL_FAILED_UPDATE_INCOMPATIBLE` when installing a CI-built APK over a locally-built one) | Merged | [#68](https://github.com/fsoftt/PiccoloReader/pull/68) |
 
 ## Plan 5: Undo/Redo
 
-Not planned yet.
+Spec: [`2026-09-19-undo-redo-design.md`](../specs/2026-09-19-undo-redo-design.md)
+Plan: [`2026-09-19-undo-redo.md`](../plans/2026-09-19-undo-redo.md)
+
+Session-scoped (in-memory, resets per page) undo/redo for annotation edits: place icon, add stroke, move, resize, delete/erase (button or eraser drag, batched into one step per drag).
+
+| Item | Status | PR |
+|---|---|---|
+| Reversible action types + undo/redo stacks + toolbar buttons | Merged | [#69](https://github.com/fsoftt/PiccoloReader/pull/69) |
 
 ## Plan 6: Navigation Polish
 
