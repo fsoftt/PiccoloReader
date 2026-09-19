@@ -113,6 +113,8 @@ public static class AppStrings
     public static string DonatePageTitle => Get(nameof(DonatePageTitle));
     public static string DonateExplanation => Get(nameof(DonateExplanation));
     public static string SeeAdButton => Get(nameof(SeeAdButton));
+    public static string SupportWithAdsOption => Get(nameof(SupportWithAdsOption));
+    public static string DonateSupportWithAdsExplanation => Get(nameof(DonateSupportWithAdsExplanation));
 
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;

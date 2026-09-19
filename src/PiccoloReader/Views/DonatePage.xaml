@@ -20,6 +20,7 @@
                 Text="{x:Static strings:AppStrings.SeeAdButton}"
                 Command="{Binding SeeAdCommand}"
                 IsEnabled="{Binding IsAdLoading, Converter={StaticResource InvertedBool}}" />
+            <Label Text="{x:Static strings:AppStrings.DonateSupportWithAdsExplanation}" FontSize="14" />
         </VerticalStackLayout>
 
         <admob:BannerAd Grid.Row="1" />
