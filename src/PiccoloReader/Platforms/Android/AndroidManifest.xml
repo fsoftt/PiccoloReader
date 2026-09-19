@@ -1,9 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true">
-		<!-- Google's official public test App ID - swap for the real one
-		     once an AdMob app entry exists for PiccoloReader. -->
-		<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713" />
+		<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-5615495156288390~9771833173" />
 	</application>
 	<!-- Required by the Google Mobile Ads SDK to load ads (Donate page only). -->
 	<uses-permission android:name="android.permission.INTERNET" />
