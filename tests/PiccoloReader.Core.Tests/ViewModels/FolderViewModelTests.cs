@@ -19,7 +19,7 @@ public class FolderViewModelTests : IDisposable
         database.InitializeAsync().GetAwaiter().GetResult();
         _libraryService = new LibraryService(database, _storage);
         var importService = new PdfImportService(database, _storage);
-        _sut = new FolderViewModel(_libraryService, importService);
+        _sut = new FolderViewModel(_libraryService, importService, new FakeAdsPreferenceService());
     }
 
     public void Dispose() => _storage.Dispose();

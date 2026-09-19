@@ -16,6 +16,7 @@ public partial class SheetViewerViewModel : ObservableObject
     private readonly IPdfPageRenderer _pdfPageRenderer;
     private readonly AnnotationService _annotationService;
     private readonly BookmarkService _bookmarkService;
+    private readonly IAdsPreferenceService _adsPreferenceService;
 
     private readonly Stack<IUndoableAction> _undoStack = new();
     private readonly Stack<IUndoableAction> _redoStack = new();
@@ -31,13 +32,15 @@ public partial class SheetViewerViewModel : ObservableObject
         IAppStorageProvider storageProvider,
         IPdfPageRenderer pdfPageRenderer,
         AnnotationService annotationService,
-        BookmarkService bookmarkService)
+        BookmarkService bookmarkService,
+        IAdsPreferenceService adsPreferenceService)
     {
         _libraryService = libraryService;
         _storageProvider = storageProvider;
         _pdfPageRenderer = pdfPageRenderer;
         _annotationService = annotationService;
         _bookmarkService = bookmarkService;
+        _adsPreferenceService = adsPreferenceService;
     }
 
     [ObservableProperty]
@@ -84,6 +87,9 @@ public partial class SheetViewerViewModel : ObservableObject
     [ObservableProperty]
     private bool _canRedo;
 
+    [ObservableProperty]
+    private bool _showAdsBanner;
+
     public bool IsDrawingToolActive => ActiveTool != AnnotationTool.MusicIcons;
 
     public ObservableCollection<Annotation> CurrentPageAnnotations { get; } = new();
@@ -96,6 +102,8 @@ public partial class SheetViewerViewModel : ObservableObject
 
     public async Task LoadAsync(int sheetId, int targetWidthPx, int targetHeightPx)
     {
+        ShowAdsBanner = _adsPreferenceService.GetSupportWithAdsEnabled();
+
         IsLoading = true;
         try
         {

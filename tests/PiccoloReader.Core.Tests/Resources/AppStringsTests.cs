@@ -97,6 +97,21 @@ public class AppStringsTests
     }
 
     [Fact]
+    public void SupportWithAdsOption_SpanishCulture_ReturnsSpanishValue()
+    {
+        var original = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = new CultureInfo("es");
+            Assert.Equal("Apoyar con anuncios", AppStrings.SupportWithAdsOption);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
+
+    [Fact]
     public void DonateExplanation_SpanishCulture_ContainsSpanishText()
     {
         var original = CultureInfo.CurrentUICulture;

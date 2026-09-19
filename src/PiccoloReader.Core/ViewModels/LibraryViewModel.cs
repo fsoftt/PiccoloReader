@@ -10,14 +10,16 @@ public partial class LibraryViewModel : ObservableObject
 {
     private readonly LibraryService _libraryService;
     private readonly PdfImportService _importService;
+    private readonly IAdsPreferenceService _adsPreferenceService;
 
     private List<Folder> _allFolders = new();
     private List<Sheet> _allRootSheets = new();
 
-    public LibraryViewModel(LibraryService libraryService, PdfImportService importService)
+    public LibraryViewModel(LibraryService libraryService, PdfImportService importService, IAdsPreferenceService adsPreferenceService)
     {
         _libraryService = libraryService;
         _importService = importService;
+        _adsPreferenceService = adsPreferenceService;
     }
 
     public ObservableCollection<Folder> Folders { get; } = new();
@@ -63,12 +65,17 @@ public partial class LibraryViewModel : ObservableObject
     [ObservableProperty]
     private SortDirection _sheetSortDirection = SortDirection.Ascending;
 
+    [ObservableProperty]
+    private bool _showAdsBanner;
+
     partial void OnFolderSearchTextChanged(string value) => RefreshFolders();
 
     partial void OnSheetSearchTextChanged(string value) => RefreshSheets();
 
     public async Task LoadAsync()
     {
+        ShowAdsBanner = _adsPreferenceService.GetSupportWithAdsEnabled();
+
         _allFolders = (await _libraryService.GetFoldersAsync()).ToList();
         HasFolders = _allFolders.Count > 0;
         HasMultipleFolders = _allFolders.Count > 1;

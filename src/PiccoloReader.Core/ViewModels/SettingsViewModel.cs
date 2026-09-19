@@ -7,6 +7,7 @@ namespace PiccoloReader.Core.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly ILanguagePreferenceService _languagePreferenceService;
+    private readonly IAdsPreferenceService _adsPreferenceService;
 
     // Parallel arrays backing the language Picker: index i in one
     // corresponds to index i in the other. Language names are shown in
@@ -20,10 +21,15 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _selectedLanguageCode;
 
-    public SettingsViewModel(ILanguagePreferenceService languagePreferenceService)
+    [ObservableProperty]
+    private bool _supportWithAdsEnabled;
+
+    public SettingsViewModel(ILanguagePreferenceService languagePreferenceService, IAdsPreferenceService adsPreferenceService)
     {
         _languagePreferenceService = languagePreferenceService;
+        _adsPreferenceService = adsPreferenceService;
         _selectedLanguageCode = languagePreferenceService.GetSavedLanguageCode() ?? "en";
+        _supportWithAdsEnabled = adsPreferenceService.GetSupportWithAdsEnabled();
     }
 
     [RelayCommand]
@@ -32,4 +38,7 @@ public partial class SettingsViewModel : ObservableObject
         _languagePreferenceService.SaveLanguageCode(code);
         SelectedLanguageCode = code;
     }
+
+    partial void OnSupportWithAdsEnabledChanged(bool value) =>
+        _adsPreferenceService.SetSupportWithAdsEnabled(value);
 }
