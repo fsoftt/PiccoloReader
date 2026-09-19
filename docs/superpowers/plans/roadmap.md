@@ -197,7 +197,3 @@ Session-scoped (in-memory, resets per page) undo/redo for annotation edits: plac
 | Item | Status | PR |
 |---|---|---|
 | Reversible action types + undo/redo stacks + toolbar buttons | Merged | [#69](https://github.com/fsoftt/PiccoloReader/pull/69) |
-
-## Plan 6: Navigation Polish
-
-Not planned yet — hamburger flyout across folders, final wiring.
