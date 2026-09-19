@@ -38,71 +38,158 @@ reinventing something these community plugins already solve (YAGNI).
 
 `src/PiccoloReader/PiccoloReader.csproj` gets a `Plugin.AdMob`
 `PackageReference`. `MauiProgram.cs`'s builder chain gets `.UseAdMob()`
-alongside the existing `.UseMauiCommunityToolkit()` etc. A single line
-sets `AdConfig.UseTestAdUnitIds = true` right after — this makes the
-plugin substitute Google's official test ad unit IDs automatically, so
-the ad unit ID strings used in code can already look like real
-production IDs; flipping this one flag to `false` (once the AdMob
-account has real ad units) is the entire "go live" step for ad
-identifiers.
+alongside the existing `.UseMauiCommunityToolkit()` etc., passing
+`androidDefaultBannerAdUnitId`/`androidDefaultRewardedAdUnitId`
+placeholder values — this is the *one* place ad unit IDs are
+configured; `MauiDonateAdService.CreateAd()` and `DonatePage`'s
+`<admob:BannerAd>` both omit an explicit ad unit ID and fall back to
+these defaults (confirmed from the plugin's own
+`RewardedAdService.GetAdUnitId`/`BannerAdHandler.GetAdUnitId`, both of
+which fall back to `AdConfig.Default...AdUnitId` when none is passed
+explicitly). A single line right after sets
+`AdConfig.UseTestAdUnitIds = true`, which makes the plugin substitute
+Google's official test ad unit IDs instead of whatever we configured —
+confirmed this override happens regardless of what's passed to
+`.UseAdMob()`, so the placeholder strings are inert while this flag is
+`true`. Flipping it to `false` (once the AdMob account has real ad
+units) plus swapping those two placeholder strings for real ones is
+the entire "go live" step for ad identifiers.
+
+### Why `DonateViewModel` can't talk to `Plugin.AdMob` directly
+
+`Plugin.AdMob` only targets `net10.0-android;net10.0-ios;net10.0-maccatalyst`
+(confirmed from its own `.csproj`) — there's no plain `net10.0` target.
+`PiccoloReader.Core` is a plain `net10.0` class library (no MAUI platform
+TFMs), so it flat-out cannot reference `Plugin.AdMob`'s types; NuGet
+would refuse the restore. This app already has exactly this situation
+solved elsewhere (`IPdfPageRenderer`/`PdfPageRenderer`,
+`ILanguagePreferenceService`/`MauiLanguagePreferenceService`): a small
+interface lives in Core with no platform-SDK dependency, and the App
+project (which *does* target `net10.0-android`) provides the real
+implementation, registered via DI. This feature follows the same split.
+
+### `IDonateAdService` (Core) / `MauiDonateAdService` (App project)
+
+```csharp
+// PiccoloReader.Core/Services/IDonateAdService.cs
+namespace PiccoloReader.Core.Services;
+
+public interface IDonateAdService
+{
+    Task<bool> ShowRewardedAdAsync();
+}
+```
+
+Returns `true` if the ad loaded and was shown, `false` if it failed to
+load. `MauiDonateAdService` (App project, `PiccoloReader.Services`
+namespace, same location pattern as `MauiAppStorageProvider`) adapts
+this to the plugin's real, verified interface
+(`Plugin.AdMob.Services.IRewardedAdService.CreateAd()` returning an
+`Plugin.AdMob.IRewardedAd`, whose `OnAdLoaded`/`OnAdFailedToLoad`
+events and `Load()`/`Show()` methods this wraps into a `Task<bool>`):
+
+```csharp
+// PiccoloReader/Services/MauiDonateAdService.cs
+using Plugin.AdMob;
+using Plugin.AdMob.Services;
+
+namespace PiccoloReader.Services;
+
+public class MauiDonateAdService : PiccoloReader.Core.Services.IDonateAdService
+{
+    private readonly IRewardedAdService _rewardedAdService;
+
+    public MauiDonateAdService(IRewardedAdService rewardedAdService)
+    {
+        _rewardedAdService = rewardedAdService;
+    }
+
+    public Task<bool> ShowRewardedAdAsync()
+    {
+        var tcs = new TaskCompletionSource<bool>();
+        var ad = _rewardedAdService.CreateAd();
+
+        void Unsubscribe()
+        {
+            ad.OnAdLoaded -= OnLoaded;
+            ad.OnAdFailedToLoad -= OnFailedToLoad;
+        }
+
+        void OnLoaded(object? sender, EventArgs e)
+        {
+            Unsubscribe();
+            ad.Show();
+            tcs.TrySetResult(true);
+        }
+
+        void OnFailedToLoad(object? sender, IAdError e)
+        {
+            Unsubscribe();
+            tcs.TrySetResult(false);
+        }
+
+        ad.OnAdLoaded += OnLoaded;
+        ad.OnAdFailedToLoad += OnFailedToLoad;
+        ad.Load();
+
+        return tcs.Task;
+    }
+}
+```
+
+`.UseAdMob()` (called in `MauiProgram.cs`) already registers
+`Plugin.AdMob.Services.IRewardedAdService` internally, so
+`MauiDonateAdService`'s constructor dependency resolves automatically —
+we only need to register `IDonateAdService`/`MauiDonateAdService`
+ourselves.
 
 ### `DonateViewModel` (Core) + `DonatePage` (View)
 
 Same MVVM/DI shape as `SettingsViewModel`/`SettingsPage` — constructor
 injection, `AddTransient` registration in `MauiProgram.cs`.
 
-`DonateViewModel` takes `IRewardedAdService` (from the plugin) in its
-constructor and exposes:
-
 ```csharp
-[RelayCommand]
-private void SeeAd()
+public partial class DonateViewModel : ObservableObject
 {
-    IsAdLoading = true;
-    _rewardedAdService.OnAdLoaded += HandleAdLoaded;
-    _rewardedAdService.OnAdFailedToLoad += HandleAdFailedToLoad;
-    _rewardedAdService.PrepareAd();
-}
+    private readonly IDonateAdService _donateAdService;
 
-private void HandleAdLoaded(object? sender, EventArgs e)
-{
-    Unsubscribe();
-    IsAdLoading = false;
-    _rewardedAdService.ShowAd();
-}
+    [ObservableProperty]
+    private bool _isAdLoading;
 
-private void HandleAdFailedToLoad(object? sender, EventArgs e)
-{
-    Unsubscribe();
-    IsAdLoading = false;
-}
+    public DonateViewModel(IDonateAdService donateAdService)
+    {
+        _donateAdService = donateAdService;
+    }
 
-private void Unsubscribe()
-{
-    _rewardedAdService.OnAdLoaded -= HandleAdLoaded;
-    _rewardedAdService.OnAdFailedToLoad -= HandleAdFailedToLoad;
+    [RelayCommand]
+    private async Task SeeAdAsync()
+    {
+        IsAdLoading = true;
+        await _donateAdService.ShowRewardedAdAsync();
+        IsAdLoading = false;
+    }
 }
 ```
 
-`IsAdLoading` (`[ObservableProperty] bool`) disables the "See ad"
-button while the ad is loading, so a slow network connection can't be
-mistaken for a broken button via a double-tap. If the ad fails to load
-(no connection, no fill, etc.), `IsAdLoading` resets to `false` so the
-button becomes tappable again instead of getting stuck disabled
-forever — no error message shown, just a silent reset; the user can
-simply try again. The plugin's exact failure-event name should be
-confirmed against its actual interface (IntelliSense/source) during
-implementation — `OnAdFailedToLoad` here names the concept, not a
-verified literal API surface. There is no reward grant on ad
+`IsAdLoading` disables the "See ad" button while the ad is
+loading/showing, so a slow network connection can't be mistaken for a
+broken button via a double-tap. Whether `ShowRewardedAdAsync()` returns
+`true` or `false`, `IsAdLoading` resets to `false` either way — a
+failed load just makes the button tappable again with no error
+message; the user can simply try again. There is no reward grant on ad
 completion — no code path needs to run when the user finishes
-watching; the ad impression itself is the entire "tip" mechanism.
+watching; the ad impression itself is the entire "tip" mechanism. This
+also makes `DonateViewModel` trivially testable: a fake
+`IDonateAdService` is a one-line `Task<bool>` return, no AdMob event
+plumbing needed in tests at all.
 
 `DonatePage.xaml` contains: the localized explanation text, the "See
 ad" button bound to `SeeAdCommand`/`IsAdLoading`, and the plugin's
-`<admob:BannerAd AdUnitId="..." />` control pinned to the bottom of
-the page's layout. The banner is scoped entirely to this page's XAML —
-no shared layout/shell chrome changes, so no other page can be
-affected by it.
+`<admob:BannerAd />` control (no `AdUnitId` set — falls back to the
+default configured in `.UseAdMob()`) pinned to the bottom of the
+page's layout. The banner is scoped entirely to this page's XAML — no
+shared layout/shell chrome changes, so no other page can be affected
+by it.
 
 ### Flyout entry
 
@@ -135,12 +222,15 @@ New `AppStrings` resx keys (English + neutral, Spanish in
 
 ## Testing
 
-- `DonateViewModel`'s `SeeAdCommand` sequencing (prepare → wait for
-  loaded → show, and prepare → wait for failure → reset) gets unit
-  tests in `PiccoloReader.Core.Tests`, against a fake
-  `IRewardedAdService` implementing the plugin's interface — no real
-  Android AdMob SDK involved, consistent with every other ViewModel
-  test in this project.
+- `DonateViewModel`'s `SeeAdCommand` (loading state true → false on
+  both success and failure) gets unit tests in
+  `PiccoloReader.Core.Tests`, against a fake `IDonateAdService` — no
+  AdMob types or events involved at all, consistent with every other
+  ViewModel test in this project.
+- `MauiDonateAdService` itself (the real adapter wrapping
+  `Plugin.AdMob`) is UI/platform layer, like `PdfPageRenderer` and
+  `MauiAppStorageProvider` — verified manually on-device, not unit
+  tested, matching how those are handled today.
 - `AppStrings` additions get the same English/Spanish resolution tests
   already used for every other localized string (see
   `AppStringsTests.cs`).
