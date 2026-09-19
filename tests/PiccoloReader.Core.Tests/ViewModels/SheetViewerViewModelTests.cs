@@ -466,6 +466,70 @@ public class SheetViewerViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task UndoCommand_AfterDeleteSelectedAnnotation_RestoresIt()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        await _sut.DeleteSelectedAnnotationCommand.ExecuteAsync(null);
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Single(_sut.CurrentPageAnnotations);
+        Assert.Equal("dynamicForte", _sut.CurrentPageAnnotations[0].IconKey);
+    }
+
+    [Fact]
+    public async Task UndoCommand_AfterEraseAnnotation_RestoresIt()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var annotation = _sut.CurrentPageAnnotations[0];
+
+        await _sut.EraseAnnotationAsync(annotation);
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Single(_sut.CurrentPageAnnotations);
+    }
+
+    [Fact]
+    public async Task EraseBatch_MultipleErasuresInOneBatch_UndoRestoresAllInOneStep()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var first = _sut.CurrentPageAnnotations[0];
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicPiano");
+        var second = _sut.CurrentPageAnnotations[1];
+
+        _sut.BeginEraseBatch();
+        await _sut.EraseAnnotationAsync(first);
+        await _sut.EraseAnnotationAsync(second);
+        _sut.EndEraseBatch();
+
+        Assert.Empty(_sut.CurrentPageAnnotations);
+        Assert.True(_sut.CanUndo);
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        // One undo restores both erased icons at once - the stack still has
+        // the two earlier PlaceIconCommand actions underneath, so CanUndo
+        // stays true; it's the count restored in a single step that matters.
+        Assert.Equal(2, _sut.CurrentPageAnnotations.Count);
+        Assert.True(_sut.CanUndo);
+    }
+
+    [Fact]
+    public void EndEraseBatch_WithNoErasures_DoesNotPushAnAction()
+    {
+        _sut.BeginEraseBatch();
+        _sut.EndEraseBatch();
+
+        Assert.False(_sut.CanUndo);
+    }
+
+    [Fact]
     public void PageIndicatorText_SpanishCulture_UsesSpanishFormat()
     {
         var original = System.Globalization.CultureInfo.CurrentUICulture;

@@ -19,6 +19,7 @@ public partial class SheetViewerViewModel : ObservableObject
 
     private readonly Stack<IUndoableAction> _undoStack = new();
     private readonly Stack<IUndoableAction> _redoStack = new();
+    private List<IUndoableAction>? _eraseBatch;
 
     private Sheet? _sheet;
     private string _filePath = string.Empty;
@@ -288,14 +289,16 @@ public partial class SheetViewerViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanDeleteSelectedAnnotation))]
     private async Task DeleteSelectedAnnotationAsync()
     {
-        if (SelectedAnnotation is null)
+        var annotation = SelectedAnnotation;
+        if (annotation is null)
         {
             return;
         }
 
-        await _annotationService.DeleteAnnotationAsync(SelectedAnnotation);
-        CurrentPageAnnotations.Remove(SelectedAnnotation);
+        await _annotationService.DeleteAnnotationAsync(annotation);
+        CurrentPageAnnotations.Remove(annotation);
         SelectedAnnotation = null;
+        RecordAction(new DeleteAnnotationAction(_annotationService, CurrentPageAnnotations, annotation));
     }
 
     public async Task EraseAnnotationAsync(Annotation annotation)
@@ -305,6 +308,32 @@ public partial class SheetViewerViewModel : ObservableObject
         if (SelectedAnnotation == annotation)
         {
             SelectedAnnotation = null;
+        }
+
+        var action = new DeleteAnnotationAction(_annotationService, CurrentPageAnnotations, annotation);
+        if (_eraseBatch is not null)
+        {
+            _eraseBatch.Add(action);
+        }
+        else
+        {
+            RecordAction(action);
+        }
+    }
+
+    public void BeginEraseBatch()
+    {
+        _eraseBatch = new List<IUndoableAction>();
+    }
+
+    public void EndEraseBatch()
+    {
+        var batch = _eraseBatch;
+        _eraseBatch = null;
+
+        if (batch is { Count: > 0 })
+        {
+            RecordAction(new CompositeUndoAction(batch));
         }
     }
 
