@@ -262,28 +262,48 @@ public partial class SheetViewerViewModel : ObservableObject
         }
     }
 
-    public async Task MoveSelectedAnnotationAsync(double newX, double newY)
+    public async Task MoveSelectedAnnotationAsync(double oldX, double oldY, double newX, double newY)
     {
-        if (SelectedAnnotation is null)
+        var annotation = SelectedAnnotation;
+        if (annotation is null)
         {
             return;
         }
 
-        SelectedAnnotation.X = newX;
-        SelectedAnnotation.Y = newY;
-        await _annotationService.UpdateAnnotationAsync(SelectedAnnotation);
+        annotation.X = newX;
+        annotation.Y = newY;
+        await _annotationService.UpdateAnnotationAsync(annotation);
+
+        if (oldX != newX || oldY != newY)
+        {
+            RecordAction(new UpdateAnnotationAction(
+                _annotationService,
+                annotation,
+                before: (oldX, oldY, annotation.Width, annotation.Height),
+                after: (newX, newY, annotation.Width, annotation.Height)));
+        }
     }
 
-    public async Task ResizeSelectedAnnotationAsync(double newWidth, double newHeight)
+    public async Task ResizeSelectedAnnotationAsync(double oldWidth, double oldHeight, double newWidth, double newHeight)
     {
-        if (SelectedAnnotation is null)
+        var annotation = SelectedAnnotation;
+        if (annotation is null)
         {
             return;
         }
 
-        SelectedAnnotation.Width = newWidth;
-        SelectedAnnotation.Height = newHeight;
-        await _annotationService.UpdateAnnotationAsync(SelectedAnnotation);
+        annotation.Width = newWidth;
+        annotation.Height = newHeight;
+        await _annotationService.UpdateAnnotationAsync(annotation);
+
+        if (oldWidth != newWidth || oldHeight != newHeight)
+        {
+            RecordAction(new UpdateAnnotationAction(
+                _annotationService,
+                annotation,
+                before: (annotation.X, annotation.Y, oldWidth, oldHeight),
+                after: (annotation.X, annotation.Y, newWidth, newHeight)));
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanDeleteSelectedAnnotation))]
