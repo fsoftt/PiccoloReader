@@ -28,12 +28,35 @@
 **Interfaces:**
 - Produces: `.UseAdMob(...)` called with placeholder default ad unit IDs, `AdConfig.UseTestAdUnitIds = true` set — both consumed implicitly by later tasks (`MauiDonateAdService.CreateAd()` and `DonatePage`'s `<admob:BannerAd>` both rely on the defaults configured here).
 
-- [ ] **Step 1: Add the package reference**
+- [ ] **Step 1: Add the package reference, and two required version bumps**
 
 In `src/PiccoloReader/PiccoloReader.csproj`, add to the existing `PackageReference` `ItemGroup` (after `Microsoft.Maui.Controls.Compatibility`):
 
 ```xml
 		<PackageReference Include="Plugin.AdMob" Version="10.0.90" />
+```
+
+This alone isn't enough - restore fails with a downgrade conflict,
+since `Plugin.AdMob` 10.0.90 requires `Microsoft.Maui.Controls`/
+`.Compatibility` >= 10.0.90, but this project pins `Microsoft.Maui.Controls`
+to `$(MauiVersion)` (resolves to `10.0.20` on this SDK) and
+`.Compatibility` explicitly to `10.0.20`. Change both:
+
+```xml
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.90" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.90" />
+```
+
+Also bump the Android `SupportedOSPlatformVersion` from `21.0` to
+`23.0` (further up in the same file) - the Google Mobile Ads SDK's
+transitive `androidx.lifecycle` dependency requires minSdk 23, and the
+Android manifest merger fails outright below that:
+
+```xml
+		<!-- 23 (Android 6.0), not 21 - the Google Mobile Ads SDK's transitive
+		     androidx.lifecycle dependency (pulled in via Plugin.AdMob) requires
+		     minSdk 23. Android 21-22 devices are vanishingly rare at this point. -->
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
 ```
 
 - [ ] **Step 2: Wire `.UseAdMob()` into the builder chain**
