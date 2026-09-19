@@ -144,4 +144,27 @@ public class AnnotationServiceTests : IDisposable
         Assert.Empty(AnnotationService.DeserializePoints(null));
         Assert.Empty(AnnotationService.DeserializePoints(""));
     }
+
+    [Fact]
+    public async Task InsertAnnotationAsync_InsertsRetrievableAnnotation()
+    {
+        var annotation = new Annotation
+        {
+            SheetId = 1,
+            PageIndex = 0,
+            Type = AnnotationType.Icon,
+            IconKey = "dynamicForte",
+            X = 0.1,
+            Y = 0.1,
+            Width = 0.1,
+            Height = 0.1,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _sut.InsertAnnotationAsync(annotation);
+
+        var loaded = await _sut.GetAnnotationsAsync(1, 0);
+        Assert.Single(loaded);
+        Assert.Equal("dynamicForte", loaded[0].IconKey);
+    }
 }

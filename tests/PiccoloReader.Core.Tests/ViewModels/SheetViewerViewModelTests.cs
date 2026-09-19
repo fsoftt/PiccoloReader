@@ -247,8 +247,10 @@ public class SheetViewerViewModelTests : IDisposable
         var sheet = await InsertSheetAsync(pageCount: 3);
         await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
         await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var oldX = _sut.SelectedAnnotation!.X;
+        var oldY = _sut.SelectedAnnotation!.Y;
 
-        await _sut.MoveSelectedAnnotationAsync(0.2, 0.3);
+        await _sut.MoveSelectedAnnotationAsync(oldX, oldY, 0.2, 0.3);
 
         Assert.Equal(0.2, _sut.SelectedAnnotation!.X);
         Assert.Equal(0.3, _sut.SelectedAnnotation!.Y);
@@ -262,8 +264,10 @@ public class SheetViewerViewModelTests : IDisposable
         var sheet = await InsertSheetAsync(pageCount: 3);
         await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
         await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var oldWidth = _sut.SelectedAnnotation!.Width;
+        var oldHeight = _sut.SelectedAnnotation!.Height;
 
-        await _sut.ResizeSelectedAnnotationAsync(0.2, 0.18);
+        await _sut.ResizeSelectedAnnotationAsync(oldWidth, oldHeight, 0.2, 0.18);
 
         Assert.Equal(0.2, _sut.SelectedAnnotation!.Width);
         Assert.Equal(0.18, _sut.SelectedAnnotation!.Height);
@@ -383,6 +387,202 @@ public class SheetViewerViewModelTests : IDisposable
         await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
 
         Assert.Equal(2, _sut.Bookmarks.Count);
+    }
+
+    [Fact]
+    public async Task UndoCommand_InitiallyCannotExecute()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.False(_sut.CanUndo);
+        Assert.False(_sut.UndoCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task UndoCommand_AfterPlaceIcon_RemovesTheIconAndEnablesRedo()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Empty(_sut.CurrentPageAnnotations);
+        Assert.Empty(await _annotationService.GetAnnotationsAsync(sheet.Id, 0));
+        Assert.False(_sut.CanUndo);
+        Assert.True(_sut.CanRedo);
+    }
+
+    [Fact]
+    public async Task RedoCommand_AfterUndoingPlaceIcon_RestoresTheIcon()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        await _sut.RedoCommand.ExecuteAsync(null);
+
+        Assert.Single(_sut.CurrentPageAnnotations);
+        Assert.Equal("dynamicForte", _sut.CurrentPageAnnotations[0].IconKey);
+        Assert.True(_sut.CanUndo);
+        Assert.False(_sut.CanRedo);
+    }
+
+    [Fact]
+    public async Task PlaceIconCommand_AfterUndo_NewActionClearsRedoStack()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicPiano");
+
+        Assert.False(_sut.CanRedo);
+    }
+
+    [Fact]
+    public async Task UndoCommand_AfterAddStroke_RemovesTheStroke()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        var points = new List<StrokePoint> { new(0.1, 0.1), new(0.2, 0.2) };
+        await _sut.AddStrokeAsync(sheet.Id, "#000000", 0.01, points);
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Empty(_sut.CurrentPageAnnotations);
+    }
+
+    [Fact]
+    public async Task NextPageCommand_ResetsUndoRedoStacks()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        await _sut.NextPageCommand.ExecuteAsync(null);
+
+        Assert.False(_sut.CanUndo);
+        Assert.False(_sut.CanRedo);
+    }
+
+    [Fact]
+    public async Task UndoCommand_AfterMove_RestoresOriginalPosition()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var oldX = _sut.SelectedAnnotation!.X;
+        var oldY = _sut.SelectedAnnotation!.Y;
+        await _sut.MoveSelectedAnnotationAsync(oldX, oldY, 0.2, 0.3);
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Equal(oldX, _sut.SelectedAnnotation!.X);
+        Assert.Equal(oldY, _sut.SelectedAnnotation!.Y);
+        var persisted = await _annotationService.GetAnnotationsAsync(sheet.Id, 0);
+        Assert.Equal(oldX, persisted[0].X);
+    }
+
+    [Fact]
+    public async Task UndoCommand_AfterResize_RestoresOriginalSize()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var oldWidth = _sut.SelectedAnnotation!.Width;
+        var oldHeight = _sut.SelectedAnnotation!.Height;
+        await _sut.ResizeSelectedAnnotationAsync(oldWidth, oldHeight, 0.2, 0.18);
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Equal(oldWidth, _sut.SelectedAnnotation!.Width);
+        Assert.Equal(oldHeight, _sut.SelectedAnnotation!.Height);
+    }
+
+    [Fact]
+    public async Task MoveSelectedAnnotationAsync_NoActualChange_DoesNotPushUndoAction()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var x = _sut.SelectedAnnotation!.X;
+        var y = _sut.SelectedAnnotation!.Y;
+
+        await _sut.MoveSelectedAnnotationAsync(x, y, x, y);
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        // Only the earlier PlaceIcon action should have been on the stack -
+        // undoing once removes the icon entirely rather than just resetting
+        // a position that never actually changed.
+        Assert.Empty(_sut.CurrentPageAnnotations);
+    }
+
+    [Fact]
+    public async Task UndoCommand_AfterDeleteSelectedAnnotation_RestoresIt()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        await _sut.DeleteSelectedAnnotationCommand.ExecuteAsync(null);
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Single(_sut.CurrentPageAnnotations);
+        Assert.Equal("dynamicForte", _sut.CurrentPageAnnotations[0].IconKey);
+    }
+
+    [Fact]
+    public async Task UndoCommand_AfterEraseAnnotation_RestoresIt()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var annotation = _sut.CurrentPageAnnotations[0];
+
+        await _sut.EraseAnnotationAsync(annotation);
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Single(_sut.CurrentPageAnnotations);
+    }
+
+    [Fact]
+    public async Task EraseBatch_MultipleErasuresInOneBatch_UndoRestoresAllInOneStep()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var first = _sut.CurrentPageAnnotations[0];
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicPiano");
+        var second = _sut.CurrentPageAnnotations[1];
+
+        _sut.BeginEraseBatch();
+        await _sut.EraseAnnotationAsync(first);
+        await _sut.EraseAnnotationAsync(second);
+        _sut.EndEraseBatch();
+
+        Assert.Empty(_sut.CurrentPageAnnotations);
+        Assert.True(_sut.CanUndo);
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        // One undo restores both erased icons at once - the stack still has
+        // the two earlier PlaceIconCommand actions underneath, so CanUndo
+        // stays true; it's the count restored in a single step that matters.
+        Assert.Equal(2, _sut.CurrentPageAnnotations.Count);
+        Assert.True(_sut.CanUndo);
+    }
+
+    [Fact]
+    public void EndEraseBatch_WithNoErasures_DoesNotPushAnAction()
+    {
+        _sut.BeginEraseBatch();
+        _sut.EndEraseBatch();
+
+        Assert.False(_sut.CanUndo);
     }
 
     [Fact]
