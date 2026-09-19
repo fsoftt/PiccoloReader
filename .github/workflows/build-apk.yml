@@ -54,6 +54,25 @@ jobs:
       - name: Build Release APK
         run: dotnet build src/PiccoloReader/PiccoloReader.csproj -c Release
 
+      # Confirms the APK was actually signed with the repo-committed
+      # debug.keystore rather than a runner-auto-generated fallback key.
+      # A mismatch here means CI-built APKs will fail to install over
+      # previous ones (Android rejects the signature mismatch) - fail
+      # fast instead of finding out from a phone.
+      - name: Verify APK is signed with the committed debug keystore
+        run: |
+          KEYSTORE_FINGERPRINT=$(keytool -list -v -keystore src/PiccoloReader/debug.keystore -storepass android -alias androiddebugkey \
+            | grep 'SHA256:' | head -1 | sed 's/.*SHA256: //')
+          APK_PATH=$(ls src/PiccoloReader/bin/Release/net10.0-android/*-Signed.apk)
+          APK_FINGERPRINT=$(keytool -printcert -jarfile "$APK_PATH" \
+            | grep 'SHA256:' | head -1 | sed 's/.*SHA256: //')
+          echo "debug.keystore fingerprint: $KEYSTORE_FINGERPRINT"
+          echo "Built APK fingerprint:      $APK_FINGERPRINT"
+          if [ "$KEYSTORE_FINGERPRINT" != "$APK_FINGERPRINT" ]; then
+            echo "::error::APK was not signed with src/PiccoloReader/debug.keystore - signing config was not applied as expected."
+            exit 1
+          fi
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
