@@ -384,4 +384,19 @@ public class SheetViewerViewModelTests : IDisposable
 
         Assert.Equal(2, _sut.Bookmarks.Count);
     }
+
+    [Fact]
+    public void PageIndicatorText_SpanishCulture_UsesSpanishFormat()
+    {
+        var original = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = new System.Globalization.CultureInfo("es");
+            Assert.Contains("Página", _sut.PageIndicatorText);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = original;
+        }
+    }
 }

@@ -5,8 +5,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
     xmlns:converters="clr-namespace:PiccoloReader.Converters"
+    xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
     x:Name="ThisPage"
-    Title="Folder">
+    Title="{x:Static strings:AppStrings.Folder}">
 
     <ContentPage.Resources>
         <converters:StringNotEmptyConverter x:Key="StringNotEmpty" />
@@ -20,7 +21,7 @@
             IsVisible="{Binding IsSearchVisible}">
             <Entry
                 Grid.Column="0"
-                Placeholder="Search sheets"
+                Placeholder="{x:Static strings:AppStrings.SearchSheetsPlaceholder}"
                 Text="{Binding SearchText}" />
             <Border
                 Grid.Column="1"

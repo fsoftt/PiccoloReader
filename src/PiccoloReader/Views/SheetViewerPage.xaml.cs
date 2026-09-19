@@ -1,5 +1,6 @@
 using CommunityToolkit.Maui.Core;
 using PiccoloReader.Core.Data.Models;
+using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.ViewModels;
 using SkiaSharp;
@@ -989,8 +990,10 @@ public partial class SheetViewerPage : ContentPage
     private async void OnPageIndicatorTapped(object? sender, TappedEventArgs e)
     {
         var input = await DisplayPromptAsync(
-            "Go to Page",
-            $"Enter a page number (1-{_viewModel.PageCount}):",
+            AppStrings.GoToPageTitle,
+            string.Format(AppStrings.GoToPageMessageFormat, _viewModel.PageCount),
+            accept: AppStrings.OK,
+            cancel: AppStrings.Cancel,
             initialValue: _viewModel.CurrentPageDisplay.ToString(),
             keyboard: Keyboard.Numeric);
 
@@ -1012,14 +1015,14 @@ public partial class SheetViewerPage : ContentPage
     // lists what's there and lets you add to it.
     private async void OnBookmarksClicked(object? sender, EventArgs e)
     {
-        const string addBookmarkOption = "Add Bookmark";
+        var addBookmarkOption = AppStrings.AddBookmarkOption;
 
         var ordered = _viewModel.Bookmarks.OrderBy(b => b.PageIndex).ToList();
         var options = ordered.Select(BookmarkOptionLabel).Append(addBookmarkOption).ToArray();
 
-        var choice = await DisplayActionSheetAsync("Bookmarks", "Cancel", null, options);
+        var choice = await DisplayActionSheetAsync(AppStrings.BookmarksTitle, AppStrings.Cancel, null, options);
 
-        if (choice is null || choice == "Cancel")
+        if (choice is null || choice == AppStrings.Cancel)
         {
             return;
         }
@@ -1040,8 +1043,8 @@ public partial class SheetViewerPage : ContentPage
 
     private static string BookmarkOptionLabel(Bookmark bookmark) =>
         string.IsNullOrWhiteSpace(bookmark.Name)
-            ? $"Page {bookmark.PageIndex + 1}"
-            : $"{bookmark.Name} (Page {bookmark.PageIndex + 1})";
+            ? string.Format(AppStrings.BookmarkPageLabelFormat, bookmark.PageIndex + 1)
+            : string.Format(AppStrings.BookmarkNamedPageLabelFormat, bookmark.Name, bookmark.PageIndex + 1);
 
     private void ShowAddBookmarkOverlay()
     {
