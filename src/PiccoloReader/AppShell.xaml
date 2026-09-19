@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:views="clr-namespace:PiccoloReader.Views"
+    xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
     FlyoutBehavior="Flyout"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
     Title="PiccoloReader">
@@ -38,7 +39,7 @@
         </Grid>
     </Shell.FlyoutHeader>
 
-    <FlyoutItem Title="Library" Route="library">
+    <FlyoutItem Title="{x:Static strings:AppStrings.Library}" Route="library">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource
                 Glyph="&#xE2C7;"
@@ -49,13 +50,24 @@
         <ShellContent ContentTemplate="{DataTemplate views:LibraryPage}" />
     </FlyoutItem>
 
+    <FlyoutItem Title="{x:Static strings:AppStrings.Settings}" Route="settings">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource
+                Glyph="&#xE429;"
+                FontFamily="MaterialOutlined"
+                Size="24"
+                Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" />
+    </FlyoutItem>
+
     <Shell.FlyoutFooter>
         <HorizontalStackLayout
             Padding="0,0,0,20"
             HorizontalOptions="Center"
             Spacing="4">
             <Label
-                Text="Made with love by"
+                Text="{x:Static strings:AppStrings.MadeWithLoveBy}"
                 FontSize="12"
                 TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray300}}" />
             <Label

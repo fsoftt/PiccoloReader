@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="PiccoloReader.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
+    Title="{x:Static strings:AppStrings.Settings}">
+
+    <VerticalStackLayout Padding="16" Spacing="12">
+
+        <Label Text="{x:Static strings:AppStrings.LanguageSectionHeader}" FontAttributes="Bold" FontSize="16" />
+
+        <Border Style="{StaticResource ListItemCard}">
+            <Picker
+                x:Name="LanguagePicker"
+                ItemsSource="{Binding LanguageDisplayNames}"
+                SelectedIndexChanged="OnLanguagePickerSelectedIndexChanged" />
+        </Border>
+
+    </VerticalStackLayout>
+</ContentPage>

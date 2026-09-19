@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Maui;
+﻿using System.Globalization;
+using CommunityToolkit.Maui;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using SkiaSharp.Views.Maui.Controls.Hosting;
@@ -36,7 +37,30 @@ public static class MauiProgram
 
 		Batteries_V2.Init();
 
+		var savedLanguageCode = Preferences.Default.Get("AppLanguage", (string?)null);
+#if ANDROID
+		// CultureInfo.CurrentUICulture does not sync with the Android device
+		// locale on this runtime (it stays Invariant) - read the OS locale
+		// directly via the Java API instead.
+		var deviceLanguageCode = Java.Util.Locale.Default?.Language ?? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+#else
+		var deviceLanguageCode = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+#endif
+		var resolvedLanguageCode = LanguageResolver.ResolveLanguageCode(savedLanguageCode, deviceLanguageCode);
+
+		if (savedLanguageCode is null)
+		{
+			Preferences.Default.Set("AppLanguage", resolvedLanguageCode);
+		}
+
+		var resolvedCulture = new CultureInfo(resolvedLanguageCode);
+		CultureInfo.CurrentCulture = resolvedCulture;
+		CultureInfo.CurrentUICulture = resolvedCulture;
+		CultureInfo.DefaultThreadCurrentCulture = resolvedCulture;
+		CultureInfo.DefaultThreadCurrentUICulture = resolvedCulture;
+
 		builder.Services.AddSingleton<IAppStorageProvider, MauiAppStorageProvider>();
+		builder.Services.AddSingleton<ILanguagePreferenceService, MauiLanguagePreferenceService>();
 #if ANDROID
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.Android.PdfPageRenderer>();
 #elif IOS
@@ -65,10 +89,12 @@ public static class MauiProgram
 		builder.Services.AddTransient<LibraryViewModel>();
 		builder.Services.AddTransient<FolderViewModel>();
 		builder.Services.AddTransient<SheetViewerViewModel>();
+		builder.Services.AddTransient<SettingsViewModel>();
 
 		builder.Services.AddTransient<LibraryPage>();
 		builder.Services.AddTransient<FolderPage>();
 		builder.Services.AddTransient<SheetViewerPage>();
+		builder.Services.AddTransient<SettingsPage>();
 
 		return builder.Build();
 	}
