@@ -88,13 +88,17 @@ undo/redo cycle since everything downstream (the ObservableCollection,
 - `[RelayCommand(CanExecute = nameof(CanUndo))] private async Task
   UndoAsync()` / the matching `RedoAsync()` — same
   `CanExecute`-predicate pattern already used by `NextPageCommand` and
-  `DeleteSelectedAnnotationCommand`, so bound toolbar buttons
-  auto-disable via MAUI's normal command binding; no extra bindable
-  bool needed. `CanUndo()` / `CanRedo()` just check `_undoStack.Count >
-  0` / `_redoStack.Count > 0`.
+  `DeleteSelectedAnnotationCommand`. `CanUndo()` / `CanRedo()` just
+  check `_undoStack.Count > 0` / `_redoStack.Count > 0`.
+- Two `[ObservableProperty] private bool _canUndo;` / `_canRedo`
+  properties, kept in sync alongside the commands' own CanExecute (see
+  UI section below — this page's toolbar items use `Clicked` handlers
+  rather than `Command` bindings, so they need an explicit bindable
+  bool rather than relying on command auto-disable).
 - Every mutating method pushes the matching action onto `_undoStack`
   right after its existing DB + collection work, clears `_redoStack`,
-  and calls `UndoCommand.NotifyCanExecuteChanged()` /
+  updates `CanUndo`/`CanRedo`, and calls
+  `UndoCommand.NotifyCanExecuteChanged()` /
   `RedoCommand.NotifyCanExecuteChanged()`.
 - `UndoAsync()` pops `_undoStack`, calls `action.UndoAsync()`, pushes
   the action onto `_redoStack`. `RedoAsync()` is the mirror image.
@@ -153,12 +157,16 @@ step (or pushes nothing if the drag erased zero annotations).
 
 ## UI
 
-Two new toolbar icon buttons in `SheetViewerPage.xaml`, alongside the
-existing back/bookmark icons, bound to `UndoCommand`/`RedoCommand`.
-They gray out automatically via MAUI's normal command-`CanExecute`
-binding whenever their stack is empty — no separate bindable bool
-property, consistent with how `DeleteSelectedAnnotationCommand`
-already disables its own button elsewhere on this page.
+Two new `ToolbarItem`s in `SheetViewerPage.xaml`, alongside the
+existing back/bookmark icons. This page's existing toolbar items all
+use `Clicked="OnXClicked"` code-behind handlers rather than XAML
+`Command` bindings (see `ToolConfigItem`/`BookmarksItem`), so the new
+items follow that same pattern for consistency: `Clicked="OnUndoClicked"`
+/ `Clicked="OnRedoClicked"` call `_viewModel.UndoCommand.ExecuteAsync(null)`
+/ `RedoCommand.ExecuteAsync(null)`. Auto-graying-out is done via
+`IsEnabled="{Binding CanUndo}"` / `{Binding CanRedo}` bound to two new
+`[ObservableProperty] bool` properties on the ViewModel, updated
+alongside `NotifyCanExecuteChanged()` every time either stack changes.
 
 ## Testing
 
