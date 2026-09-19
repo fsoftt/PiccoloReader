@@ -80,6 +80,46 @@
   <data name="IconBreathMark" xml:space="preserve"><value>Breath mark</value></data>
   <data name="IconCrescendo" xml:space="preserve"><value>Crescendo</value></data>
   <data name="IconDecrescendo" xml:space="preserve"><value>Decrescendo</value></data>
+  <data name="CategoryOrnaments" xml:space="preserve"><value>Ornaments</value></data>
+  <data name="CategoryBowingPlucking" xml:space="preserve"><value>Bowing &amp; Plucking</value></data>
+  <data name="CategoryPedalMarks" xml:space="preserve"><value>Pedal Marks</value></data>
+  <data name="CategoryRepeatsNavigation" xml:space="preserve"><value>Repeats &amp; Navigation</value></data>
+  <data name="CategoryMoreDynamics" xml:space="preserve"><value>More Dynamics</value></data>
+  <data name="CategoryAccidentals" xml:space="preserve"><value>Accidentals</value></data>
+  <data name="CategoryTremoloGlissando" xml:space="preserve"><value>Tremolo &amp; Glissando</value></data>
+  <data name="IconTrill" xml:space="preserve"><value>Trill</value></data>
+  <data name="IconMordent" xml:space="preserve"><value>Mordent</value></data>
+  <data name="IconMordentWithLine" xml:space="preserve"><value>Mordent (with line)</value></data>
+  <data name="IconTurn" xml:space="preserve"><value>Turn</value></data>
+  <data name="IconTurnInverted" xml:space="preserve"><value>Inverted turn</value></data>
+  <data name="IconGraceNote" xml:space="preserve"><value>Grace note</value></data>
+  <data name="IconUpBow" xml:space="preserve"><value>Up-bow</value></data>
+  <data name="IconDownBow" xml:space="preserve"><value>Down-bow</value></data>
+  <data name="IconSnapPizzicato" xml:space="preserve"><value>Snap pizzicato</value></data>
+  <data name="IconHarmonic" xml:space="preserve"><value>Harmonic</value></data>
+  <data name="IconPedalDown" xml:space="preserve"><value>Pedal down</value></data>
+  <data name="IconPedalUp" xml:space="preserve"><value>Pedal up</value></data>
+  <data name="IconHalfPedal" xml:space="preserve"><value>Half pedal</value></data>
+  <data name="IconSegno" xml:space="preserve"><value>Segno</value></data>
+  <data name="IconCoda" xml:space="preserve"><value>Coda</value></data>
+  <data name="IconRepeatStart" xml:space="preserve"><value>Repeat start</value></data>
+  <data name="IconRepeatEnd" xml:space="preserve"><value>Repeat end</value></data>
+  <data name="IconMezzoPiano" xml:space="preserve"><value>mp</value></data>
+  <data name="IconMezzoForte" xml:space="preserve"><value>mf</value></data>
+  <data name="IconPPP" xml:space="preserve"><value>ppp</value></data>
+  <data name="IconFFF" xml:space="preserve"><value>fff</value></data>
+  <data name="IconSforzando" xml:space="preserve"><value>sfz</value></data>
+  <data name="IconRinforzando" xml:space="preserve"><value>rfz</value></data>
+  <data name="IconSharp" xml:space="preserve"><value>Sharp</value></data>
+  <data name="IconFlat" xml:space="preserve"><value>Flat</value></data>
+  <data name="IconNatural" xml:space="preserve"><value>Natural</value></data>
+  <data name="IconDoubleSharp" xml:space="preserve"><value>Double sharp</value></data>
+  <data name="IconDoubleFlat" xml:space="preserve"><value>Double flat</value></data>
+  <data name="IconTremolo1" xml:space="preserve"><value>Tremolo (1)</value></data>
+  <data name="IconTremolo2" xml:space="preserve"><value>Tremolo (2)</value></data>
+  <data name="IconTremolo3" xml:space="preserve"><value>Tremolo (3)</value></data>
+  <data name="IconGlissandoUp" xml:space="preserve"><value>Glissando up</value></data>
+  <data name="IconGlissandoDown" xml:space="preserve"><value>Glissando down</value></data>
   <data name="LanguageSectionHeader" xml:space="preserve"><value>Language</value></data>
   <data name="RestartRequiredTitle" xml:space="preserve"><value>Restart Required</value></data>
   <data name="RestartRequiredMessage" xml:space="preserve"><value>Restart PiccoloReader for the new language to take effect.</value></data>
