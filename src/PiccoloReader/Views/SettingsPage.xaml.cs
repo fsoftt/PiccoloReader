@@ -43,4 +43,30 @@ public partial class SettingsPage : ContentPage
 
         await DisplayAlertAsync(AppStrings.RestartRequiredTitle, AppStrings.RestartRequiredMessage, AppStrings.OK);
     }
+
+    private async void OnPrivacyPolicyClicked(object? sender, EventArgs e)
+    {
+        try
+        {
+            await Launcher.Default.OpenAsync(new Uri("https://fsoftt.github.io/PiccoloReader/privacy-policy"));
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Error", "Could not open privacy policy. Please try again.", "OK");
+            System.Diagnostics.Debug.WriteLine($"Failed to open privacy policy URL: {ex.Message}");
+        }
+    }
+
+    private async void OnTermsOfServiceClicked(object? sender, EventArgs e)
+    {
+        try
+        {
+            await Launcher.Default.OpenAsync(new Uri("https://fsoftt.github.io/PiccoloReader/terms-of-service"));
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Error", "Could not open terms of service. Please try again.", "OK");
+            System.Diagnostics.Debug.WriteLine($"Failed to open terms of service URL: {ex.Message}");
+        }
+    }
 }
