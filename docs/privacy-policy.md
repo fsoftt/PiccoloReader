@@ -251,7 +251,7 @@ If you have questions, concerns, or requests related to this Privacy Policy, ple
 **Piccolo Music Reader Development Team**
 - Email: **fsilva@duck.com**
 - GitHub: https://github.com/fsoftt/PiccoloReader
-- Report a Privacy Issue: issues@fsoftt.com
+- Report a Privacy Issue: fsilva@duck.com
 
 We'll respond to legitimate privacy inquiries within 30 days.
 
@@ -271,7 +271,7 @@ If you're a California resident, you have the right to:
 - We do NOT sell your personal information
 - We do NOT "share" information for cross-context behavioral advertising
 - Your sheets are stored locally (we never receive them)
-- California residents can exercise rights by emailing: privacy@fsoftt.com
+- California residents can exercise rights by emailing: fsilva@duck.com
 
 ### 11.2 European Union GDPR
 
@@ -293,7 +293,7 @@ Australian users have rights under the Australian Privacy Principles. We comply 
 - Providing access and complaint mechanisms
 - Protecting data with reasonable security
 
-For Australian privacy inquiries: privacy@fsoftt.com
+For Australian privacy inquiries: fsilva@duck.com
 
 ---
 
