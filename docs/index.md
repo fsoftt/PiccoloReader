@@ -293,9 +293,9 @@ For version history and changelog, see:
 
 📧 For any questions not answered here:
 
-- **Privacy:** privacy@fsoftt.com
-- **Legal:** legal@fsoftt.com
-- **Support:** issues@fsoftt.com
+- **Privacy:** fsilva@duck.com
+- **Legal:** fsilva@duck.com
+- **Support:** fsilva@duck.com
 - **GitHub:** https://github.com/fsoftt/PiccoloReader
 
 ---
