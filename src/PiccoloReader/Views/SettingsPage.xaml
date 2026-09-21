@@ -24,5 +24,41 @@
             </Grid>
         </Border>
 
+        <Label Text="{x:Static strings:AppStrings.LegalSectionHeader}" FontAttributes="Bold" FontSize="16" Margin="0,8,0,0" />
+
+        <Border Style="{StaticResource ListItemCard}">
+            <VerticalStackLayout Spacing="8">
+                <Button
+                    x:Name="PrivacyPolicyButton"
+                    Text="{x:Static strings:AppStrings.PrivacyPolicyLabel}"
+                    Clicked="OnPrivacyPolicyClicked"
+                    Padding="8,4"
+                    CornerRadius="8"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource Primary}}" />
+                <Label
+                    Text="{x:Static strings:AppStrings.PrivacyPolicyDescription}"
+                    FontSize="12"
+                    Opacity="0.7"
+                    Margin="0,-4,0,0" />
+            </VerticalStackLayout>
+        </Border>
+
+        <Border Style="{StaticResource ListItemCard}">
+            <VerticalStackLayout Spacing="8">
+                <Button
+                    x:Name="TermsOfServiceButton"
+                    Text="{x:Static strings:AppStrings.TermsOfServiceLabel}"
+                    Clicked="OnTermsOfServiceClicked"
+                    Padding="8,4"
+                    CornerRadius="8"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource Primary}}" />
+                <Label
+                    Text="{x:Static strings:AppStrings.TermsOfServiceDescription}"
+                    FontSize="12"
+                    Opacity="0.7"
+                    Margin="0,-4,0,0" />
+            </VerticalStackLayout>
+        </Border>
+
     </VerticalStackLayout>
 </ContentPage>

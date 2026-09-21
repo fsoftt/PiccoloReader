@@ -115,6 +115,12 @@ public static class AppStrings
     public static string SeeAdButton => Get(nameof(SeeAdButton));
     public static string SupportWithAdsOption => Get(nameof(SupportWithAdsOption));
     public static string DonateSupportWithAdsExplanation => Get(nameof(DonateSupportWithAdsExplanation));
+    public static string LegalSectionHeader => Get(nameof(LegalSectionHeader));
+    public static string PrivacyPolicyLabel => Get(nameof(PrivacyPolicyLabel));
+    public static string PrivacyPolicyDescription => Get(nameof(PrivacyPolicyDescription));
+    public static string TermsOfServiceLabel => Get(nameof(TermsOfServiceLabel));
+    public static string TermsOfServiceDescription => Get(nameof(TermsOfServiceDescription));
+    public static string OpenPrivacyPolicy => Get(nameof(OpenPrivacyPolicy));
 
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;

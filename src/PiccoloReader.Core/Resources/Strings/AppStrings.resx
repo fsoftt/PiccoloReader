@@ -131,4 +131,10 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="SeeAdButton" xml:space="preserve"><value>See ad</value></data>
   <data name="SupportWithAdsOption" xml:space="preserve"><value>Support with ads</value></data>
   <data name="DonateSupportWithAdsExplanation" xml:space="preserve"><value>There's also a "Support with ads" option in Settings — turn it on and a small ad banner will show up while you use the app. It helps me out.</value></data>
+  <data name="LegalSectionHeader" xml:space="preserve"><value>Legal &amp; Compliance</value></data>
+  <data name="PrivacyPolicyLabel" xml:space="preserve"><value>Privacy Policy</value></data>
+  <data name="PrivacyPolicyDescription" xml:space="preserve"><value>How we collect, use, and protect your information</value></data>
+  <data name="TermsOfServiceLabel" xml:space="preserve"><value>Terms of Service</value></data>
+  <data name="TermsOfServiceDescription" xml:space="preserve"><value>Usage rights, restrictions, and liability disclaimers</value></data>
+  <data name="OpenPrivacyPolicy" xml:space="preserve"><value>Open in Browser</value></data>
 </root>
