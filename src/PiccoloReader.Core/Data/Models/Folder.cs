@@ -10,4 +10,8 @@ public class Folder
     public string Name { get; set; } = string.Empty;
 
     public DateTime DateAdded { get; set; }
+
+    // Populated by LibraryViewModel; not stored.
+    [Ignore]
+    public int SheetCount { get; set; }
 }

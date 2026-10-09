@@ -23,6 +23,12 @@ public class LibraryService
             .OrderBy(s => s.Title)
             .ToListAsync();
 
+    public async Task<Dictionary<int, int>> GetSheetCountsByFolderAsync()
+    {
+        var sheets = await _database.Connection.Table<Sheet>().Where(s => s.FolderId != null).ToListAsync();
+        return sheets.GroupBy(s => s.FolderId!.Value).ToDictionary(g => g.Key, g => g.Count());
+    }
+
     public Task<Sheet> GetSheetAsync(int sheetId) =>
         _database.Connection.Table<Sheet>().Where(s => s.Id == sheetId).FirstAsync();
 

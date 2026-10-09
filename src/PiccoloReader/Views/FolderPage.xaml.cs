@@ -13,8 +13,6 @@ public partial class FolderPage : ContentPage
 {
     private readonly FolderViewModel _viewModel;
     private readonly LibraryService _libraryService;
-    private readonly ToolbarItem _searchToolbarItem;
-    private readonly ToolbarItem _sortToolbarItem;
 
     public FolderPage(FolderViewModel viewModel, LibraryService libraryService)
     {
@@ -24,20 +22,6 @@ public partial class FolderPage : ContentPage
         BindingContext = _viewModel;
 
         SheetLongPressCommand = new Command<Sheet>(async sheet => await OnSheetLongPressedAsync(sheet));
-
-        _searchToolbarItem = new ToolbarItem
-        {
-            IconImageSource = new FontImageSource { Glyph = "", FontFamily = "MaterialOutlined", Size = 24, Color = Colors.White }
-        };
-        _searchToolbarItem.Clicked += OnSearchClicked;
-
-        _sortToolbarItem = new ToolbarItem
-        {
-            IconImageSource = new FontImageSource { Glyph = "", FontFamily = "MaterialOutlined", Size = 24, Color = Colors.White }
-        };
-        _sortToolbarItem.Clicked += OnSortClicked;
-
-        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
 
     public ICommand SheetLongPressCommand { get; }
@@ -56,7 +40,6 @@ public partial class FolderPage : ContentPage
     {
         base.OnAppearing();
         var folderExists = await _viewModel.LoadAsync();
-        UpdateToolbarItems();
 
         if (!folderExists)
         {
@@ -65,36 +48,7 @@ public partial class FolderPage : ContentPage
         }
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(FolderViewModel.HasMultipleSheets))
-        {
-            UpdateToolbarItems();
-        }
-    }
-
-    private void UpdateToolbarItems()
-    {
-        if (_viewModel.HasMultipleSheets)
-        {
-            if (!ToolbarItems.Contains(_searchToolbarItem))
-            {
-                ToolbarItems.Add(_searchToolbarItem);
-            }
-
-            if (!ToolbarItems.Contains(_sortToolbarItem))
-            {
-                ToolbarItems.Add(_sortToolbarItem);
-            }
-        }
-        else
-        {
-            ToolbarItems.Remove(_searchToolbarItem);
-            ToolbarItems.Remove(_sortToolbarItem);
-        }
-    }
-
-    private async void OnImportPdfClicked(object? sender, TappedEventArgs e)
+    private async void OnImportPdfClicked(object? sender, EventArgs e)
     {
         var results = await FilePicker.Default.PickMultipleAsync(new PickOptions
         {
@@ -118,17 +72,7 @@ public partial class FolderPage : ContentPage
         }
     }
 
-    private void OnSearchClicked(object? sender, EventArgs e)
-    {
-        _viewModel.IsSearchVisible = !_viewModel.IsSearchVisible;
-
-        if (!_viewModel.IsSearchVisible)
-        {
-            _viewModel.SearchText = string.Empty;
-        }
-    }
-
-    private void OnSearchClearClicked(object? sender, TappedEventArgs e)
+    private void OnSearchClearClicked(object? sender, EventArgs e)
     {
         _viewModel.SearchText = string.Empty;
     }
@@ -189,9 +133,24 @@ public partial class FolderPage : ContentPage
         }
     }
 
+    private async void OnBackClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("..");
+
+    private async void OnSheetMoreClicked(object? sender, EventArgs e)
+    {
+        if ((sender as BindableObject)?.BindingContext is Sheet sheet)
+        {
+            await ShowSheetMenuAsync(sheet);
+        }
+    }
+
     private async Task OnSheetLongPressedAsync(Sheet sheet)
     {
         _suppressNextTap = true;
+        await ShowSheetMenuAsync(sheet);
+    }
+
+    private async Task ShowSheetMenuAsync(Sheet sheet)
+    {
 
         var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, AppStrings.Move, AppStrings.Delete);
 

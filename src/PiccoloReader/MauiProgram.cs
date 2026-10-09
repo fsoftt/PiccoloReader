@@ -66,6 +66,17 @@ public static class MauiProgram
 		CultureInfo.DefaultThreadCurrentCulture = resolvedCulture;
 		CultureInfo.DefaultThreadCurrentUICulture = resolvedCulture;
 
+#if ANDROID
+		// Search fields live inside a rounded Border: drop the native underline.
+		Microsoft.Maui.Handlers.EntryHandler.Mapper.AppendToMapping("BorderlessSearch", (handler, view) =>
+		{
+			if (view.AutomationId is { } id && id.EndsWith("SearchEntry", StringComparison.Ordinal))
+			{
+				handler.PlatformView.BackgroundTintList = Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent);
+			}
+		});
+#endif
+
 		builder.Services.AddSingleton<IAppStorageProvider, MauiAppStorageProvider>();
 		builder.Services.AddSingleton<ILanguagePreferenceService, MauiLanguagePreferenceService>();
 		builder.Services.AddSingleton<IDonateAdService, MauiDonateAdService>();

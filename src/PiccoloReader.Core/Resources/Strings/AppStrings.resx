@@ -157,4 +157,18 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="TutorialBookmarksText" xml:space="preserve"><value>Bookmark the pages you come back to most and jump straight to them whenever you need.</value></data>
   <data name="TutorialSettingsTitle" xml:space="preserve"><value>Settings and support</value></data>
   <data name="TutorialSettingsText" xml:space="preserve"><value>Change the app language in Settings. If you enjoy Piccolo Reader, you can support it by turning on ads. You can reopen this tutorial any time from Settings.</value></data>
+  <data name="ImportPdf" xml:space="preserve"><value>Import PDF</value></data>
+  <data name="NewFolder" xml:space="preserve"><value>New folder</value></data>
+  <data name="MoreOptions" xml:space="preserve"><value>More options</value></data>
+  <data name="SortLabel" xml:space="preserve"><value>Sort</value></data>
+  <data name="BackLabel" xml:space="preserve"><value>Back</value></data>
+  <data name="LibrarySummaryFormat" xml:space="preserve"><value>{0} · {1}</value></data>
+  <data name="SheetCountFormat" xml:space="preserve"><value>{0} sheets</value></data>
+  <data name="SheetCountSingularFormat" xml:space="preserve"><value>{0} sheet</value></data>
+  <data name="FolderCountFormat" xml:space="preserve"><value>{0} folders</value></data>
+  <data name="FolderCountSingularFormat" xml:space="preserve"><value>{0} folder</value></data>
+  <data name="PagesFormat" xml:space="preserve"><value>{0} pp.</value></data>
+  <data name="PagesSingularFormat" xml:space="preserve"><value>{0} p.</value></data>
+  <data name="EmptyLibraryTitle" xml:space="preserve"><value>Your library is empty</value></data>
+  <data name="EmptyLibraryMessage" xml:space="preserve"><value>Import a PDF to start reading your sheet music.</value></data>
 </root>
