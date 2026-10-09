@@ -1,5 +1,6 @@
 using System.Drawing;
 using OpenQA.Selenium;
+using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.E2E.Infrastructure;
 using PiccoloReader.E2E.Screens;
 
@@ -170,7 +171,9 @@ public class EditorTests : E2ETestBase
         Ui.Tap(ViewerScreen.UndoButton);
         AppDb.WaitForAnnotations(r => r.Count == 0, "undo removes the icon");
 
-        Ui.Tap(ViewerScreen.RedoButton);
+        // Undoing the placement ends the selection, so the editing bar is gone: redo is in the "more" menu.
+        Ui.Tap("ViewerMoreButton");
+        Ui.TapText(AppStrings.RedoAction);
         var rows = AppDb.WaitForAnnotations(r => r.Count == 1, "redo restores the icon");
         Assert.That(rows[0].IconKey, Is.EqualTo(ViewerScreen.FirstSymbolKey));
     }

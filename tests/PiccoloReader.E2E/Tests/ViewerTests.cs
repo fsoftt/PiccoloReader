@@ -82,7 +82,7 @@ public class ViewerTests : E2ETestBase
     {
         ViewerScreen.RevealChrome();
         Assert.That(ViewerScreen.IsContinuous, Is.False, "starts horizontal");
-        Assert.That(AppSession.ReadStringPreference("ReadingMode"), Is.EqualTo("Horizontal"));
+        Assert.That(AppSession.ReadStringPreference("ReadingMode"), Is.Null.Or.EqualTo("Horizontal"), "nothing saved yet or the default");
 
         // Horizontal -> vertical paged: still the single-page surface, but turning is top/bottom.
         ViewerScreen.CycleReadingMode();
