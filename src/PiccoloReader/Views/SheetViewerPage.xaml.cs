@@ -93,11 +93,6 @@ public partial class SheetViewerPage : ContentPage
         PageContainer.SizeChanged += OnPageContainerSizeChanged;
         ContinuousPagesView.SizeChanged += (_, _) =>
         {
-            if (ContinuousPagesView.Width > 0 && ContinuousPagesView.Height > 0)
-            {
-                _viewModel.ReadingAreaSize = (ContinuousPagesView.Width, ContinuousPagesView.Height);
-            }
-
             RelayoutContinuousPages();
         };
 
@@ -119,6 +114,42 @@ public partial class SheetViewerPage : ContentPage
 
     public IReadOnlyList<MusicIconCategory> IconCategories => MusicIconCatalog.Categories;
 
+    // The portrait reading area legacy annotations were normalized to: the
+    // PageContainer of the pre-#81 viewer, i.e. the screen in portrait minus
+    // the status bar, the system navigation bar and the (visible) app bar, as
+    // that is when annotations were authored. Derived from the display only,
+    // in dp, so it is the same for every page, orientation and toolbar state.
+    private static (double Width, double Height) LegacyPortraitReadingArea()
+    {
+        var info = DeviceDisplay.Current.MainDisplayInfo;
+        if (info.Density <= 0)
+        {
+            return (0, 0);
+        }
+
+        var widthDp = Math.Min(info.Width, info.Height) / info.Density;
+        var heightDp = Math.Max(info.Width, info.Height) / info.Density;
+        var chromeDp = 56.0;
+
+#if ANDROID
+        var resources = Microsoft.Maui.ApplicationModel.Platform.AppContext.Resources;
+        if (resources is not null)
+        {
+            chromeDp += AndroidDimenDp(resources, "status_bar_height") + AndroidDimenDp(resources, "navigation_bar_height");
+        }
+#endif
+
+        return (widthDp, heightDp - chromeDp);
+    }
+
+#if ANDROID
+    private static double AndroidDimenDp(Android.Content.Res.Resources resources, string name)
+    {
+        var id = resources.GetIdentifier(name, "dimen", "android");
+        return id > 0 ? resources.GetDimensionPixelSize(id) / resources.DisplayMetrics!.Density : 0;
+    }
+#endif
+
     protected override async void OnAppearing()
     {
         base.OnAppearing();
@@ -134,6 +165,7 @@ public partial class SheetViewerPage : ContentPage
         UpdateToolSections();
 
         var displayInfo = DeviceDisplay.Current.MainDisplayInfo;
+        _viewModel.LegacyReferenceSize = LegacyPortraitReadingArea();
         var targetWidthPx = (int)displayInfo.Width;
         var targetHeightPx = (int)displayInfo.Height;
 
@@ -179,7 +211,6 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        _viewModel.ReadingAreaSize = (PageContainer.Width, PageContainer.Height);
         UpdatePencilDrawingViewLineWidth();
 
         if (_orientationFlipped)

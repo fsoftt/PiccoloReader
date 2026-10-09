@@ -231,4 +231,66 @@ public class AnnotationServiceTests : IDisposable
         var raw = await _sut.GetAnnotationsAsync(1, 0);
         Assert.Equal(AnnotationCoordinateSpace.Legacy, raw[0].CoordinateSpace);
     }
+
+    private Task InsertLegacyIconAsync(int pageIndex) => _sut.InsertAnnotationAsync(new Annotation
+    {
+        SheetId = 1,
+        PageIndex = pageIndex,
+        Type = AnnotationType.Icon,
+        IconKey = "dynamicForte",
+        X = 0.5,
+        Y = 0.5,
+        Width = 0.12,
+        Height = 0.141,
+        CreatedAt = DateTime.UtcNow
+    });
+
+    [Fact]
+    public async Task GetPageAnnotationsAsync_SameLegacyRowOnDifferentPages_ConvertsIdentically()
+    {
+        // The same legacy icon on two pages, loaded at different "times" with
+        // the same stable reference (dp, shape only), must convert identically.
+        await InsertLegacyIconAsync(0);
+        await InsertLegacyIconAsync(1);
+
+        var firstPage = await _sut.GetPageAnnotationsAsync(1, 0, 1.4142, 411, 780);
+        var secondPage = await _sut.GetPageAnnotationsAsync(1, 1, 1.4142, 411, 780);
+
+        Assert.Equal(firstPage[0].Y, secondPage[0].Y, 9);
+        Assert.Equal(firstPage[0].Height, secondPage[0].Height, 9);
+        Assert.Equal(firstPage[0].Width, secondPage[0].Width, 9);
+    }
+
+    [Fact]
+    public async Task GetPageAnnotationsAsync_ReferenceIsUnitIndependent()
+    {
+        // dp vs px of the same reference area gives the same result.
+        await InsertLegacyIconAsync(0);
+        await InsertLegacyIconAsync(1);
+
+        var dp = await _sut.GetPageAnnotationsAsync(1, 0, 1.4142, 411, 780);
+        var px = await _sut.GetPageAnnotationsAsync(1, 1, 1.4142, 411 * 2.625, 780 * 2.625);
+
+        Assert.Equal(dp[0].Y, px[0].Y, 9);
+        Assert.Equal(dp[0].Height, px[0].Height, 9);
+    }
+
+    [Fact]
+    public async Task GetPageAnnotationsAsync_PersistFalse_ConvertsForDisplayButKeepsRowLegacy()
+    {
+        await InsertLegacyIconAsync(0);
+
+        var shown = await _sut.GetPageAnnotationsAsync(1, 0, 1.4142, 1080, 2400, persist: false);
+        Assert.Equal(AnnotationCoordinateSpace.Page, shown[0].CoordinateSpace);
+
+        var raw = await _sut.GetAnnotationsAsync(1, 0);
+        Assert.Equal(AnnotationCoordinateSpace.Legacy, raw[0].CoordinateSpace);
+        Assert.Equal(0.141, raw[0].Height, 9);
+
+        // A later load with the stable reference converts and saves it.
+        var stable = await _sut.GetPageAnnotationsAsync(1, 0, 1.4142, 411, 780);
+        raw = await _sut.GetAnnotationsAsync(1, 0);
+        Assert.Equal(AnnotationCoordinateSpace.Page, raw[0].CoordinateSpace);
+        Assert.Equal(stable[0].Height, raw[0].Height, 9);
+    }
 }

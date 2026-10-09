@@ -20,16 +20,17 @@ public class AnnotationService
 
     // Annotations are stored normalized to the page. Legacy rows (normalized
     // to the reading area container) are converted here, once, using a
-    // portrait reference container derived from the current reading area, and
-    // written back so they are not converted again.
+    // stable portrait reference container, and written back so they are not
+    // converted again. persist: false converts for display only.
     public async Task<List<Annotation>> GetPageAnnotationsAsync(
-        int sheetId, int pageIndex, double pageAspectRatio, double containerWidth, double containerHeight)
+        int sheetId, int pageIndex, double pageAspectRatio, double containerWidth, double containerHeight, bool persist = true)
     {
         var annotations = await GetAnnotationsAsync(sheetId, pageIndex);
 
         foreach (var annotation in annotations)
         {
-            if (AnnotationCoordinateMigrator.MigrateToPageSpace(annotation, pageAspectRatio, containerWidth, containerHeight))
+            if (AnnotationCoordinateMigrator.MigrateToPageSpace(annotation, pageAspectRatio, containerWidth, containerHeight)
+                && persist)
             {
                 await _database.Connection.UpdateAsync(annotation);
             }
