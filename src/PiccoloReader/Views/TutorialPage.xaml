@@ -69,15 +69,14 @@
                 Command="{Binding SkipCommand}"
                 IsVisible="{Binding ShowSkip}"
                 BackgroundColor="Transparent"
-                TextColor="{StaticResource Primary}"
+                TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
                 HorizontalOptions="Start" />
             <Button
                 Grid.Column="1"
                 Text="{Binding PrimaryButtonText}"
                 Command="{Binding NextCommand}"
                 CornerRadius="8"
-                Padding="24,4"
-                BackgroundColor="{StaticResource Primary}" />
+                Padding="24,4" />
         </Grid>
     </Grid>
 </ContentPage>
