@@ -8,7 +8,7 @@
     Shell.NavBarIsVisible="False"
     NavigationPage.HasNavigationBar="False">
 
-    <Grid RowDefinitions="*,Auto,Auto" Padding="24">
+    <Grid RowDefinitions="*,Auto,Auto" Padding="24,16">
 
         <CarouselView
             Grid.Row="0"
@@ -19,8 +19,9 @@
             <CarouselView.ItemTemplate>
                 <DataTemplate x:DataType="vm:TutorialSlide">
                     <ScrollView>
-                        <VerticalStackLayout Spacing="20" VerticalOptions="Center" Padding="8,24">
+                        <VerticalStackLayout Spacing="12" VerticalOptions="Center" Padding="8,12">
                             <Border
+                                IsVisible="{Binding Source={RelativeSource AncestorType={x:Type vm:TutorialViewModel}}, Path=ShowSlideIcon}"
                                 WidthRequest="120"
                                 HeightRequest="120"
                                 Padding="0"
@@ -69,15 +70,14 @@
                 Command="{Binding SkipCommand}"
                 IsVisible="{Binding ShowSkip}"
                 BackgroundColor="Transparent"
-                TextColor="{StaticResource Primary}"
+                TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
                 HorizontalOptions="Start" />
             <Button
                 Grid.Column="1"
                 Text="{Binding PrimaryButtonText}"
                 Command="{Binding NextCommand}"
                 CornerRadius="8"
-                Padding="24,4"
-                BackgroundColor="{StaticResource Primary}" />
+                Padding="24,4" />
         </Grid>
     </Grid>
 </ContentPage>
