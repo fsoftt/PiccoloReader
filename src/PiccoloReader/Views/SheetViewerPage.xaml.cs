@@ -77,7 +77,7 @@ public partial class SheetViewerPage : ContentPage
         };
         UpdateReadingModeIcon();
 
-        ContinuousPagesView.ItemTemplate = new DataTemplate(() => new ContinuousPageView(_annotationPainter, EditorContainerSize, OnContinuousPageTapped));
+        ContinuousPagesView.ItemTemplate = new DataTemplate(() => new ContinuousPageView(_annotationPainter, EditorContainerSize, OnContinuousPageTapped, () => _continuousZoom));
 
         // ToolbarItem has no bindable IsVisible in this MAUI version (it
         // derives from Element, not VisualElement), so visibility is

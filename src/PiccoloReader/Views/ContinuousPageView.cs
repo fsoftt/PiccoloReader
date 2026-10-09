@@ -28,11 +28,14 @@ public class ContinuousPageView : ContentView
 
     // editorSize is the single-page viewer's container size, which stored
     // annotation coordinates are relative to. onTapped receives the page and
-    // the tap position in those same annotation coordinates.
+    // the tap position in those same annotation coordinates. listZoom is the
+    // list's pinch zoom: the gesture position is measured in screen pixels,
+    // which the zoomed list magnifies, so it's divided back out.
     public ContinuousPageView(
         AnnotationPainter painter,
         Func<(double Width, double Height)> editorSize,
-        Action<ContinuousPage, double, double> onTapped)
+        Action<ContinuousPage, double, double> onTapped,
+        Func<double> listZoom)
     {
         _painter = painter;
         _editorSize = editorSize;
@@ -63,11 +66,12 @@ public class ContinuousPageView : ContentView
                 return;
             }
 
+            var zoom = Math.Max(listZoom(), 1);
             var frame = CurrentFrame();
             onTapped(
                 _page,
-                frame.ToContainerX(position.Value.X / _pageArea.Width),
-                frame.ToContainerY(position.Value.Y / _pageArea.Height));
+                frame.ToContainerX(position.Value.X / zoom / _pageArea.Width),
+                frame.ToContainerY(position.Value.Y / zoom / _pageArea.Height));
         };
         GestureRecognizers.Add(tap);
 
