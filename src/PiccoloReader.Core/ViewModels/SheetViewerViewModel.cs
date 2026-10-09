@@ -48,11 +48,14 @@ public partial class SheetViewerViewModel : ObservableObject
     private int _targetWidthPx;
     private int _targetHeightPx;
 
-    // Size of the reading area as last laid out by the view; (0, 0) until
-    // known, in which case the render target size stands in for it. Only its
-    // shape matters: it sets the portrait reference container used to
-    // convert legacy annotations.
-    public (double Width, double Height) ReadingAreaSize { get; set; }
+    // The portrait reading area (dp) legacy annotations were normalized to: a
+    // stable value derived by the view from the screen, not from the current
+    // layout (toolbar shown/hidden, rotation), so a legacy row converts to
+    // the same result whichever page loads it and whenever. (0, 0) while
+    // unknown: legacy rows are then converted for display only (against the
+    // render target) and not saved, so a guess is never persisted. Only its
+    // shape matters.
+    public (double Width, double Height) LegacyReferenceSize { get; set; }
 
     // Height / width of the page shown in the single-page viewer (0 while
     // unknown). Annotations are normalized to that page rectangle.
@@ -705,16 +708,19 @@ public partial class SheetViewerViewModel : ObservableObject
     }
 
     // Reads a page's annotations in page coordinates, converting legacy ones
-    // on the way. An unknown page aspect falls back to the render target's.
+    // on the way. The conversion is saved only when both the stable
+    // LegacyReferenceSize and the page aspect are known; otherwise the render
+    // target stands in for display and the rows stay legacy in the database.
     private Task<List<Annotation>> LoadPageAnnotationsAsync(int pageIndex, double pageAspectRatio)
     {
         var targetAspect = _targetWidthPx > 0 ? (double)_targetHeightPx / _targetWidthPx : 0;
-        var (areaWidth, areaHeight) = ReadingAreaSize is { Width: > 0, Height: > 0 }
-            ? ReadingAreaSize
+        var known = LegacyReferenceSize is { Width: > 0, Height: > 0 } && pageAspectRatio > 0;
+        var (areaWidth, areaHeight) = LegacyReferenceSize is { Width: > 0, Height: > 0 }
+            ? LegacyReferenceSize
             : (_targetWidthPx, _targetHeightPx);
 
         return _annotationService.GetPageAnnotationsAsync(
-            _sheet!.Id, pageIndex, pageAspectRatio > 0 ? pageAspectRatio : targetAspect, areaWidth, areaHeight);
+            _sheet!.Id, pageIndex, pageAspectRatio > 0 ? pageAspectRatio : targetAspect, areaWidth, areaHeight, persist: known);
     }
 
     private async Task<byte[]?> RenderPageGatedAsync(int pageIndex)
