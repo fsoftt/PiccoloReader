@@ -7,15 +7,18 @@
     xmlns:vm="clr-namespace:PiccoloReader.Core.ViewModels;assembly=PiccoloReader.Core"
     Shell.NavBarIsVisible="False"
     Shell.TabBarIsVisible="False"
-    NavigationPage.HasNavigationBar="False">
+    NavigationPage.HasNavigationBar="False"
+    BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource BackgroundDark}}">
 
-    <Grid RowDefinitions="*,Auto,Auto" Padding="24,16">
+    <Grid RowDefinitions="*,Auto,Auto" Padding="24,16,24,24">
 
         <CarouselView
             Grid.Row="0"
             x:Name="SlidesCarousel"
+            AutomationId="TutorialCarousel"
             ItemsSource="{Binding Slides}"
             Position="{Binding CurrentIndex, Mode=TwoWay}"
+            HorizontalScrollBarVisibility="Never"
             Loop="False">
             <CarouselView.ItemTemplate>
                 <DataTemplate x:DataType="vm:TutorialSlide">
@@ -23,33 +26,35 @@
                         <VerticalStackLayout Spacing="12" VerticalOptions="Center" Padding="8,12">
                             <Border
                                 IsVisible="{Binding Source={RelativeSource AncestorType={x:Type vm:TutorialViewModel}}, Path=ShowSlideIcon}"
-                                WidthRequest="120"
-                                HeightRequest="120"
+                                WidthRequest="96"
+                                HeightRequest="96"
                                 Padding="0"
                                 StrokeThickness="0"
-                                StrokeShape="RoundRectangle 60"
+                                StrokeShape="RoundRectangle 48"
                                 HorizontalOptions="Center"
-                                BackgroundColor="{StaticResource Primary}">
+                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}">
                                 <Image HorizontalOptions="Center" VerticalOptions="Center">
                                     <Image.Source>
                                         <FontImageSource
                                             Glyph="{Binding Glyph}"
                                             FontFamily="MaterialOutlined"
-                                            Size="64"
-                                            Color="White" />
+                                            Size="48"
+                                            Color="{AppThemeBinding Light={StaticResource OnPrimaryLight}, Dark={StaticResource OnPrimaryDark}}" />
                                     </Image.Source>
                                 </Image>
                             </Border>
                             <Label
                                 Text="{Binding Title}"
-                                FontSize="24"
-                                FontAttributes="Bold"
+                                Style="{StaticResource PageTitle}"
+                                FontSize="26"
+                                SemanticProperties.HeadingLevel="Level1"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
                                 HorizontalTextAlignment="Center" />
                             <Label
                                 Text="{Binding Description}"
                                 FontSize="16"
                                 HorizontalTextAlignment="Center"
-                                Opacity="0.8" />
+                                TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
                         </VerticalStackLayout>
                     </ScrollView>
                 </DataTemplate>
@@ -61,24 +66,30 @@
             x:Name="SlideIndicator"
             HorizontalOptions="Center"
             Margin="0,8,0,16"
-            IndicatorColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
-            SelectedIndicatorColor="{StaticResource Primary}" />
+            IndicatorSize="8" IndicatorColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+            SelectedIndicatorColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
 
         <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <Button
                 Grid.Column="0"
+                AutomationId="TutorialSkipButton"
                 Text="{x:Static strings:AppStrings.TutorialSkip}"
                 Command="{Binding SkipCommand}"
                 IsVisible="{Binding ShowSkip}"
                 BackgroundColor="Transparent"
-                TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                MinimumHeightRequest="48"
+                TextColor="{AppThemeBinding Light={StaticResource OnPrimaryContainerLight}, Dark={StaticResource OnPrimaryContainerDark}}"
                 HorizontalOptions="Start" />
             <Button
                 Grid.Column="1"
+                AutomationId="TutorialNextButton"
                 Text="{Binding PrimaryButtonText}"
                 Command="{Binding NextCommand}"
-                CornerRadius="8"
-                Padding="24,4" />
+                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                TextColor="{AppThemeBinding Light={StaticResource OnPrimaryLight}, Dark={StaticResource OnPrimaryDark}}"
+                HeightRequest="48"
+                CornerRadius="24"
+                Padding="28,0" />
         </Grid>
     </Grid>
 </ContentPage>

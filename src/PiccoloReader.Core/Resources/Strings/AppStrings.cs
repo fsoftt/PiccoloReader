@@ -180,6 +180,10 @@ public static class AppStrings
     public static string Symbols => Get(nameof(Symbols));
     public static string EditorDoneLabel => Get(nameof(EditorDoneLabel));
 
+    public static string SettingsGeneralSection => Get(nameof(SettingsGeneralSection));
+    public static string SettingsHelpSection => Get(nameof(SettingsHelpSection));
+    public static string AppVersionFormat => Get(nameof(AppVersionFormat));
+
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;
 }
