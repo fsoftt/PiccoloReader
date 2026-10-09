@@ -241,6 +241,97 @@ public class SheetViewerViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task BeginContinuousEditAsync_OpensPageInEditorAndBlocksPageTurns()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _annotationService.AddIconAsync(sheet.Id, 4, "forte", 0.1, 0.1, 0.1, 0.1);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.BeginContinuousEditAsync(4);
+
+        Assert.True(_sut.IsContinuousEditing);
+        Assert.Equal(4, _sut.CurrentPageIndex);
+        Assert.Equal(new byte[] { 4 }, _sut.CurrentPageImageBytes);
+        Assert.Single(_sut.CurrentPageAnnotations);
+        Assert.False(_sut.NextPageCommand.CanExecute(null));
+        Assert.False(_sut.PreviousPageCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task BeginContinuousEditAsync_NotInContinuousMode_DoesNothing()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.BeginContinuousEditAsync(4);
+
+        Assert.False(_sut.IsContinuousEditing);
+        Assert.Equal(0, _sut.CurrentPageIndex);
+    }
+
+    [Fact]
+    public async Task EndContinuousEditAsync_RefreshesEditedPageAnnotationsInList()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.BeginContinuousEditAsync(0);
+
+        await _sut.PlaceIconCommand.ExecuteAsync("forte");
+        await _sut.EndContinuousEditAsync();
+
+        Assert.False(_sut.IsContinuousEditing);
+        Assert.Null(_sut.SelectedAnnotation);
+        Assert.False(_sut.CanUndo);
+        Assert.Single(_sut.ContinuousPages[0].Annotations);
+        Assert.True(_sut.NextPageCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task GoToPageAsync_WhileContinuousEditing_EndsEditingAndMovesToPage()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.BeginContinuousEditAsync(2);
+
+        await _sut.GoToPageAsync(7);
+
+        Assert.False(_sut.IsContinuousEditing);
+        Assert.Equal(7, _sut.CurrentPageIndex);
+        Assert.NotNull(_sut.ContinuousPages[7].ImageBytes);
+    }
+
+    [Fact]
+    public async Task UpdateContinuousViewportAsync_WhileEditing_IsIgnored()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.BeginContinuousEditAsync(2);
+
+        await _sut.UpdateContinuousViewportAsync(firstVisibleIndex: 7, lastVisibleIndex: 8, centerIndex: 8);
+
+        Assert.Equal(2, _sut.CurrentPageIndex);
+    }
+
+    [Fact]
+    public async Task CycleReadingModeCommand_WhileContinuousEditing_EndsEditing()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.BeginContinuousEditAsync(3);
+
+        await _sut.CycleReadingModeCommand.ExecuteAsync(null);
+
+        Assert.Equal(ReadingMode.Horizontal, _sut.ReadingMode);
+        Assert.False(_sut.IsContinuousEditing);
+        Assert.True(_sut.NextPageCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task CycleReadingModeCommand_LeavingContinuous_RendersPageScrolledTo()
     {
         _readingPreferences.Mode = ReadingMode.VerticalContinuous;

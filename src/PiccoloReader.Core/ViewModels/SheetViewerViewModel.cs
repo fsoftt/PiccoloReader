@@ -125,6 +125,14 @@ public partial class SheetViewerViewModel : ObservableObject
 
     public ObservableCollection<ContinuousPage> ContinuousPages { get; } = new();
 
+    // True while one page of the continuous list is open in the single-page
+    // editor (tools, selection, zoom). Page turning is disabled meanwhile -
+    // the user leaves the editor to scroll to another page.
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviousPageCommand))]
+    private bool _isContinuousEditing;
+
     public bool IsDrawingToolActive => ActiveTool != AnnotationTool.MusicIcons;
 
     public ObservableCollection<Annotation> CurrentPageAnnotations { get; } = new();
@@ -201,6 +209,13 @@ public partial class SheetViewerViewModel : ObservableObject
             return;
         }
 
+        // A jump (page indicator, bookmark) while a continuous-mode page
+        // is open in the editor goes back to the list first.
+        if (IsContinuousEditing)
+        {
+            await EndContinuousEditAsync();
+        }
+
         CurrentPageIndex = pageIndex;
         if (IsContinuousReading)
         {
@@ -220,7 +235,7 @@ public partial class SheetViewerViewModel : ObservableObject
     // side get rendered, and pages that scrolled far away are released.
     public async Task UpdateContinuousViewportAsync(int firstVisibleIndex, int lastVisibleIndex, int centerIndex)
     {
-        if (!IsContinuousReading || PageCount <= 0)
+        if (!IsContinuousReading || IsContinuousEditing || PageCount <= 0)
         {
             return;
         }
@@ -315,9 +330,46 @@ public partial class SheetViewerViewModel : ObservableObject
         Bookmarks.Add(bookmark);
     }
 
-    private bool CanGoToNextPage() => CurrentPageIndex < PageCount - 1;
+    private bool CanGoToNextPage() => !IsContinuousEditing && CurrentPageIndex < PageCount - 1;
 
-    private bool CanGoToPreviousPage() => CurrentPageIndex > 0;
+    private bool CanGoToPreviousPage() => !IsContinuousEditing && CurrentPageIndex > 0;
+
+    // Opens one page of the continuous list in the single-page editor.
+    public async Task BeginContinuousEditAsync(int pageIndex)
+    {
+        if (!IsContinuousReading || PageCount <= 0)
+        {
+            return;
+        }
+
+        CurrentPageIndex = Math.Clamp(pageIndex, 0, PageCount - 1);
+        IsContinuousEditing = true;
+        await LoadCurrentPageAsync();
+    }
+
+    // Back to scrolling: the edited page's annotations are re-read so the
+    // list shows the changes.
+    public async Task EndContinuousEditAsync()
+    {
+        if (!IsContinuousEditing)
+        {
+            return;
+        }
+
+        IsContinuousEditing = false;
+        SelectedAnnotation = null;
+        ActiveTool = AnnotationTool.MusicIcons;
+        _undoStack.Clear();
+        _redoStack.Clear();
+        RefreshUndoRedoState();
+
+        if (_sheet is not null && CurrentPageIndex < ContinuousPages.Count)
+        {
+            var page = ContinuousPages[CurrentPageIndex];
+            var annotations = await _annotationService.GetAnnotationsAsync(_sheet.Id, page.PageIndex);
+            page.Annotations = annotations.ToList();
+        }
+    }
 
     private bool CanDeleteSelectedAnnotation() => SelectedAnnotation is not null;
 
@@ -326,6 +378,7 @@ public partial class SheetViewerViewModel : ObservableObject
     private async Task CycleReadingModeAsync()
     {
         var previousMode = ReadingMode;
+        IsContinuousEditing = false;
         ReadingMode = ReadingMode switch
         {
             ReadingMode.Horizontal => ReadingMode.VerticalPaged,
@@ -336,9 +389,10 @@ public partial class SheetViewerViewModel : ObservableObject
 
         if (IsContinuousReading)
         {
-            // Continuous mode is read-only - drop any in-progress
-            // selection/tool, and reload annotations since they may have
-            // been edited in a paged mode since the pages were last shown.
+            // Drop any in-progress selection/tool (editing in continuous
+            // mode goes through BeginContinuousEditAsync), and reload
+            // annotations since they may have been edited in a paged mode
+            // since the pages were last shown.
             SelectedAnnotation = null;
             ActiveTool = AnnotationTool.MusicIcons;
             _undoStack.Clear();
