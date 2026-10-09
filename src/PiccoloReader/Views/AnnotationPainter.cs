@@ -8,10 +8,10 @@ namespace PiccoloReader.Views;
 // Draws annotations (strokes and music-font icons) onto a Skia canvas.
 // Shared by the single-page viewer's overlay, the icon picker, and each
 // page of the continuous reading mode so they all render identically.
-// Annotation coordinates are normalized (0-1) to the single-page viewer's
-// container, so by default info's size is that container's size. A canvas
-// covering just the page (the continuous list) passes the page's frame
-// within the container to map them onto itself.
+// Annotation coordinates are normalized (0-1) to the page. A canvas covering
+// just the page (the continuous list) maps them straight onto info; a canvas
+// covering the reading area (the single-page viewer) passes the page's frame
+// within it.
 public class AnnotationPainter
 {
     private readonly Dictionary<int, SKRect> _glyphBoundsCache = new();
@@ -37,10 +37,10 @@ public class AnnotationPainter
             }
 
             var targetRect = new SKRect(
-                (float)(frame.ToPageX(annotation.X) * info.Width),
-                (float)(frame.ToPageY(annotation.Y) * info.Height),
-                (float)(frame.ToPageX(annotation.X + annotation.Width) * info.Width),
-                (float)(frame.ToPageY(annotation.Y + annotation.Height) * info.Height));
+                (float)(frame.ToContainerX(annotation.X) * info.Width),
+                (float)(frame.ToContainerY(annotation.Y) * info.Height),
+                (float)(frame.ToContainerX(annotation.X + annotation.Width) * info.Width),
+                (float)(frame.ToContainerY(annotation.Y + annotation.Height) * info.Height));
 
             DrawGlyphFitted(canvas, icon.Codepoint, targetRect, icon.VisualScale);
         }
@@ -55,16 +55,16 @@ public class AnnotationPainter
         }
 
         using var path = new SKPath();
-        path.MoveTo((float)(frame.ToPageX(points[0].X) * info.Width), (float)(frame.ToPageY(points[0].Y) * info.Height));
+        path.MoveTo((float)(frame.ToContainerX(points[0].X) * info.Width), (float)(frame.ToContainerY(points[0].Y) * info.Height));
         for (var i = 1; i < points.Count; i++)
         {
-            path.LineTo((float)(frame.ToPageX(points[i].X) * info.Width), (float)(frame.ToPageY(points[i].Y) * info.Height));
+            path.LineTo((float)(frame.ToContainerX(points[i].X) * info.Width), (float)(frame.ToContainerY(points[i].Y) * info.Height));
         }
 
         using var paint = new SKPaint
         {
             Color = SKColor.Parse(annotation.ColorHex),
-            StrokeWidth = (float)(annotation.StrokeWidth / frame.Width * info.Width),
+            StrokeWidth = (float)(annotation.StrokeWidth * frame.Width * info.Width),
             Style = SKPaintStyle.Stroke,
             StrokeCap = SKStrokeCap.Round,
             StrokeJoin = SKStrokeJoin.Round,

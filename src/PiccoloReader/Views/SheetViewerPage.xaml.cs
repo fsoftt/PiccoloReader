@@ -76,32 +76,25 @@ public partial class SheetViewerPage : ContentPage
             {
                 UpdateReadingModeUi();
             }
-
-            if (e.PropertyName is nameof(SheetViewerViewModel.ReadingMode)
-                or nameof(SheetViewerViewModel.IsContinuousEditing)
-                or nameof(SheetViewerViewModel.ActiveTool)
-                or nameof(SheetViewerViewModel.SelectedAnnotation))
+            else if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageImageBytes))
             {
-                UpdateOrientationLock();
-            }
-        };
-        ToolPanel.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(VisualElement.IsVisible))
-            {
-                UpdateOrientationLock();
+                // The pencil's on-screen width follows the page's size.
+                UpdatePencilDrawingViewLineWidth();
             }
         };
         UpdateReadingModeIcon();
 
         ContinuousPagesView.ItemTemplate = new DataTemplate(() =>
         {
-            var view = new ContinuousPageView(_annotationPainter, EditorContainerSize, OnContinuousPageTapped, () => _continuousZoom);
+            var view = new ContinuousPageView(_annotationPainter, OnContinuousPageTapped, () => _continuousZoom);
             _continuousViews.Add(new WeakReference<ContinuousPageView>(view));
             return view;
         });
         PageContainer.SizeChanged += OnPageContainerSizeChanged;
-        ContinuousPagesView.SizeChanged += (_, _) => RelayoutContinuousPages();
+        ContinuousPagesView.SizeChanged += (_, _) =>
+        {
+            RelayoutContinuousPages();
+        };
 
         // ToolbarItem has no bindable IsVisible in this MAUI version (it
         // derives from Element, not VisualElement), so visibility is
@@ -121,69 +114,45 @@ public partial class SheetViewerPage : ContentPage
 
     public IReadOnlyList<MusicIconCategory> IconCategories => MusicIconCatalog.Categories;
 
-    protected override void OnDisappearing()
+    // The portrait reading area legacy annotations were normalized to: the
+    // PageContainer of the pre-#81 viewer, i.e. the screen in portrait minus
+    // the status bar, the system navigation bar and the (visible) app bar, as
+    // that is when annotations were authored. Derived from the display only,
+    // in dp, so it is the same for every page, orientation and toolbar state.
+    private static (double Width, double Height) LegacyPortraitReadingArea()
     {
-        base.OnDisappearing();
-
-        if (Window is { } window)
+        var info = DeviceDisplay.Current.MainDisplayInfo;
+        if (info.Density <= 0)
         {
-            window.Stopped -= OnWindowStopped;
-            window.Resumed -= OnWindowResumed;
-            window.Destroying -= OnWindowStopped;
+            return (0, 0);
         }
 
-        SetOrientationLocked(false);
-    }
+        var widthDp = Math.Min(info.Width, info.Height) / info.Density;
+        var heightDp = Math.Max(info.Width, info.Height) / info.Density;
+        var chromeDp = 56.0;
 
-    private void OnWindowStopped(object? sender, EventArgs e) => SetOrientationLocked(false);
-
-    private void OnWindowResumed(object? sender, EventArgs e) => UpdateOrientationLock();
-
-    // Annotations are stored normalized to PageContainer (the whole reading
-    // area), so rotating while editing distorts them. Until page-normalized
-    // storage exists, the screen is kept in portrait for as long as the
-    // editor is open: continuous single-page editor, or (paged modes) an
-    // active Pencil/Eraser tool, the icon panel or a selected annotation.
-    private bool IsEditorOpen =>
-        _viewModel.IsContinuousEditing
-        || (!_viewModel.IsContinuousReading
-            && (_viewModel.ActiveTool != AnnotationTool.MusicIcons
-                || ToolPanel.IsVisible
-                || _viewModel.SelectedAnnotation is not null));
-
-    private bool _orientationLocked;
-
-    private void UpdateOrientationLock() => SetOrientationLocked(IsEditorOpen);
-
-    private void SetOrientationLocked(bool locked)
-    {
-        if (_orientationLocked == locked)
-        {
-            return;
-        }
-
-        _orientationLocked = locked;
 #if ANDROID
-        var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
-        if (activity is not null)
+        var resources = Microsoft.Maui.ApplicationModel.Platform.AppContext.Resources;
+        if (resources is not null)
         {
-            activity.RequestedOrientation = locked
-                ? Android.Content.PM.ScreenOrientation.Portrait
-                : Android.Content.PM.ScreenOrientation.Unspecified;
+            chromeDp += AndroidDimenDp(resources, "status_bar_height") + AndroidDimenDp(resources, "navigation_bar_height");
         }
 #endif
+
+        return (widthDp, heightDp - chromeDp);
     }
+
+#if ANDROID
+    private static double AndroidDimenDp(Android.Content.Res.Resources resources, string name)
+    {
+        var id = resources.GetIdentifier(name, "dimen", "android");
+        return id > 0 ? resources.GetDimensionPixelSize(id) / resources.DisplayMetrics!.Density : 0;
+    }
+#endif
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-
-        if (Window is { } window)
-        {
-            window.Stopped += OnWindowStopped;
-            window.Resumed += OnWindowResumed;
-            window.Destroying += OnWindowStopped;
-        }
 
         SetToolbarVisible(false);
 
@@ -196,6 +165,7 @@ public partial class SheetViewerPage : ContentPage
         UpdateToolSections();
 
         var displayInfo = DeviceDisplay.Current.MainDisplayInfo;
+        _viewModel.LegacyReferenceSize = LegacyPortraitReadingArea();
         var targetWidthPx = (int)displayInfo.Width;
         var targetHeightPx = (int)displayInfo.Height;
 
@@ -222,9 +192,8 @@ public partial class SheetViewerPage : ContentPage
 
         base.OnSizeAllocated(width, height);
 
-        // Entering the editor from landscape rotates to portrait (see
-        // UpdateOrientationLock), which lands here: re-center the page and
-        // re-place the selection overlay for the new size.
+        // A rotation lands here: re-center the page and re-place the
+        // selection overlay for the new size.
         if (changed && hadSize)
         {
             _orientationFlipped = true;
@@ -242,7 +211,9 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        if (_orientationFlipped && _viewModel.IsContinuousEditing)
+        UpdatePencilDrawingViewLineWidth();
+
+        if (_orientationFlipped)
         {
             ResetZoom();
         }
@@ -290,6 +261,23 @@ public partial class SheetViewerPage : ContentPage
                 view.InvalidateAnnotations();
             }
         }
+    }
+
+    // The page's rectangle within PageContainer, in PageContainer-local
+    // units. Annotations are normalized to this rectangle, not to the whole
+    // container (the page is letterboxed inside it). Falls back to the whole
+    // container while the page's aspect ratio is unknown.
+    private PageFrame EditorPageFrame() =>
+        PageFrame.Fit(PageContainer.Width, PageContainer.Height, _viewModel.CurrentPageAspectRatio);
+
+    private Rect EditorPageRect()
+    {
+        var frame = EditorPageFrame();
+        return new Rect(
+            frame.X * PageContainer.Width,
+            frame.Y * PageContainer.Height,
+            frame.Width * PageContainer.Width,
+            frame.Height * PageContainer.Height);
     }
 
     private void ResetZoom()
@@ -354,9 +342,13 @@ public partial class SheetViewerPage : ContentPage
     // classification in that case too.
     private void HandleContainerTap(double normalizedX, double normalizedY)
     {
+        // Annotations are page-normalized, the tap is container-normalized.
+        var pageRect = EditorPageRect();
+        var pageX = (normalizedX * PageContainer.Width - pageRect.Left) / pageRect.Width;
+        var pageY = (normalizedY * PageContainer.Height - pageRect.Top) / pageRect.Height;
         var hit = _viewModel.CurrentPageAnnotations.FirstOrDefault(a =>
-            normalizedX >= a.X && normalizedX <= a.X + a.Width &&
-            normalizedY >= a.Y && normalizedY <= a.Y + a.Height);
+            pageX >= a.X && pageX <= a.X + a.Width &&
+            pageY >= a.Y && pageY <= a.Y + a.Height);
 
         if (hit is not null)
         {
@@ -492,10 +484,11 @@ public partial class SheetViewerPage : ContentPage
         SelectionOverlay.IsVisible = true;
         TrashTarget.IsVisible = true;
 
-        var left = annotation.X * PageContainer.Width;
-        var top = annotation.Y * PageContainer.Height;
-        var width = annotation.Width * PageContainer.Width;
-        var height = annotation.Height * PageContainer.Height;
+        var pageRect = EditorPageRect();
+        var left = pageRect.Left + annotation.X * pageRect.Width;
+        var top = pageRect.Top + annotation.Y * pageRect.Height;
+        var width = annotation.Width * pageRect.Width;
+        var height = annotation.Height * pageRect.Height;
 
         SelectionOverlay.WidthRequest = width + SelectionHandlePadding * 2;
         SelectionOverlay.HeightRequest = height + SelectionHandlePadding * 2;
@@ -580,10 +573,10 @@ public partial class SheetViewerPage : ContentPage
     // nested inside PageContainer's live Scale transform). At zoom S, the
     // same screen-pixel drag covers 1/S as much of the page, so the delta
     // must be scaled down by _currentScale before normalizing - dividing by
-    // PageContainer.Width*_currentScale (the page's actual on-screen size)
-    // instead of just PageContainer.Width (its unscaled size) does that in
-    // one step. At the default zoom (_currentScale == 1) this is identical
-    // to just dividing by PageContainer.Width.
+    // the page rectangle's width*_currentScale (the page's actual on-screen
+    // size) instead of just its unscaled width does that in one step. At the
+    // default zoom (_currentScale == 1) this is identical to just dividing
+    // by the page rectangle's size.
     private void HandleSelectionMoveRunning(double totalX, double totalY)
     {
         var annotation = _viewModel.SelectedAnnotation;
@@ -592,8 +585,9 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        annotation.X = _moveStartX + totalX / (PageContainer.Width * _currentScale);
-        annotation.Y = _moveStartY + totalY / (PageContainer.Height * _currentScale);
+        var pageRect = EditorPageRect();
+        annotation.X = _moveStartX + totalX / (pageRect.Width * _currentScale);
+        annotation.Y = _moveStartY + totalY / (pageRect.Height * _currentScale);
         RepositionSelectionOverlay();
         AnnotationCanvas.InvalidateSurface();
     }
@@ -646,8 +640,9 @@ public partial class SheetViewerPage : ContentPage
             return false;
         }
 
-        var localCenterX = (annotation.X + annotation.Width / 2) * PageContainer.Width;
-        var localCenterY = (annotation.Y + annotation.Height / 2) * PageContainer.Height;
+        var pageRect = EditorPageRect();
+        var localCenterX = pageRect.Left + (annotation.X + annotation.Width / 2) * pageRect.Width;
+        var localCenterY = pageRect.Top + (annotation.Y + annotation.Height / 2) * pageRect.Height;
 
         var screenCenterX = PageContainer.X + PageContainer.TranslationX + localCenterX * _currentScale;
         var screenCenterY = PageContainer.Y + PageContainer.TranslationY + localCenterY * _currentScale;
@@ -706,8 +701,9 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        annotation.Width = Math.Max(0.02, _resizeStartWidth + totalX / (PageContainer.Width * _currentScale));
-        annotation.Height = Math.Max(0.02, _resizeStartHeight + totalY / (PageContainer.Height * _currentScale));
+        var pageRect = EditorPageRect();
+        annotation.Width = Math.Max(0.02, _resizeStartWidth + totalX / (pageRect.Width * _currentScale));
+        annotation.Height = Math.Max(0.02, _resizeStartHeight + totalY / (pageRect.Height * _currentScale));
         RepositionSelectionOverlay();
         AnnotationCanvas.InvalidateSurface();
     }
@@ -1109,13 +1105,13 @@ public partial class SheetViewerPage : ContentPage
     // drag (see the EraserDrawingView handlers below), each new point
     // restarts the timer, so the indicator tracks the finger live and
     // only fades out shortly after it lifts.
-    private void ShowEraserRadiusIndicator(double normalizedX, double normalizedY)
+    private void ShowEraserRadiusIndicator(double localX, double localY)
     {
-        var radiusPx = _viewModel.EraserRadius * PageContainer.Width;
+        var radiusPx = _viewModel.EraserRadius * EditorPageRect().Width;
         EraserRadiusIndicator.WidthRequest = radiusPx * 2;
         EraserRadiusIndicator.HeightRequest = radiusPx * 2;
-        EraserRadiusIndicator.TranslationX = normalizedX * PageContainer.Width - radiusPx;
-        EraserRadiusIndicator.TranslationY = normalizedY * PageContainer.Height - radiusPx;
+        EraserRadiusIndicator.TranslationX = localX - radiusPx;
+        EraserRadiusIndicator.TranslationY = localY - radiusPx;
         EraserRadiusIndicator.IsVisible = true;
 
         Dispatcher.StartTimer(TimeSpan.FromMilliseconds(350), () =>
@@ -1125,21 +1121,29 @@ public partial class SheetViewerPage : ContentPage
         });
     }
 
-    private void EraseAt(double normalizedX, double normalizedY)
+    // localX/localY are PageContainer-local. The radius is a fraction of the
+    // page's width, so hit-testing happens in page-width units (Y is scaled
+    // by the page's height/width) to keep the eraser circular.
+    private void EraseAt(double localX, double localY)
     {
-        ShowEraserRadiusIndicator(normalizedX, normalizedY);
+        ShowEraserRadiusIndicator(localX, localY);
 
+        var pageRect = EditorPageRect();
+        var aspect = pageRect.Height / pageRect.Width;
+        var normalizedX = (localX - pageRect.Left) / pageRect.Width;
+        var normalizedY = (localY - pageRect.Top) / pageRect.Height;
         var radius = _viewModel.EraserRadius;
         var hit = _viewModel.CurrentPageAnnotations.FirstOrDefault(a =>
         {
             if (a.IsStroke)
             {
                 var points = AnnotationService.DeserializePoints(a.Points);
-                return StrokeHitTester.DistanceToPolyline(normalizedX, normalizedY, points) <= radius;
+                return StrokeHitTester.DistanceToPolyline(normalizedX, normalizedY, points, aspect) <= radius;
             }
 
+            var radiusY = radius / aspect;
             return normalizedX >= a.X - radius && normalizedX <= a.X + a.Width + radius &&
-                   normalizedY >= a.Y - radius && normalizedY <= a.Y + a.Height + radius;
+                   normalizedY >= a.Y - radiusY && normalizedY <= a.Y + a.Height + radiusY;
         });
 
         if (hit is not null)
@@ -1197,7 +1201,7 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        EraseAt(point.X / PageContainer.Width, point.Y / PageContainer.Height);
+        EraseAt(point.X, point.Y);
     }
 
     private void TryGoToNextPage()
@@ -1334,13 +1338,6 @@ public partial class SheetViewerPage : ContentPage
         return _continuousScrollOffsetFallback;
     }
 
-    // Size that annotation coordinates are normalized against: PageContainer
-    // fills the same area as the list, but has no size while hidden.
-    private (double Width, double Height) EditorContainerSize() =>
-        PageContainer.Width > 0 && PageContainer.Height > 0
-            ? (PageContainer.Width, PageContainer.Height)
-            : (ContinuousPagesView.Width, ContinuousPagesView.Height);
-
     // A tap on an annotation opens that page in the editor with the
     // annotation selected (to move, resize or delete it); anywhere else
     // toggles the toolbar, like a center tap in the paged modes.
@@ -1372,7 +1369,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         var strokeHit = page.Annotations.Any(a => a.IsStroke &&
-            StrokeHitTester.DistanceToPolyline(normalizedX, normalizedY, AnnotationService.DeserializePoints(a.Points))
+            StrokeHitTester.DistanceToPolyline(normalizedX, normalizedY, AnnotationService.DeserializePoints(a.Points), page.AspectRatio)
                 <= StrokeTapTolerance + a.StrokeWidth / 2);
 
         if (strokeHit)
@@ -1393,7 +1390,6 @@ public partial class SheetViewerPage : ContentPage
         var listTranslationX = ContinuousPagesView.TranslationX;
         var pageScreenTop = (ContinuousLayout.PageTop(_viewModel.ContinuousPages, pageIndex, listWidth, ContinuousPageView.Spacing)
             - ContinuousScrollOffset()) * listZoom;
-        var fromLandscape = ContinuousPagesView.Width > ContinuousPagesView.Height;
 
         await _viewModel.BeginContinuousEditAsync(pageIndex);
         UpdateContinuousLayers();
@@ -1408,13 +1404,6 @@ public partial class SheetViewerPage : ContentPage
 
         // PageContainer was hidden until now - give it a layout pass before
         // reading its size/position.
-        // From landscape the editor locks portrait and rotates, so the list's
-        // geometry does not apply: the rotation's size change resets the zoom.
-        if (fromLandscape)
-        {
-            return;
-        }
-
         Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(50), () =>
             ApplyEditorZoomFromContinuous(pageIndex, listWidth, listZoom, listTranslationX, pageScreenTop));
     }
@@ -1432,11 +1421,13 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        var pageTopInContainer = pageIndex < _viewModel.ContinuousPages.Count
-            ? PageFrame.Fit(PageContainer.Width, PageContainer.Height, _viewModel.ContinuousPages[pageIndex].AspectRatio).Y * PageContainer.Height
-            : 0;
+        // The page is letterboxed inside PageContainer (in landscape it is
+        // narrower than the container), so the zoom is derived from the
+        // page's own rectangle rather than the container's.
+        var pageRect = EditorPageRect();
+        var pageTopInContainer = pageRect.Top;
 
-        var scale = listZoom * listWidth / PageContainer.Width;
+        var scale = listZoom * listWidth / pageRect.Width;
         if (scale <= ZoomedInThreshold)
         {
             // Not zoomed in: only shift vertically (unclamped, there is no
@@ -1451,7 +1442,7 @@ public partial class SheetViewerPage : ContentPage
         PageContainer.AnchorX = 0;
         PageContainer.AnchorY = 0;
         PageContainer.Scale = scale;
-        PageContainer.TranslationX = Math.Clamp(listTranslationX - PageContainer.X, -PageContainer.Width * (scale - 1), 0);
+        PageContainer.TranslationX = Math.Clamp(listTranslationX - PageContainer.X - pageRect.Left * scale, -PageContainer.Width * (scale - 1), 0);
         PageContainer.TranslationY = Math.Clamp(pageScreenTop - PageContainer.Y - pageTopInContainer * scale, -PageContainer.Height * (scale - 1), 0);
         _xOffset = PageContainer.TranslationX;
         _yOffset = PageContainer.TranslationY;
@@ -1640,12 +1631,18 @@ public partial class SheetViewerPage : ContentPage
     private async void OnUndoClicked(object? sender, EventArgs e)
     {
         await _viewModel.UndoCommand.ExecuteAsync(null);
+        // Undo/redo of a move or resize mutates the annotation in place (no
+        // collection change), so repaint the glyphs explicitly.
+        AnnotationCanvas.InvalidateSurface();
         UpdateSelectionOverlay();
     }
 
     private async void OnRedoClicked(object? sender, EventArgs e)
     {
         await _viewModel.RedoCommand.ExecuteAsync(null);
+        // Undo/redo of a move or resize mutates the annotation in place (no
+        // collection change), so repaint the glyphs explicitly.
+        AnnotationCanvas.InvalidateSurface();
         UpdateSelectionOverlay();
     }
 
@@ -1955,7 +1952,7 @@ public partial class SheetViewerPage : ContentPage
     {
         if (PageContainer.Width > 0)
         {
-            PencilDrawingView.LineWidth = (float)(_viewModel.PencilStrokeWidth * PageContainer.Width);
+            PencilDrawingView.LineWidth = (float)(_viewModel.PencilStrokeWidth * EditorPageRect().Width);
         }
     }
 
@@ -2016,8 +2013,9 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
+        var pageRect = EditorPageRect();
         var normalizedPoints = linePoints
-            .Select(p => new StrokePoint(p.X / PageContainer.Width, p.Y / PageContainer.Height))
+            .Select(p => new StrokePoint((p.X - pageRect.Left) / pageRect.Width, (p.Y - pageRect.Top) / pageRect.Height))
             .ToList();
 
         await _viewModel.AddStrokeAsync(sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, normalizedPoints);
@@ -2066,6 +2064,6 @@ public partial class SheetViewerPage : ContentPage
     {
         var canvas = e.Surface.Canvas;
         canvas.Clear(SKColors.Transparent);
-        _annotationPainter.DrawAnnotations(canvas, e.Info, _viewModel.CurrentPageAnnotations);
+        _annotationPainter.DrawAnnotations(canvas, e.Info, _viewModel.CurrentPageAnnotations, EditorPageFrame());
     }
 }

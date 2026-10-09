@@ -4,8 +4,13 @@ namespace PiccoloReader.Core.Services;
 
 public static class StrokeHitTester
 {
-    public static double DistanceToPolyline(double pointX, double pointY, IReadOnlyList<StrokePoint> points)
+    // yScale stretches the Y axis so distances are measured in a uniform
+    // unit when X and Y are normalized to different lengths (a page's
+    // width and height): pass the page's height / width.
+    public static double DistanceToPolyline(double pointX, double pointY, IReadOnlyList<StrokePoint> points, double yScale = 1)
     {
+        pointY *= yScale;
+
         if (points.Count == 0)
         {
             return double.MaxValue;
@@ -13,13 +18,13 @@ public static class StrokeHitTester
 
         if (points.Count == 1)
         {
-            return Distance(pointX, pointY, points[0].X, points[0].Y);
+            return Distance(pointX, pointY, points[0].X, points[0].Y * yScale);
         }
 
         var minDistance = double.MaxValue;
         for (var i = 0; i < points.Count - 1; i++)
         {
-            var distance = DistanceToSegment(pointX, pointY, points[i].X, points[i].Y, points[i + 1].X, points[i + 1].Y);
+            var distance = DistanceToSegment(pointX, pointY, points[i].X, points[i].Y * yScale, points[i + 1].X, points[i + 1].Y * yScale);
             minDistance = Math.Min(minDistance, distance);
         }
 

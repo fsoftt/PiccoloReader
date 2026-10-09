@@ -18,6 +18,27 @@ public class AnnotationService
             .Where(a => a.SheetId == sheetId && a.PageIndex == pageIndex)
             .ToListAsync();
 
+    // Annotations are stored normalized to the page. Legacy rows (normalized
+    // to the reading area container) are converted here, once, using a
+    // stable portrait reference container, and written back so they are not
+    // converted again. persist: false converts for display only.
+    public async Task<List<Annotation>> GetPageAnnotationsAsync(
+        int sheetId, int pageIndex, double pageAspectRatio, double containerWidth, double containerHeight, bool persist = true)
+    {
+        var annotations = await GetAnnotationsAsync(sheetId, pageIndex);
+
+        foreach (var annotation in annotations)
+        {
+            if (AnnotationCoordinateMigrator.MigrateToPageSpace(annotation, pageAspectRatio, containerWidth, containerHeight)
+                && persist)
+            {
+                await _database.Connection.UpdateAsync(annotation);
+            }
+        }
+
+        return annotations;
+    }
+
     public async Task<Annotation> AddIconAsync(int sheetId, int pageIndex, string iconKey, double x, double y, double width, double height)
     {
         var annotation = new Annotation
@@ -30,6 +51,7 @@ public class AnnotationService
             Y = y,
             Width = width,
             Height = height,
+            CoordinateSpace = AnnotationCoordinateSpace.Page,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -47,6 +69,7 @@ public class AnnotationService
             ColorHex = colorHex,
             StrokeWidth = strokeWidth,
             Points = SerializePoints(points),
+            CoordinateSpace = AnnotationCoordinateSpace.Page,
             CreatedAt = DateTime.UtcNow
         };
 
