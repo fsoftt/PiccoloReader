@@ -71,7 +71,7 @@
   <data name="PageIndicatorFormat" xml:space="preserve"><value>Page {0} of {1}</value></data>
   <data name="ReadingModeHorizontalMessage" xml:space="preserve"><value>Reading mode: left to right</value></data>
   <data name="ReadingModeVerticalPagedMessage" xml:space="preserve"><value>Reading mode: top to bottom, page by page</value></data>
-  <data name="ReadingModeVerticalContinuousMessage" xml:space="preserve"><value>Reading mode: top to bottom, continuous scroll (annotations are read-only)</value></data>
+  <data name="ReadingModeVerticalContinuousMessage" xml:space="preserve"><value>Reading mode: top to bottom, continuous scroll</value></data>
   <data name="CategoryDynamics" xml:space="preserve"><value>Dynamics</value></data>
   <data name="CategoryArticulations" xml:space="preserve"><value>Articulations</value></data>
   <data name="CategoryFermataBreath" xml:space="preserve"><value>Fermata &amp; Breath</value></data>
