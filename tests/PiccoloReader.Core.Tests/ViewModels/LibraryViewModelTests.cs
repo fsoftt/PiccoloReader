@@ -74,6 +74,31 @@ public class LibraryViewModelTests : IDisposable
         Assert.False(_sut.HasFolders);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("\t")]
+    [InlineData(null)]
+    public async Task CreateFolderCommand_EmptyOrNullName_DoesNotCreateFolder(string? name)
+    {
+        _sut.NewFolderName = name!;
+
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+
+        Assert.Empty(_sut.Folders);
+        Assert.False(_sut.HasFolders);
+    }
+
+    [Fact]
+    public async Task CreateFolderCommand_NameWithSurroundingWhitespace_CreatesTrimmedFolder()
+    {
+        _sut.NewFolderName = "  Big Band  ";
+
+        await _sut.CreateFolderCommand.ExecuteAsync(null);
+
+        Assert.Single(_sut.Folders);
+        Assert.Equal("Big Band", _sut.Folders[0].Name);
+    }
+
     [Fact]
     public async Task ImportPdfCommand_AddsSheetToRootSheets()
     {

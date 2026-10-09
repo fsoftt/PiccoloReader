@@ -43,6 +43,34 @@ public class LibraryServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateFolderAsync_TrimsName()
+    {
+        var folder = await _sut.CreateFolderAsync("  Orchestra  ");
+
+        Assert.Equal("Orchestra", folder.Name);
+        Assert.Equal("Orchestra", (await _sut.GetFoldersAsync()).Single().Name);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("\t\n")]
+    public async Task CreateFolderAsync_EmptyOrWhitespaceName_ThrowsArgumentException(string name)
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => _sut.CreateFolderAsync(name));
+
+        Assert.Empty(await _sut.GetFoldersAsync());
+    }
+
+    [Fact]
+    public async Task CreateFolderAsync_NullName_ThrowsArgumentException()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => _sut.CreateFolderAsync(null!));
+
+        Assert.Empty(await _sut.GetFoldersAsync());
+    }
+
+    [Fact]
     public async Task GetSheetsAsync_NullFolderId_ReturnsOnlyRootSheets()
     {
         var folder = await _sut.CreateFolderAsync("Orchestra");

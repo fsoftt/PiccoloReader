@@ -49,6 +49,7 @@
   <data name="RootOption" xml:space="preserve"><value>Raíz</value></data>
   <data name="MoveToTitle" xml:space="preserve"><value>Mover a…</value></data>
   <data name="NoFoldersToMoveMessage" xml:space="preserve"><value>Primero crea una carpeta para poder mover partituras a ella.</value></data>
+  <data name="FolderNameEmptyMessage" xml:space="preserve"><value>El nombre de la carpeta no puede estar vacío.</value></data>
   <data name="OK" xml:space="preserve"><value>Aceptar</value></data>
   <data name="Folder" xml:space="preserve"><value>Carpeta</value></data>
   <data name="GoToPageTitle" xml:space="preserve"><value>Ir a la página</value></data>
@@ -68,6 +69,9 @@
   <data name="Eraser" xml:space="preserve"><value>Borrador</value></data>
   <data name="Size" xml:space="preserve"><value>Tamaño</value></data>
   <data name="PageIndicatorFormat" xml:space="preserve"><value>Página {0} de {1}</value></data>
+  <data name="ReadingModeHorizontalMessage" xml:space="preserve"><value>Modo de lectura: izquierda a derecha</value></data>
+  <data name="ReadingModeVerticalPagedMessage" xml:space="preserve"><value>Modo de lectura: arriba a abajo, página por página</value></data>
+  <data name="ReadingModeVerticalContinuousMessage" xml:space="preserve"><value>Modo de lectura: arriba a abajo, desplazamiento continuo (anotaciones solo lectura)</value></data>
   <data name="CategoryDynamics" xml:space="preserve"><value>Dinámica</value></data>
   <data name="CategoryArticulations" xml:space="preserve"><value>Articulaciones</value></data>
   <data name="CategoryFermataBreath" xml:space="preserve"><value>Calderón y respiración</value></data>
@@ -131,4 +135,26 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="SeeAdButton" xml:space="preserve"><value>Ver anuncio</value></data>
   <data name="SupportWithAdsOption" xml:space="preserve"><value>Apoyar con anuncios</value></data>
   <data name="DonateSupportWithAdsExplanation" xml:space="preserve"><value>También existe la opción "Apoyar con anuncios" en Ajustes — actívala y aparecerá un pequeño banner de anuncios mientras usas la app. Es una gran ayuda.</value></data>
+  <data name="LegalSectionHeader" xml:space="preserve"><value>Legal y cumplimiento</value></data>
+  <data name="PrivacyPolicyLabel" xml:space="preserve"><value>Política de privacidad</value></data>
+  <data name="PrivacyPolicyDescription" xml:space="preserve"><value>Cómo recopilamos, usamos y protegemos tu información</value></data>
+  <data name="TermsOfServiceLabel" xml:space="preserve"><value>Términos del servicio</value></data>
+  <data name="TermsOfServiceDescription" xml:space="preserve"><value>Derechos de uso, restricciones y exenciones de responsabilidad</value></data>
+  <data name="OpenPrivacyPolicy" xml:space="preserve"><value>Abrir en el navegador</value></data>
+  <data name="TutorialSkip" xml:space="preserve"><value>Omitir</value></data>
+  <data name="TutorialNext" xml:space="preserve"><value>Siguiente</value></data>
+  <data name="TutorialGetStarted" xml:space="preserve"><value>Comenzar</value></data>
+  <data name="ShowTutorial" xml:space="preserve"><value>Mostrar tutorial</value></data>
+  <data name="TutorialWelcomeTitle" xml:space="preserve"><value>Bienvenido a Piccolo Reader</value></data>
+  <data name="TutorialWelcomeText" xml:space="preserve"><value>Tus partituras, siempre a mano. Importa tus PDF a la Biblioteca y empieza a leer.</value></data>
+  <data name="TutorialFoldersTitle" xml:space="preserve"><value>Organiza tu biblioteca</value></data>
+  <data name="TutorialFoldersText" xml:space="preserve"><value>Crea carpetas, mueve partituras entre ellas, ordénalas por nombre o fecha de incorporación y usa la búsqueda para encontrar todo rápido.</value></data>
+  <data name="TutorialReadingTitle" xml:space="preserve"><value>Lectura</value></data>
+  <data name="TutorialReadingText" xml:space="preserve"><value>Toca el borde izquierdo o derecho, o desliza, para pasar de página. Toca el centro para mostrar u ocultar la barra de herramientas, pellizca para hacer zoom y toca el indicador de página para saltar a una página. El botón de la barra alterna entre tres modos de lectura: izquierda a derecha; arriba a abajo página por página (toca el borde superior o inferior, o desliza hacia arriba o abajo); y arriba a abajo con desplazamiento continuo, donde el final de una página sigue visible mientras entra la siguiente.</value></data>
+  <data name="TutorialAnnotationsTitle" xml:space="preserve"><value>Anotaciones</value></data>
+  <data name="TutorialAnnotationsText" xml:space="preserve"><value>Añade símbolos musicales, dibuja con el lápiz o borra con la goma. ¿Te equivocaste? Deshaz y rehaz cualquier cambio.</value></data>
+  <data name="TutorialBookmarksTitle" xml:space="preserve"><value>Marcadores</value></data>
+  <data name="TutorialBookmarksText" xml:space="preserve"><value>Marca las páginas a las que más vuelves y salta directamente a ellas cuando quieras.</value></data>
+  <data name="TutorialSettingsTitle" xml:space="preserve"><value>Ajustes y apoyo</value></data>
+  <data name="TutorialSettingsText" xml:space="preserve"><value>Cambia el idioma de la app en Ajustes. Si disfrutas Piccolo Reader, puedes apoyarlo activando los anuncios. Puedes volver a abrir este tutorial cuando quieras desde Ajustes.</value></data>
 </root>

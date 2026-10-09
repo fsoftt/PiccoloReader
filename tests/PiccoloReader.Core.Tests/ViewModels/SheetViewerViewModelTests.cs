@@ -12,6 +12,7 @@ public class SheetViewerViewModelTests : IDisposable
     private readonly AppDatabase _database;
     private readonly LibraryService _libraryService;
     private readonly FakePdfPageRenderer _renderer = new();
+    private readonly FakeReadingPreferenceService _readingPreferences = new();
     private readonly AnnotationService _annotationService;
     private readonly BookmarkService _bookmarkService;
     private readonly SheetViewerViewModel _sut;
@@ -24,7 +25,7 @@ public class SheetViewerViewModelTests : IDisposable
         _libraryService = new LibraryService(_database, _storage);
         _annotationService = new AnnotationService(_database);
         _bookmarkService = new BookmarkService(_database);
-        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService());
+        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences);
     }
 
     public void Dispose() => _storage.Dispose();
@@ -90,7 +91,168 @@ public class SheetViewerViewModelTests : IDisposable
         await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
 
         Assert.Equal(new byte[] { 0 }, _sut.CurrentPageImageBytes);
-        Assert.Equal(new List<int> { 0 }, _renderer.RenderedPageIndexes);
+        Assert.Equal(0, _renderer.RenderedPageIndexes[0]);
+    }
+
+    [Fact]
+    public async Task LoadAsync_PrefetchesNeighbouringPages()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 6, lastViewedPageIndex: 2);
+
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.Equal(new List<int> { 2, 3, 1, 4, 0 }, _renderer.RenderedPageIndexes);
+    }
+
+    [Fact]
+    public async Task NextPageAsync_PrefetchedPage_IsNotRenderedAgain()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.NextPageCommand.ExecuteAsync(null);
+
+        Assert.Equal(new byte[] { 1 }, _sut.CurrentPageImageBytes);
+        Assert.Single(_renderer.RenderedPageIndexes, 1);
+    }
+
+    [Fact]
+    public async Task NextPageCommand_WhileRenderInFlight_CanStillExecute()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        _renderer.RenderGate = new TaskCompletionSource();
+
+        var turns = new List<Task>();
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.True(_sut.NextPageCommand.CanExecute(null));
+            turns.Add(_sut.NextPageCommand.ExecuteAsync(null));
+        }
+
+        Assert.Equal(5, _sut.CurrentPageIndex);
+        Assert.True(_sut.IsLoading);
+
+        _renderer.RenderGate.SetResult();
+        await Task.WhenAll(turns);
+
+        Assert.Equal(5, _sut.CurrentPageIndex);
+        Assert.Equal(new byte[] { 5 }, _sut.CurrentPageImageBytes);
+        Assert.False(_sut.IsLoading);
+    }
+
+    [Fact]
+    public void ReadingMode_DefaultsToSavedPreference()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalPaged;
+
+        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences);
+
+        Assert.Equal(ReadingMode.VerticalPaged, sut.ReadingMode);
+        Assert.True(sut.IsVerticalPaged);
+        Assert.False(sut.IsContinuousReading);
+    }
+
+    [Fact]
+    public async Task CycleReadingModeCommand_CyclesThroughAllModesAndPersists()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.CycleReadingModeCommand.ExecuteAsync(null);
+        Assert.Equal(ReadingMode.VerticalPaged, _sut.ReadingMode);
+        Assert.Equal(ReadingMode.VerticalPaged, _readingPreferences.Mode);
+
+        await _sut.CycleReadingModeCommand.ExecuteAsync(null);
+        Assert.Equal(ReadingMode.VerticalContinuous, _sut.ReadingMode);
+        Assert.True(_sut.IsContinuousReading);
+        Assert.Equal(ReadingMode.VerticalContinuous, _readingPreferences.Mode);
+
+        await _sut.CycleReadingModeCommand.ExecuteAsync(null);
+        Assert.Equal(ReadingMode.Horizontal, _sut.ReadingMode);
+        Assert.Equal(ReadingMode.Horizontal, _readingPreferences.Mode);
+    }
+
+    [Fact]
+    public async Task LoadAsync_CreatesOneContinuousPagePerPage()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 4);
+
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.Equal(new[] { 0, 1, 2, 3 }, _sut.ContinuousPages.Select(p => p.PageIndex));
+        Assert.All(_sut.ContinuousPages, p => Assert.Equal(1.25, p.AspectRatio));
+    }
+
+    [Fact]
+    public async Task LoadAsync_ContinuousMode_LoadsCurrentPageAndNeighboursOnly()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10, lastViewedPageIndex: 4);
+
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        var loaded = _sut.ContinuousPages.Where(p => p.ImageBytes is not null).Select(p => p.PageIndex);
+        Assert.Equal(new[] { 3, 4, 5 }, loaded);
+        Assert.Equal(new byte[] { 4 }, _sut.ContinuousPages[4].ImageBytes);
+        Assert.Null(_sut.CurrentPageImageBytes);
+    }
+
+    [Fact]
+    public async Task UpdateContinuousViewportAsync_UpdatesCurrentPageAndPersistsIt()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.UpdateContinuousViewportAsync(firstVisibleIndex: 5, lastVisibleIndex: 6, centerIndex: 6);
+
+        Assert.Equal(6, _sut.CurrentPageIndex);
+        var reloaded = await _libraryService.GetSheetAsync(sheet.Id);
+        Assert.Equal(6, reloaded.LastViewedPageIndex);
+    }
+
+    [Fact]
+    public async Task UpdateContinuousViewportAsync_ReleasesPagesThatScrolledAway()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        Assert.NotNull(_sut.ContinuousPages[0].ImageBytes);
+
+        await _sut.UpdateContinuousViewportAsync(firstVisibleIndex: 7, lastVisibleIndex: 8, centerIndex: 8);
+
+        var loaded = _sut.ContinuousPages.Where(p => p.ImageBytes is not null).Select(p => p.PageIndex);
+        Assert.Equal(new[] { 6, 7, 8, 9 }, loaded);
+    }
+
+    [Fact]
+    public async Task UpdateContinuousViewportAsync_LoadsAnnotationsForVisiblePages()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _annotationService.AddIconAsync(sheet.Id, 2, "forte", 0.1, 0.1, 0.1, 0.1);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.UpdateContinuousViewportAsync(firstVisibleIndex: 2, lastVisibleIndex: 2, centerIndex: 2);
+
+        Assert.Single(_sut.ContinuousPages[2].Annotations);
+        Assert.Empty(_sut.ContinuousPages[3].Annotations);
+    }
+
+    [Fact]
+    public async Task CycleReadingModeCommand_LeavingContinuous_RendersPageScrolledTo()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.UpdateContinuousViewportAsync(firstVisibleIndex: 6, lastVisibleIndex: 7, centerIndex: 7);
+
+        await _sut.CycleReadingModeCommand.ExecuteAsync(null);
+
+        Assert.Equal(ReadingMode.Horizontal, _sut.ReadingMode);
+        Assert.Equal(7, _sut.CurrentPageIndex);
+        Assert.Equal(new byte[] { 7 }, _sut.CurrentPageImageBytes);
     }
 
     [Fact]

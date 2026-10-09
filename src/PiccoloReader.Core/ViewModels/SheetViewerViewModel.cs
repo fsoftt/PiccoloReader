@@ -11,12 +11,33 @@ public partial class SheetViewerViewModel : ObservableObject
 {
     private const double DefaultIconWidth = 0.12;
 
+    // Pages within this distance of the current one are rendered ahead of
+    // time and kept in memory, so turning to a neighbouring page shows it
+    // instantly instead of waiting on the PDF renderer.
+    private const int PrefetchRadius = 2;
+
     private readonly LibraryService _libraryService;
     private readonly IAppStorageProvider _storageProvider;
     private readonly IPdfPageRenderer _pdfPageRenderer;
     private readonly AnnotationService _annotationService;
     private readonly BookmarkService _bookmarkService;
     private readonly IAdsPreferenceService _adsPreferenceService;
+    private readonly IReadingPreferenceService _readingPreferenceService;
+
+    // One render task per page index - current page plus prefetched
+    // neighbours. Renders run one at a time through _renderGate (each
+    // full-screen render is memory heavy), and a queued render whose page
+    // has fallen out of the window by the time it gets its turn is
+    // skipped, so flicking quickly through many pages never leaves a
+    // backlog of renders nobody will see.
+    private readonly Dictionary<int, Task<byte[]?>> _pageRenders = new();
+    private readonly SemaphoreSlim _renderGate = new(1, 1);
+
+    // Pages worth rendering/keeping right now: current page +/-
+    // PrefetchRadius in the paged modes, the visible pages plus one on
+    // each side in continuous mode.
+    private int _keepFirst;
+    private int _keepLast;
 
     private readonly Stack<IUndoableAction> _undoStack = new();
     private readonly Stack<IUndoableAction> _redoStack = new();
@@ -33,7 +54,8 @@ public partial class SheetViewerViewModel : ObservableObject
         IPdfPageRenderer pdfPageRenderer,
         AnnotationService annotationService,
         BookmarkService bookmarkService,
-        IAdsPreferenceService adsPreferenceService)
+        IAdsPreferenceService adsPreferenceService,
+        IReadingPreferenceService readingPreferenceService)
     {
         _libraryService = libraryService;
         _storageProvider = storageProvider;
@@ -41,6 +63,8 @@ public partial class SheetViewerViewModel : ObservableObject
         _annotationService = annotationService;
         _bookmarkService = bookmarkService;
         _adsPreferenceService = adsPreferenceService;
+        _readingPreferenceService = readingPreferenceService;
+        _readingMode = readingPreferenceService.GetReadingMode();
     }
 
     [ObservableProperty]
@@ -90,6 +114,17 @@ public partial class SheetViewerViewModel : ObservableObject
     [ObservableProperty]
     private bool _showAdsBanner;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsVerticalPaged))]
+    [NotifyPropertyChangedFor(nameof(IsContinuousReading))]
+    private ReadingMode _readingMode;
+
+    public bool IsVerticalPaged => ReadingMode == ReadingMode.VerticalPaged;
+
+    public bool IsContinuousReading => ReadingMode == ReadingMode.VerticalContinuous;
+
+    public ObservableCollection<ContinuousPage> ContinuousPages { get; } = new();
+
     public bool IsDrawingToolActive => ActiveTool != AnnotationTool.MusicIcons;
 
     public ObservableCollection<Annotation> CurrentPageAnnotations { get; } = new();
@@ -103,6 +138,8 @@ public partial class SheetViewerViewModel : ObservableObject
     public async Task LoadAsync(int sheetId, int targetWidthPx, int targetHeightPx)
     {
         ShowAdsBanner = _adsPreferenceService.GetSupportWithAdsEnabled();
+        ReadingMode = _readingPreferenceService.GetReadingMode();
+        _pageRenders.Clear();
 
         IsLoading = true;
         try
@@ -133,7 +170,23 @@ public partial class SheetViewerViewModel : ObservableObject
                 Bookmarks.Add(bookmark);
             }
 
-            await LoadCurrentPageAsync();
+            ContinuousPages.Clear();
+            var estimatedAspectRatio = targetWidthPx > 0 && targetHeightPx > 0
+                ? (double)targetHeightPx / targetWidthPx
+                : Math.Sqrt(2);
+            for (var i = 0; i < pageCount; i++)
+            {
+                ContinuousPages.Add(new ContinuousPage(i, estimatedAspectRatio));
+            }
+
+            if (IsContinuousReading)
+            {
+                await UpdateContinuousViewportAsync(CurrentPageIndex, CurrentPageIndex, CurrentPageIndex);
+            }
+            else
+            {
+                await LoadCurrentPageAsync();
+            }
         }
         finally
         {
@@ -149,8 +202,106 @@ public partial class SheetViewerViewModel : ObservableObject
         }
 
         CurrentPageIndex = pageIndex;
-        await LoadCurrentPageAsync();
+        if (IsContinuousReading)
+        {
+            await UpdateContinuousViewportAsync(pageIndex, pageIndex, pageIndex);
+        }
+        else
+        {
+            await LoadCurrentPageAsync();
+        }
+
         await PersistLastViewedPageAsync();
+    }
+
+    // Called by the view as the continuous list scrolls. The page nearest
+    // the middle of the screen becomes the current page (page indicator,
+    // bookmarks, last-viewed position); the visible pages and one on each
+    // side get rendered, and pages that scrolled far away are released.
+    public async Task UpdateContinuousViewportAsync(int firstVisibleIndex, int lastVisibleIndex, int centerIndex)
+    {
+        if (!IsContinuousReading || PageCount <= 0)
+        {
+            return;
+        }
+
+        var last = PageCount - 1;
+        centerIndex = Math.Clamp(centerIndex, 0, last);
+        firstVisibleIndex = Math.Clamp(Math.Min(firstVisibleIndex, centerIndex), 0, last);
+        lastVisibleIndex = Math.Clamp(Math.Max(lastVisibleIndex, centerIndex), 0, last);
+
+        var pageChanged = centerIndex != CurrentPageIndex;
+        if (pageChanged)
+        {
+            CurrentPageIndex = centerIndex;
+        }
+
+        _keepFirst = Math.Max(0, firstVisibleIndex - 1);
+        _keepLast = Math.Min(last, lastVisibleIndex + 1);
+
+        foreach (var page in ContinuousPages)
+        {
+            if ((page.PageIndex < _keepFirst || page.PageIndex > _keepLast) && page.IsLoadRequested)
+            {
+                page.IsLoadRequested = false;
+                page.ImageBytes = null;
+                page.Annotations = Array.Empty<Annotation>();
+            }
+        }
+
+        EvictDistantPages();
+
+        // Center page first so it wins the render queue, then the rest of
+        // the window in reading order.
+        var loads = new List<Task>();
+        foreach (var index in Enumerable.Range(_keepFirst, _keepLast - _keepFirst + 1).OrderBy(i => i == centerIndex ? 0 : 1))
+        {
+            var page = ContinuousPages[index];
+            if (!page.IsLoadRequested)
+            {
+                loads.Add(LoadContinuousPageAsync(page));
+            }
+        }
+
+        if (pageChanged)
+        {
+            loads.Add(PersistLastViewedPageAsync());
+        }
+
+        await Task.WhenAll(loads);
+    }
+
+    private async Task LoadContinuousPageAsync(ContinuousPage page)
+    {
+        page.IsLoadRequested = true;
+
+        var imageBytes = await GetPageImageAsync(page.PageIndex);
+        if (!page.IsLoadRequested)
+        {
+            return;
+        }
+
+        if (imageBytes is null)
+        {
+            page.IsLoadRequested = false;
+            return;
+        }
+
+        if (PngDimensions.TryRead(imageBytes, out var width, out var height))
+        {
+            page.AspectRatio = (double)height / width;
+        }
+
+        page.ImageBytes = imageBytes;
+
+        if (_sheet is not null)
+        {
+            var annotations = await _annotationService.GetAnnotationsAsync(_sheet.Id, page.PageIndex);
+            if (page.IsLoadRequested)
+            {
+                page.Annotations = annotations.ToList();
+            }
+        }
     }
 
     public async Task AddBookmarkAsync(int pageIndex, string? name = null)
@@ -170,7 +321,48 @@ public partial class SheetViewerViewModel : ObservableObject
 
     private bool CanDeleteSelectedAnnotation() => SelectedAnnotation is not null;
 
-    [RelayCommand(CanExecute = nameof(CanGoToNextPage))]
+    // Cycles Horizontal -> VerticalPaged -> VerticalContinuous.
+    [RelayCommand]
+    private async Task CycleReadingModeAsync()
+    {
+        var previousMode = ReadingMode;
+        ReadingMode = ReadingMode switch
+        {
+            ReadingMode.Horizontal => ReadingMode.VerticalPaged,
+            ReadingMode.VerticalPaged => ReadingMode.VerticalContinuous,
+            _ => ReadingMode.Horizontal
+        };
+        _readingPreferenceService.SetReadingMode(ReadingMode);
+
+        if (IsContinuousReading)
+        {
+            // Continuous mode is read-only - drop any in-progress
+            // selection/tool, and reload annotations since they may have
+            // been edited in a paged mode since the pages were last shown.
+            SelectedAnnotation = null;
+            ActiveTool = AnnotationTool.MusicIcons;
+            _undoStack.Clear();
+            _redoStack.Clear();
+            RefreshUndoRedoState();
+            foreach (var page in ContinuousPages)
+            {
+                page.IsLoadRequested = false;
+            }
+
+            await UpdateContinuousViewportAsync(CurrentPageIndex, CurrentPageIndex, CurrentPageIndex);
+        }
+        else if (previousMode == ReadingMode.VerticalContinuous)
+        {
+            // CurrentPageIndex moved while scrolling without the single
+            // page view following it.
+            await LoadCurrentPageAsync();
+        }
+    }
+
+    // AllowConcurrentExecutions: page turns must not wait for the previous
+    // page's render to finish - otherwise the command stays disabled while
+    // a render is in flight and quick taps/swipes are silently dropped.
+    [RelayCommand(CanExecute = nameof(CanGoToNextPage), AllowConcurrentExecutions = true)]
     private async Task NextPageAsync()
     {
         CurrentPageIndex++;
@@ -178,7 +370,7 @@ public partial class SheetViewerViewModel : ObservableObject
         await PersistLastViewedPageAsync();
     }
 
-    [RelayCommand(CanExecute = nameof(CanGoToPreviousPage))]
+    [RelayCommand(CanExecute = nameof(CanGoToPreviousPage), AllowConcurrentExecutions = true)]
     private async Task PreviousPageAsync()
     {
         CurrentPageIndex--;
@@ -365,24 +557,128 @@ public partial class SheetViewerViewModel : ObservableObject
         }
     }
 
+    // Navigation updates CurrentPageIndex synchronously before calling
+    // this, and further page turns can happen while it is awaiting - so
+    // after every await it bails out if the user has already moved on,
+    // leaving the newer call to populate the page.
     private async Task LoadCurrentPageAsync()
     {
-        CurrentPageImageBytes = await _pdfPageRenderer.RenderPageAsync(_filePath, CurrentPageIndex, _targetWidthPx, _targetHeightPx);
+        var pageIndex = CurrentPageIndex;
+        _keepFirst = Math.Max(0, pageIndex - PrefetchRadius);
+        _keepLast = pageIndex + PrefetchRadius;
 
         SelectedAnnotation = null;
         CurrentPageAnnotations.Clear();
+        _undoStack.Clear();
+        _redoStack.Clear();
+        RefreshUndoRedoState();
+
+        var renderTask = GetPageImageAsync(pageIndex);
+        if (!renderTask.IsCompleted)
+        {
+            // Not prefetched yet - blank the previous page rather than
+            // leave it on screen under the new page number.
+            CurrentPageImageBytes = null;
+            IsLoading = true;
+        }
+
+        byte[]? imageBytes;
+        try
+        {
+            imageBytes = await renderTask;
+        }
+        finally
+        {
+            if (pageIndex == CurrentPageIndex)
+            {
+                IsLoading = false;
+            }
+        }
+
+        if (pageIndex != CurrentPageIndex)
+        {
+            return;
+        }
+
+        CurrentPageImageBytes = imageBytes;
+
         if (_sheet is not null)
         {
-            var annotations = await _annotationService.GetAnnotationsAsync(_sheet.Id, CurrentPageIndex);
+            var annotations = await _annotationService.GetAnnotationsAsync(_sheet.Id, pageIndex);
+            if (pageIndex != CurrentPageIndex)
+            {
+                return;
+            }
+
             foreach (var annotation in annotations)
             {
                 CurrentPageAnnotations.Add(annotation);
             }
         }
 
-        _undoStack.Clear();
-        _redoStack.Clear();
-        RefreshUndoRedoState();
+        EvictDistantPages();
+        PrefetchNeighbours(pageIndex);
+    }
+
+    private Task<byte[]?> GetPageImageAsync(int pageIndex)
+    {
+        if (!_pageRenders.TryGetValue(pageIndex, out var task) || task.IsFaulted || task.IsCanceled)
+        {
+            task = RenderPageGatedAsync(pageIndex);
+            _pageRenders[pageIndex] = task;
+        }
+
+        return task;
+    }
+
+    private async Task<byte[]?> RenderPageGatedAsync(int pageIndex)
+    {
+        await _renderGate.WaitAsync();
+        try
+        {
+            if (!IsInKeepWindow(pageIndex))
+            {
+                _pageRenders.Remove(pageIndex);
+                return null;
+            }
+
+            return await _pdfPageRenderer.RenderPageAsync(_filePath, pageIndex, _targetWidthPx, _targetHeightPx);
+        }
+        finally
+        {
+            _renderGate.Release();
+        }
+    }
+
+    // Nearest pages first, forward before backward - the next page is the
+    // one a reader most likely turns to.
+    private void PrefetchNeighbours(int pageIndex)
+    {
+        for (var distance = 1; distance <= PrefetchRadius; distance++)
+        {
+            foreach (var neighbour in new[] { pageIndex + distance, pageIndex - distance })
+            {
+                if (neighbour >= 0 && neighbour < PageCount)
+                {
+                    _ = GetPageImageAsync(neighbour);
+                }
+            }
+        }
+    }
+
+    private bool IsInKeepWindow(int pageIndex) => pageIndex >= _keepFirst && pageIndex <= _keepLast;
+
+    private void EvictDistantPages()
+    {
+        var distant = _pageRenders
+            .Where(entry => !IsInKeepWindow(entry.Key) && entry.Value.IsCompleted)
+            .Select(entry => entry.Key)
+            .ToList();
+
+        foreach (var key in distant)
+        {
+            _pageRenders.Remove(key);
+        }
     }
 
     private async Task PersistLastViewedPageAsync()

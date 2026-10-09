@@ -104,12 +104,13 @@ public partial class LibraryViewModel : ObservableObject
     [RelayCommand]
     private async Task CreateFolderAsync()
     {
-        if (string.IsNullOrWhiteSpace(NewFolderName))
+        var name = FolderNameNormalizer.Normalize(NewFolderName);
+        if (name is null)
         {
             return;
         }
 
-        await _libraryService.CreateFolderAsync(NewFolderName);
+        await _libraryService.CreateFolderAsync(name);
         NewFolderName = string.Empty;
         await LoadAsync();
     }
