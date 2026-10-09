@@ -171,4 +171,13 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="PagesSingularFormat" xml:space="preserve"><value>{0} pág</value></data>
   <data name="EmptyLibraryTitle" xml:space="preserve"><value>Tu biblioteca está vacía</value></data>
   <data name="EmptyLibraryMessage" xml:space="preserve"><value>Importa un PDF para empezar a leer tus partituras.</value></data>
+  <data name="ReadingModeNameHorizontal" xml:space="preserve"><value>Horizontal</value></data>
+  <data name="ReadingModeNameVerticalPaged" xml:space="preserve"><value>Vertical por páginas</value></data>
+  <data name="ReadingModeNameVerticalContinuous" xml:space="preserve"><value>Continuo vertical</value></data>
+  <data name="UndoAction" xml:space="preserve"><value>Deshacer</value></data>
+  <data name="RedoAction" xml:space="preserve"><value>Rehacer</value></data>
+  <data name="ToolSettingsAction" xml:space="preserve"><value>Ajustes de herramienta</value></data>
+  <data name="StopToolAction" xml:space="preserve"><value>Dejar la herramienta</value></data>
+  <data name="ReadingModeLabel" xml:space="preserve"><value>Modo de lectura</value></data>
+  <data name="AnnotationToolsLabel" xml:space="preserve"><value>Herramientas de anotación</value></data>
 </root>
