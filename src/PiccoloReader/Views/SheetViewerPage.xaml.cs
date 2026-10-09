@@ -94,7 +94,14 @@ public partial class SheetViewerPage : ContentPage
         };
         UpdateReadingModeIcon();
 
-        ContinuousPagesView.ItemTemplate = new DataTemplate(() => new ContinuousPageView(_annotationPainter, EditorContainerSize, OnContinuousPageTapped, () => _continuousZoom));
+        ContinuousPagesView.ItemTemplate = new DataTemplate(() =>
+        {
+            var view = new ContinuousPageView(_annotationPainter, EditorContainerSize, OnContinuousPageTapped, () => _continuousZoom);
+            _continuousViews.Add(new WeakReference<ContinuousPageView>(view));
+            return view;
+        });
+        PageContainer.SizeChanged += OnPageContainerSizeChanged;
+        ContinuousPagesView.SizeChanged += (_, _) => RelayoutContinuousPages();
 
         // ToolbarItem has no bindable IsVisible in this MAUI version (it
         // derives from Element, not VisualElement), so visibility is
@@ -202,6 +209,10 @@ public partial class SheetViewerPage : ContentPage
     // is in the old orientation's coordinates, so after a rotation it leaves
     // the page shifted and clipped. Resetting re-centers the page. Only an
     // orientation flip counts: the toolbar showing/hiding also resizes the page.
+    private readonly List<WeakReference<ContinuousPageView>> _continuousViews = new();
+    private bool _orientationFlipped;
+    private double _lastListWidth;
+
     protected override void OnSizeAllocated(double width, double height)
     {
         var changed = width > 0 && height > 0 && (width > height) != (_lastPageWidth > _lastPageHeight);
@@ -216,17 +227,68 @@ public partial class SheetViewerPage : ContentPage
         // re-place the selection overlay for the new size.
         if (changed && hadSize)
         {
-            Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(100), () =>
+            _orientationFlipped = true;
+        }
+    }
+
+    // PageContainer's final size after a rotation arrives here once its
+    // layout has settled (OnSizeAllocated runs before the children are
+    // arranged), so zoom, selection overlay and the list's annotation
+    // frames are re-derived now rather than after a fixed delay.
+    private void OnPageContainerSizeChanged(object? sender, EventArgs e)
+    {
+        if (PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return;
+        }
+
+        if (_orientationFlipped && _viewModel.IsContinuousEditing)
+        {
+            ResetZoom();
+        }
+        else
+        {
+            UpdateSelectionOverlay();
+        }
+
+        _orientationFlipped = false;
+        InvalidateContinuousAnnotations();
+    }
+
+    private void RelayoutContinuousPages()
+    {
+        var width = ContinuousPagesView.Width;
+        if (width <= 0 || Math.Abs(width - _lastListWidth) < 0.5)
+        {
+            return;
+        }
+
+        _lastListWidth = width;
+
+        _continuousViews.RemoveAll(r => !r.TryGetTarget(out _));
+        foreach (var reference in _continuousViews)
+        {
+            if (reference.TryGetTarget(out var view))
             {
-                if (_viewModel.IsContinuousEditing)
-                {
-                    ResetZoom();
-                }
-                else
-                {
-                    UpdateSelectionOverlay();
-                }
-            });
+                view.Relayout(width);
+            }
+        }
+
+#if ANDROID
+        // RecyclerView keeps the rows measured at the old width.
+        _continuousRecyclerView?.GetAdapter()?.NotifyDataSetChanged();
+#endif
+    }
+
+    private void InvalidateContinuousAnnotations()
+    {
+        _continuousViews.RemoveAll(r => !r.TryGetTarget(out _));
+        foreach (var reference in _continuousViews)
+        {
+            if (reference.TryGetTarget(out var view))
+            {
+                view.InvalidateAnnotations();
+            }
         }
     }
 
@@ -1331,6 +1393,7 @@ public partial class SheetViewerPage : ContentPage
         var listTranslationX = ContinuousPagesView.TranslationX;
         var pageScreenTop = (ContinuousLayout.PageTop(_viewModel.ContinuousPages, pageIndex, listWidth, ContinuousPageView.Spacing)
             - ContinuousScrollOffset()) * listZoom;
+        var fromLandscape = ContinuousPagesView.Width > ContinuousPagesView.Height;
 
         await _viewModel.BeginContinuousEditAsync(pageIndex);
         UpdateContinuousLayers();
@@ -1345,6 +1408,13 @@ public partial class SheetViewerPage : ContentPage
 
         // PageContainer was hidden until now - give it a layout pass before
         // reading its size/position.
+        // From landscape the editor locks portrait and rotates, so the list's
+        // geometry does not apply: the rotation's size change resets the zoom.
+        if (fromLandscape)
+        {
+            return;
+        }
+
         Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(50), () =>
             ApplyEditorZoomFromContinuous(pageIndex, listWidth, listZoom, listTranslationX, pageScreenTop));
     }
@@ -1405,6 +1475,7 @@ public partial class SheetViewerPage : ContentPage
         UpdateSelectionOverlay();
         ResetZoom();
         UpdateContinuousLayers();
+        InvalidateContinuousAnnotations();
     }
 
     // Annotation tools picked from the FAB while scrolling the continuous
