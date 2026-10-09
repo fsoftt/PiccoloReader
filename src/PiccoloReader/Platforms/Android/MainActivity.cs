@@ -22,6 +22,33 @@ public class MainActivity : MauiAppCompatActivity
         }
 
         UpdateSystemBarAppearance();
+        DisableFocusHighlight();
+    }
+
+    // After the soft keyboard closes with the Back key the window is in
+    // keyboard (non-touch) mode and Android paints its default focus
+    // highlight (a grey scrim) over whichever large container grabbed
+    // focus - the whole page, status bar included - until the next focus
+    // change (e.g. a tab switch). Turn the highlight off for every view
+    // that receives focus.
+    private void DisableFocusHighlight()
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(26) || Window?.DecorView is not { } decor)
+        {
+            return;
+        }
+
+        decor.DefaultFocusHighlightEnabled = false;
+        if (decor.ViewTreeObserver is { } observer)
+        {
+            observer.GlobalFocusChange += (_, e) =>
+            {
+                if (e.NewFocus is { } focused)
+                {
+                    focused.DefaultFocusHighlightEnabled = false;
+                }
+            };
+        }
     }
 
     public override void OnConfigurationChanged(Android.Content.Res.Configuration newConfig)
