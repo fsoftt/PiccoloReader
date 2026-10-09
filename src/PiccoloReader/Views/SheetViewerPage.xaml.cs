@@ -548,6 +548,15 @@ public partial class SheetViewerPage : ContentPage
         ResizeHandle.TranslationY = SelectionHandlePadding + height - ResizeHandle.HeightRequest / 2;
         UpdateResizeHandleScale();
 
+        // Landscape leaves little height: a selection hidden under the open
+        // tool sheet is collapsed so the annotation stays visible.
+        if (ToolSheet.IsVisible && Width > Height
+            && PageContainer.Y + PageContainer.TranslationY + (pageRect.Top + (annotation.Y + annotation.Height) * pageRect.Height) * _currentScale > Height - ToolSheet.HeightRequest)
+        {
+            ToolSheet.IsVisible = false;
+            UpdateEditingUi();
+        }
+
         if (ResizeHandle.IsVisible)
         {
             UpdateTrashPlacement(annotation);
@@ -2041,23 +2050,34 @@ public partial class SheetViewerPage : ContentPage
         glyph.SetAppThemeColor(FontImageSource.ColorProperty, light, dark);
     }
 
-    // Sizes the sheet to its content: pencil/eraser are compact; the symbol
-    // picker takes the rows the selected category needs, capped at ~45% of
-    // the height in portrait / ~60% in landscape (it scrolls past that).
+    // Sizes the sheet to its content. Portrait: pencil/eraser compact, the
+    // symbol picker takes the rows its category needs (cap ~45%). Landscape
+    // (little height, lots of width): a compact sheet (cap ~45%) with the
+    // pencil colors and width side by side and the symbols in one
+    // horizontally scrolling row, so the document stays usable above it.
     private void ApplyToolSheetHeight()
     {
         var pageHeight = Height > 0 ? Height : 800;
         var pageWidth = Width > 0 ? Width : 400;
         var landscape = pageWidth > pageHeight;
-        var cap = pageHeight * (landscape ? 0.60 : 0.45);
+        ApplyToolSheetLayout(landscape);
+        var cap = pageHeight * 0.45;
 
-        // handle + segmented control + paddings/spacing
-        const double header = 94;
+        // handle + segmented control + paddings/spacing (landscape drops
+        // the handle and tightens the spacing)
+        var header = landscape ? 70d : 94d;
         double height;
         switch (_viewModel.ActiveTool)
         {
             case AnnotationTool.MusicIcons:
                 const double tile = 64; // 56 tile + 8 margin
+                if (landscape)
+                {
+                    // chips (36) + spacing (8) + one scrolling row (tile + padding 8 + 4)
+                    height = header + 36 + 8 + tile + 12;
+                    break;
+                }
+
                 var cols = Math.Max(1, (int)Math.Floor((pageWidth - 48) / tile));
                 var count = MusicIconCatalog.Categories[_symbolCategoryIndex].Icons.Count;
                 var rows = Math.Max(1, (int)Math.Ceiling(count / (double)cols));
@@ -2065,17 +2085,57 @@ public partial class SheetViewerPage : ContentPage
                 height = Math.Min(cap, header + 44 + 10 + 40 + rows * tile);
                 break;
             case AnnotationTool.Eraser:
-                height = header + 100;
+                height = header + (landscape ? 82 : 100);
                 break;
             default:
-                height = Math.Min(header + 196, Math.Max(cap, landscape ? 0 : 290));
+                // landscape: label + swatches / slider side by side + bottom padding
+                height = landscape ? header + 82 : Math.Min(header + 196, Math.Max(cap, 290));
                 break;
+        }
+
+        if (landscape)
+        {
+            height = Math.Min(height, Math.Max(cap, header + 82));
         }
 
         ToolSheet.HeightRequest = Math.Round(height);
         if (_viewModel.SelectedAnnotation is { } selected)
         {
             UpdateTrashPlacement(selected);
+        }
+    }
+
+    private bool? _toolSheetLandscape;
+
+    private void ApplyToolSheetLayout(bool landscape)
+    {
+        if (_toolSheetLandscape == landscape)
+        {
+            return;
+        }
+
+        _toolSheetLandscape = landscape;
+        ToolSheetHandle.IsVisible = !landscape;
+        ToolSheetGrid.RowSpacing = landscape ? 8 : 14;
+        ToolSheet.Padding = landscape ? new Thickness(20, 8, 20, 0) : new Thickness(20, 10, 20, 0);
+        ToolOptionsPad.Padding = new Thickness(0, 0, 0, landscape ? 8 : 24);
+
+        // Pencil: color block and width block share one row in landscape.
+        Grid.SetRow(PencilWidthBlock, landscape ? 0 : 1);
+        Grid.SetColumn(PencilWidthBlock, landscape ? 1 : 0);
+        PencilSection.ColumnDefinitions = landscape
+            ? new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) }
+            : new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Star) };
+
+        // Symbols: a single horizontally scrolling row in landscape.
+        SymbolGridScroll.Orientation = landscape ? ScrollOrientation.Horizontal : ScrollOrientation.Vertical;
+        SymbolGridScroll.HorizontalScrollBarVisibility = ScrollBarVisibility.Never;
+        SymbolGridScroll.VerticalScrollBarVisibility = ScrollBarVisibility.Never;
+        SymbolGrid.Wrap = landscape ? Microsoft.Maui.Layouts.FlexWrap.NoWrap : Microsoft.Maui.Layouts.FlexWrap.Wrap;
+        SymbolGridPad.Padding = landscape ? new Thickness(8, 4, 8, 4) : new Thickness(8, 8, 0, 24);
+        foreach (var (tab, _) in _symbolTabs)
+        {
+            tab.HeightRequest = landscape ? 36 : 44;
         }
     }
 
@@ -2120,7 +2180,7 @@ public partial class SheetViewerPage : ContentPage
             var tab = new Border
             {
                 AutomationId = $"SymbolCategoryTab_{index}",
-                HeightRequest = 44,
+                HeightRequest = _toolSheetLandscape == true ? 36 : 44,
                 Padding = new Thickness(16, 0),
                 StrokeThickness = 1,
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(22) },
