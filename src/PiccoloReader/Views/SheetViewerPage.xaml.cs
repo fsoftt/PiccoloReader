@@ -51,18 +51,6 @@ public partial class SheetViewerPage : ContentPage
 
     private readonly AnnotationPainter _annotationPainter = new();
 
-    // Computed per-call, not a static field, so it reflects the theme at
-    // the moment each preview redraw happens. Uses the same Primary/
-    // PrimaryDark pairing the Library page already uses for icons - plain
-    // Primary (#512BD4) reads fine on the light panel background but
-    // nearly disappears against the dark one (Gray600, #404040), so dark
-    // mode swaps to PrimaryDark (#ac99ea), a lighter tint meant for
-    // exactly this case.
-    private static Color AccentColor =>
-        Application.Current!.RequestedTheme == AppTheme.Dark
-            ? (Color)Application.Current!.Resources["PrimaryDark"]
-            : (Color)Application.Current!.Resources["Primary"];
-
     public SheetViewerPage(SheetViewerViewModel viewModel)
     {
         InitializeComponent();
@@ -84,8 +72,27 @@ public partial class SheetViewerPage : ContentPage
             else if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageIndex))
             {
                 UpdateBookmarkButton();
+                UpdateEditingUi();
+            }
+            else if (e.PropertyName is nameof(SheetViewerViewModel.CanUndo)
+                or nameof(SheetViewerViewModel.CanRedo)
+                or nameof(SheetViewerViewModel.SelectedAnnotation)
+                or nameof(SheetViewerViewModel.IsContinuousEditing)
+                or nameof(SheetViewerViewModel.ActiveTool))
+            {
+                UpdateEditingUi();
             }
         };
+        ToolSheet.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(VisualElement.IsVisible))
+            {
+                UpdateEditingUi();
+            }
+        };
+        BuildSymbolCategoryTabs();
+        UpdateToolValueLabels();
+        UpdateToolSegments();
         _viewModel.Bookmarks.CollectionChanged += (_, _) => UpdateBookmarkButton();
         UpdateReadingModeIcon();
         UpdateReadingModeName();
@@ -154,6 +161,11 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnAppearing();
 
+        // The view model is reused across openings: start outside any editing
+        // state so the reading bar (not the editing bar) is what shows.
+        ToolSheet.IsVisible = false;
+        _viewModel.ActiveTool = AnnotationTool.MusicIcons;
+        _viewModel.SelectedAnnotation = null;
         SetToolbarVisible(false, animate: false);
 
         // The view model is reused across openings: leaving the editor with
@@ -197,6 +209,7 @@ public partial class SheetViewerPage : ContentPage
         _lastPageHeight = height;
 
         base.OnSizeAllocated(width, height);
+        ApplyToolSheetHeight();
 
         // A rotation lands here: re-center the page and re-place the
         // selection overlay for the new size.
@@ -324,9 +337,9 @@ public partial class SheetViewerPage : ContentPage
     // center toggle isn't gated by zoom - it should always work.
     private void OnPageContainerTapped(object? sender, TappedEventArgs e)
     {
-        if (ToolPanel.IsVisible)
+        if (ToolSheet.IsVisible)
         {
-            ToolPanel.IsVisible = false;
+            ToolSheet.IsVisible = false;
             return;
         }
 
@@ -347,7 +360,7 @@ public partial class SheetViewerPage : ContentPage
 
     // Shared by OnPageContainerTapped (iOS) and the Android touch
     // listener's tap path - see ApplyPinchTranslation for why the
-    // platforms split here. ToolPanel-dismissal is handled by each
+    // platforms split here. ToolSheet-dismissal is handled by each
     // caller before this, same as the original single handler did, since
     // the Android listener needs to skip its own hit-slop/tap-vs-pan
     // classification in that case too.
@@ -414,6 +427,12 @@ public partial class SheetViewerPage : ContentPage
 
     private void SetToolbarVisible(bool visible, bool animate = true)
     {
+        // The editing bar holds "Listo": it never hides while editing.
+        if (!visible && IsEditing)
+        {
+            visible = true;
+        }
+
         _isToolbarVisible = visible;
 
         // MainToolFab is the replacement for what used to be a toolbar
@@ -498,6 +517,7 @@ public partial class SheetViewerPage : ContentPage
         // frame. That's why the drag handlers below call
         // RepositionSelectionOverlay() directly instead of this method.
         SetDragControlsVisible(_viewModel.SelectedAnnotation is not null);
+        UpdateEditingUi();
     }
 
     private void RepositionSelectionOverlay()
@@ -559,7 +579,11 @@ public partial class SheetViewerPage : ContentPage
     // not moved mid-drag (the handle is hidden then) so the drop target
     // doesn't jump under the finger; bottom-center stays the default.
     private const double TrashMargin = 88;
-    private const double TrashTopMargin = 16;
+    // Below the floating editing bar (12 margin + 56 height + 12 gap).
+    private const double TrashTopMargin = 80;
+
+    // With the tool sheet open the trash sits just above it instead.
+    private double TrashBottomMargin => ToolSheet.IsVisible ? ToolSheet.HeightRequest + 16 : TrashMargin;
 
     private void UpdateTrashPlacement(Annotation annotation)
     {
@@ -574,7 +598,7 @@ public partial class SheetViewerPage : ContentPage
 
         var reach = ResizeHandle.WidthRequest / 2 + 12;
         var half = TrashTarget.WidthRequest / 2;
-        var bottomTop = host.Height - TrashMargin - TrashTarget.HeightRequest;
+        var bottomTop = host.Height - TrashBottomMargin - TrashTarget.HeightRequest;
         var overlapsBottom =
             Math.Abs(handleX - host.Width / 2) < half + reach
             && handleY > bottomTop - reach
@@ -589,7 +613,11 @@ public partial class SheetViewerPage : ContentPage
         else if (!overlapsBottom && atTop)
         {
             TrashTarget.VerticalOptions = LayoutOptions.End;
-            TrashTarget.Margin = new Thickness(0, 0, 0, TrashMargin);
+            TrashTarget.Margin = new Thickness(0, 0, 0, TrashBottomMargin);
+        }
+        else if (!atTop)
+        {
+            TrashTarget.Margin = new Thickness(0, 0, 0, TrashBottomMargin);
         }
     }
 
@@ -901,14 +929,14 @@ public partial class SheetViewerPage : ContentPage
     // to turn pages wasn't working.
     private void OnPanUpdated(object? sender, PanUpdatedEventArgs e)
     {
-        if (ToolPanel.IsVisible)
+        if (ToolSheet.IsVisible)
         {
             // Dragging on the page while the tool panel is open closes it,
             // same as a plain tap (see OnPageContainerTapped) - don't
             // also pan/turn the page underneath.
             if (e.StatusType == GestureStatus.Completed)
             {
-                ToolPanel.IsVisible = false;
+                ToolSheet.IsVisible = false;
             }
 
             return;
@@ -993,7 +1021,7 @@ public partial class SheetViewerPage : ContentPage
     // PageContainer's MAUI GestureRecognizers on Android only - see
     // AttachAndroidPageContainerTouchListener for why. These mirror
     // OnPinchUpdated/OnPanUpdated/OnPageContainerTapped's own guard
-    // clauses (ToolPanel dismissal, Eraser bailout) so behavior matches
+    // clauses (ToolSheet dismissal, Eraser bailout) so behavior matches
     // the iOS path exactly; only the gesture *source* differs.
 
     private void AndroidHandlePinchStarted()
@@ -1024,7 +1052,7 @@ public partial class SheetViewerPage : ContentPage
 
     private void AndroidHandlePanRunning(double totalXDp, double totalYDp)
     {
-        if (ToolPanel.IsVisible || _isToolFabExpanded || _viewModel.ActiveTool == AnnotationTool.Eraser)
+        if (ToolSheet.IsVisible || _isToolFabExpanded || _viewModel.ActiveTool == AnnotationTool.Eraser)
         {
             return;
         }
@@ -1034,9 +1062,9 @@ public partial class SheetViewerPage : ContentPage
 
     private void AndroidHandlePanEnded()
     {
-        if (ToolPanel.IsVisible)
+        if (ToolSheet.IsVisible)
         {
-            ToolPanel.IsVisible = false;
+            ToolSheet.IsVisible = false;
             return;
         }
 
@@ -1056,9 +1084,9 @@ public partial class SheetViewerPage : ContentPage
 
     private void AndroidHandleTap(double normalizedX, double normalizedY)
     {
-        if (ToolPanel.IsVisible)
+        if (ToolSheet.IsVisible)
         {
-            ToolPanel.IsVisible = false;
+            ToolSheet.IsVisible = false;
             return;
         }
 
@@ -1253,7 +1281,7 @@ public partial class SheetViewerPage : ContentPage
         // Closes on the initial touch-down, not when the finger lifts, so
         // the panel gets out of the way as soon as the user starts erasing
         // instead of staying open over the page for the whole drag.
-        ToolPanel.IsVisible = false;
+        ToolSheet.IsVisible = false;
         EraseAtDrawingViewPoint(e.Point);
     }
 
@@ -1305,23 +1333,14 @@ public partial class SheetViewerPage : ContentPage
     private async void OnBackClicked(object? sender, EventArgs e) =>
         await Shell.Current.GoToAsync("..");
 
-    // Secondary actions that used to be separate nav-bar buttons: undo/redo
-    // (only the ones currently possible) and, while Pencil/Eraser is active,
-    // the tool's config panel and the "stop tool" action.
+    // Secondary actions of the reading bar. Undo/redo live in the editing bar
+    // while editing; this menu offers them for the reading state.
     private async void OnMoreClicked(object? sender, EventArgs e)
     {
         var undo = AppStrings.UndoAction;
         var redo = AppStrings.RedoAction;
-        var config = AppStrings.ToolSettingsAction;
-        var stop = AppStrings.StopToolAction;
 
         var options = new List<string> { undo, redo };
-        if (_viewModel.IsDrawingToolActive)
-        {
-            options.Add(config);
-            options.Add(stop);
-        }
-
         var choice = await DisplayActionSheetAsync(AppStrings.MoreOptions, AppStrings.Cancel, null, options.ToArray());
         if (choice == undo)
         {
@@ -1336,14 +1355,6 @@ public partial class SheetViewerPage : ContentPage
             {
                 OnRedoClicked(sender, e);
             }
-        }
-        else if (choice == config)
-        {
-            OnToolConfigClicked(sender, e);
-        }
-        else if (choice == stop)
-        {
-            OnDeactivateToolClicked(sender, e);
         }
     }
 
@@ -1407,7 +1418,7 @@ public partial class SheetViewerPage : ContentPage
 
         if (_viewModel.IsContinuousReading)
         {
-            ToolPanel.IsVisible = false;
+            ToolSheet.IsVisible = false;
             SetToolFabExpanded(false);
             _viewModel.SelectedAnnotation = null;
             _viewModel.ActiveTool = AnnotationTool.MusicIcons;
@@ -1434,7 +1445,7 @@ public partial class SheetViewerPage : ContentPage
 
         PageContainer.IsVisible = !continuous || editing;
         ContinuousHost.IsVisible = continuous && !editing;
-        ContinuousEditDoneButton.IsVisible = editing;
+        UpdateEditingUi();
     }
 
     // Dispatched so it runs after the list has become visible and laid
@@ -1507,9 +1518,9 @@ public partial class SheetViewerPage : ContentPage
     // toggles the toolbar, like a center tap in the paged modes.
     private async void OnContinuousPageTapped(ContinuousPage page, double normalizedX, double normalizedY)
     {
-        if (ToolPanel.IsVisible)
+        if (ToolSheet.IsVisible)
         {
-            ToolPanel.IsVisible = false;
+            ToolSheet.IsVisible = false;
             return;
         }
 
@@ -1614,14 +1625,9 @@ public partial class SheetViewerPage : ContentPage
         UpdateSelectionOverlay();
     }
 
-    private async void OnContinuousEditDoneTapped(object? sender, TappedEventArgs e)
-    {
-        await ExitContinuousEditAsync();
-    }
-
     private async Task ExitContinuousEditAsync()
     {
-        ToolPanel.IsVisible = false;
+        ToolSheet.IsVisible = false;
         SetToolFabExpanded(false);
 
         await _viewModel.EndContinuousEditAsync();
@@ -1748,7 +1754,7 @@ public partial class SheetViewerPage : ContentPage
     {
         if (_viewModel.IsContinuousReading)
         {
-            ToolPanel.IsVisible = false;
+            ToolSheet.IsVisible = false;
             UpdateToolSections();
             UpdateSelectionOverlay();
             ResetZoom();
@@ -1874,49 +1880,28 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    // Opens the config sidebar for whichever tool is active - reachable
-    // only while Pencil or Eraser is active (see UpdateToolSections),
-    // since Icons opens its own sidebar directly via OnFabIconsClicked.
-    // Toggles like the old single toolbar button did, so tapping it again
-    // closes the panel instead of being a one-way "open" action.
-    private async void OnToolConfigClicked(object? sender, EventArgs e)
+    // The main FAB reopens the tool sheet when a drawing tool is armed and
+    // the sheet was dismissed (it hides as soon as drawing starts); otherwise
+    // it toggles the speed-dial. An open sheet hides the FAB altogether.
+    private async void OnMainToolFabClicked(object? sender, TappedEventArgs e)
     {
-        if (!ToolPanel.IsVisible)
+        if (_viewModel.IsDrawingToolActive && !ToolSheet.IsVisible)
         {
-            // Load before showing, not after - the icon buttons' SKCanvasViews
-            // paint as soon as they're visible, and painting before the
-            // typeface is ready would leave them blank with no later
-            // repaint trigger.
-            await EnsureBravuraTypefaceLoadedAsync();
-        }
-
-        ToolPanel.IsVisible = !ToolPanel.IsVisible;
-    }
-
-    // Quick one-tap way back to passive/MusicIcons mode without opening
-    // the icon sidebar - reachable only while Pencil or Eraser is active
-    // (see UpdateToolSections). The Icons mini-FAB also deactivates the
-    // current tool, but always drags the sidebar open with it; this is
-    // the "just stop" action.
-    private void OnDeactivateToolClicked(object? sender, EventArgs e)
-    {
-        _viewModel.ActiveTool = AnnotationTool.MusicIcons;
-        UpdateToolSections();
-    }
-
-    // If the config sidebar happens to be open, closing it takes priority
-    // over expanding the speed-dial - opening both at once stacked the
-    // mini FABs visually on top of the sidebar's own content, confirmed
-    // on-device while testing this feature.
-    private void OnMainToolFabClicked(object? sender, TappedEventArgs e)
-    {
-        if (ToolPanel.IsVisible)
-        {
-            ToolPanel.IsVisible = false;
+            SetToolFabExpanded(false);
+            await ShowToolSheetAsync();
             return;
         }
 
         SetToolFabExpanded(!_isToolFabExpanded);
+    }
+
+    private async Task ShowToolSheetAsync()
+    {
+        // Load before showing: the symbol tiles paint as soon as they are
+        // visible and would stay blank without the typeface.
+        await EnsureBravuraTypefaceLoadedAsync();
+        UpdateToolSections();
+        ToolSheet.IsVisible = true;
     }
 
     private async void OnFabIconsClicked(object? sender, TappedEventArgs e)
@@ -1924,11 +1909,8 @@ public partial class SheetViewerPage : ContentPage
         await EnsureEditablePageAsync();
 
         _viewModel.ActiveTool = AnnotationTool.MusicIcons;
-        UpdateToolSections();
         SetToolFabExpanded(false);
-
-        await EnsureBravuraTypefaceLoadedAsync();
-        ToolPanel.IsVisible = true;
+        await ShowToolSheetAsync();
     }
 
     private async void OnFabPencilClicked(object? sender, TappedEventArgs e)
@@ -1936,8 +1918,8 @@ public partial class SheetViewerPage : ContentPage
         await EnsureEditablePageAsync();
 
         _viewModel.ActiveTool = AnnotationTool.Pencil;
-        UpdateToolSections();
         SetToolFabExpanded(false);
+        await ShowToolSheetAsync();
     }
 
     private async void OnFabEraserClicked(object? sender, TappedEventArgs e)
@@ -1945,8 +1927,8 @@ public partial class SheetViewerPage : ContentPage
         await EnsureEditablePageAsync();
 
         _viewModel.ActiveTool = AnnotationTool.Eraser;
-        UpdateToolSections();
         SetToolFabExpanded(false);
+        await ShowToolSheetAsync();
     }
 
     // Shows/hides the 3 mini FABs above the main FAB and swaps its own
@@ -1993,7 +1975,6 @@ public partial class SheetViewerPage : ContentPage
             PencilDrawingView.LineColor = Color.FromArgb(_viewModel.PencilColorHex);
             UpdatePencilDrawingViewLineWidth();
             UpdatePencilColorSwatchSelection();
-            PencilWidthPreview.InvalidateSurface();
         }
 
         var eraserActive = _viewModel.ActiveTool == AnnotationTool.Eraser;
@@ -2001,55 +1982,199 @@ public partial class SheetViewerPage : ContentPage
         if (eraserActive)
         {
             UpdateEraserDrawingViewLineWidth();
-            EraserSizePreview.InvalidateSurface();
         }
+
+        UpdateToolValueLabels();
+        UpdateToolSegments();
+        ApplyToolSheetHeight();
+        UpdateEditingUi();
+    }
+
+    private void UpdateToolValueLabels()
+    {
+        PencilWidthValueLabel.Text = $"{_viewModel.PencilStrokeWidth * 1000:0.#} pt";
+        EraserRadiusValueLabel.Text = $"{_viewModel.EraserRadius * 100:0.#}";
+    }
+
+    // Segmented control: the selected segment gets the PrimaryContainer
+    // pill, the others stay transparent with secondary text/icons.
+    private void UpdateToolSegments()
+    {
+        SetSegment(ToolSegmentPencil, ToolSegmentPencilLabel, ToolSegmentPencilGlyph, _viewModel.ActiveTool == AnnotationTool.Pencil);
+        SetSegment(ToolSegmentEraser, ToolSegmentEraserLabel, ToolSegmentEraserGlyph, _viewModel.ActiveTool == AnnotationTool.Eraser);
+        SetSegment(ToolSegmentSymbols, ToolSegmentSymbolsLabel, ToolSegmentSymbolsGlyph, _viewModel.ActiveTool == AnnotationTool.MusicIcons);
+    }
+
+    private static void SetSegment(Border segment, Label label, FontImageSource glyph, bool selected)
+    {
+        var res = Application.Current!.Resources;
+        segment.SetAppThemeColor(VisualElement.BackgroundColorProperty,
+            selected ? (Color)res["PrimaryContainerLight"] : Colors.Transparent,
+            selected ? (Color)res["PrimaryContainerDark"] : Colors.Transparent);
+        var light = (Color)res[selected ? "OnPrimaryContainerLight" : "TextSecondaryLight"];
+        var dark = (Color)res[selected ? "OnPrimaryContainerDark" : "TextSecondaryDark"];
+        label.SetAppThemeColor(Label.TextColorProperty, light, dark);
+        glyph.SetAppThemeColor(FontImageSource.ColorProperty, light, dark);
+    }
+
+    // ~290dp for pencil/eraser, taller (up to ~55% of the screen) for the
+    // symbol picker, which scrolls.
+    private void ApplyToolSheetHeight()
+    {
+        var pageHeight = Height > 0 ? Height : 800;
+        var compact = Math.Min(290, pageHeight * (Width > Height ? 0.55 : 0.75));
+        ToolSheet.HeightRequest = _viewModel.ActiveTool == AnnotationTool.MusicIcons
+            ? Math.Max(compact, pageHeight * 0.55)
+            : compact;
+    }
+
+    private async void OnToolSegmentPencilTapped(object? sender, TappedEventArgs e) =>
+        await SelectToolSegmentAsync(AnnotationTool.Pencil);
+
+    private async void OnToolSegmentEraserTapped(object? sender, TappedEventArgs e) =>
+        await SelectToolSegmentAsync(AnnotationTool.Eraser);
+
+    private async void OnToolSegmentSymbolsTapped(object? sender, TappedEventArgs e) =>
+        await SelectToolSegmentAsync(AnnotationTool.MusicIcons);
+
+    private async Task SelectToolSegmentAsync(AnnotationTool tool)
+    {
+        if (tool == AnnotationTool.MusicIcons)
+        {
+            await EnsureBravuraTypefaceLoadedAsync();
+        }
+
+        _viewModel.ActiveTool = tool;
+        UpdateToolSections();
+    }
+
+    private readonly List<(Border Tab, Label Label)> _symbolTabs = new();
+
+    // One chip per catalog category; the selected one decides which icons
+    // the grid shows. Keys are the category's catalog position.
+    private void BuildSymbolCategoryTabs()
+    {
+        var categories = MusicIconCatalog.Categories;
+        for (var i = 0; i < categories.Count; i++)
+        {
+            var index = i;
+            var label = new Label
+            {
+                Text = categories[i].Name,
+                FontSize = 13,
+                FontFamily = "OpenSansSemibold",
+                VerticalOptions = LayoutOptions.Center
+            };
+            var tab = new Border
+            {
+                AutomationId = $"SymbolCategoryTab_{index}",
+                HeightRequest = 44,
+                Padding = new Thickness(16, 0),
+                StrokeThickness = 1,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(22) },
+                Content = label
+            };
+            tab.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(() => SelectSymbolCategory(index)) });
+            _symbolTabs.Add((tab, label));
+            SymbolCategoryTabs.Add(tab);
+        }
+
+        SelectSymbolCategory(0);
+    }
+
+    private void SelectSymbolCategory(int index)
+    {
+        var res = Application.Current!.Resources;
+        for (var i = 0; i < _symbolTabs.Count; i++)
+        {
+            var (tab, label) = _symbolTabs[i];
+            var selected = i == index;
+            tab.SetAppThemeColor(VisualElement.BackgroundColorProperty,
+                (Color)res[selected ? "PrimaryContainerLight" : "SurfaceLight"],
+                (Color)res[selected ? "PrimaryContainerDark" : "SurfaceDark"]);
+            tab.SetAppThemeColor(Border.StrokeProperty,
+                selected ? Colors.Transparent : (Color)res["OutlineLight"],
+                selected ? Colors.Transparent : (Color)res["OutlineDark"]);
+            label.SetAppThemeColor(Label.TextColorProperty,
+                (Color)res[selected ? "OnPrimaryContainerLight" : "TextSecondaryLight"],
+                (Color)res[selected ? "OnPrimaryContainerDark" : "TextSecondaryDark"]);
+        }
+
+        BindableLayout.SetItemsSource(SymbolGrid, MusicIconCatalog.Categories[index].Icons);
+    }
+
+    // True while any annotation editing is going on: a tool sheet is open,
+    // a drawing tool is armed, a continuous-mode page is open in the
+    // editor, or an icon is selected. The floating bar then shows the
+    // editing controls (undo/redo/done) instead of the reading ones.
+    private bool IsEditing =>
+        ToolSheet.IsVisible
+        || _viewModel.IsDrawingToolActive
+        || _viewModel.IsContinuousEditing
+        || _viewModel.SelectedAnnotation is not null;
+
+    private void UpdateEditingUi()
+    {
+        var editing = IsEditing;
+        EditingBarContent.IsVisible = editing;
+        ReadingBarContent.IsVisible = !editing;
+
+        if (editing)
+        {
+            // The bar must stay reachable (it holds "Listo").
+            if (!_isToolbarVisible || !FloatingBar.IsVisible)
+            {
+                SetToolbarVisible(true, animate: false);
+            }
+
+            EditorPageLabel.Text = string.Format(AppStrings.EditorPageFormat, _viewModel.CurrentPageDisplay);
+            SetBarButton(UndoButton, UndoGlyph, _viewModel.CanUndo);
+            SetBarButton(RedoButton, RedoGlyph, _viewModel.CanRedo);
+        }
+
+        // The sheet covers the bottom of the screen: the page pill and the
+        // tool FAB would sit on top of it.
+        var showBottomChrome = _isToolbarVisible && !ToolSheet.IsVisible;
+        PageIndicator.IsVisible = showBottomChrome;
+        MainToolFab.IsVisible = showBottomChrome;
+        if (ToolSheet.IsVisible)
+        {
+            SetToolFabExpanded(false);
+        }
+
+        RepositionSelectionOverlay();
+    }
+
+    private static void SetBarButton(ImageButton button, FontImageSource glyph, bool enabled)
+    {
+        button.IsEnabled = enabled;
+        var res = Application.Current!.Resources;
+        glyph.SetAppThemeColor(FontImageSource.ColorProperty,
+            (Color)res[enabled ? "TextPrimaryLight" : "TextMutedLight"],
+            (Color)res[enabled ? "TextPrimaryDark" : "TextMutedDark"]);
+    }
+
+    private async void OnEditorDoneTapped(object? sender, TappedEventArgs e)
+    {
+        ToolSheet.IsVisible = false;
+        SetToolFabExpanded(false);
+        _viewModel.SelectedAnnotation = null;
+
+        if (_viewModel.IsContinuousEditing)
+        {
+            await ExitContinuousEditAsync();
+            return;
+        }
+
+        _viewModel.ActiveTool = AnnotationTool.MusicIcons;
+        UpdateToolSections();
+        UpdateSelectionOverlay();
     }
 
     private void OnEraserRadiusChanged(object? sender, ValueChangedEventArgs e)
     {
         UpdateEraserDrawingViewLineWidth();
-        EraserSizePreview.InvalidateSurface();
-    }
-
-    // Mirrors the pencil width preview - a visual swatch of roughly how
-    // big an area the eraser will cover before you touch the page, using
-    // the same translucent circle style as EraserRadiusIndicator (the
-    // live on-page indicator shown while erasing) so the two read as the
-    // same affordance. EraserRadius's slider range (0.02-0.08) maps to a
-    // 10-40dp on-screen radius, comfortably inside the 80dp-tall canvas.
-    private void OnEraserSizePreviewPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
-    {
-        var canvas = e.Surface.Canvas;
-        canvas.Clear(SKColors.Transparent);
-
-        var info = e.Info;
-        var radius = (float)Math.Clamp(_viewModel.EraserRadius * 500, 10, 40);
-        var cx = info.Width / 2f;
-        var cy = info.Height / 2f;
-        var color = CurrentPrimarySkColor();
-
-        using var fillPaint = new SKPaint
-        {
-            Color = color.WithAlpha(80),
-            Style = SKPaintStyle.Fill,
-            IsAntialias = true
-        };
-        canvas.DrawCircle(cx, cy, radius, fillPaint);
-
-        using var strokePaint = new SKPaint
-        {
-            Color = color,
-            Style = SKPaintStyle.Stroke,
-            StrokeWidth = 2,
-            IsAntialias = true
-        };
-        canvas.DrawCircle(cx, cy, radius, strokePaint);
-    }
-
-    private static SKColor CurrentPrimarySkColor()
-    {
-        var color = AccentColor;
-        return new SKColor((byte)(color.Red * 255), (byte)(color.Green * 255), (byte)(color.Blue * 255));
+        UpdateToolValueLabels();
     }
 
     // The swipe trajectory line is just EraserDrawingView's own rendered
@@ -2094,14 +2219,13 @@ public partial class SheetViewerPage : ContentPage
             _viewModel.PencilColorHex = colorHex;
             PencilDrawingView.LineColor = Color.FromArgb(colorHex);
             UpdatePencilColorSwatchSelection();
-            PencilWidthPreview.InvalidateSurface();
         }
     }
 
     private void OnPencilWidthChanged(object? sender, ValueChangedEventArgs e)
     {
         UpdatePencilDrawingViewLineWidth();
-        PencilWidthPreview.InvalidateSurface();
+        UpdateToolValueLabels();
     }
 
     private void UpdatePencilDrawingViewLineWidth()
@@ -2112,48 +2236,12 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    // Draws an S-curve instead of a straight bar - a stroke preview reads
-    // more like an actual pencil mark when it curves, and it's a better
-    // showcase of StrokeCap.Round at small widths than a straight line's
-    // flat ends. PencilStrokeWidth's slider range is 0.003-0.02, mapped to
-    // the same 3-40 device-independent-pixel stroke width the old bar's
-    // height used, so the preview stays comparable to before.
-    private void OnPencilWidthPreviewPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
-    {
-        var canvas = e.Surface.Canvas;
-        canvas.Clear(SKColors.Transparent);
-
-        var info = e.Info;
-        var strokeWidth = (float)Math.Clamp(_viewModel.PencilStrokeWidth * 2000, 3, 40);
-
-        using var path = new SKPath();
-        var margin = info.Width * 0.08f;
-        var midY = info.Height / 2f;
-        path.MoveTo(margin, midY);
-        path.CubicTo(
-            info.Width * 0.35f, midY - info.Height * 0.35f,
-            info.Width * 0.65f, midY + info.Height * 0.35f,
-            info.Width - margin, midY);
-
-        using var paint = new SKPaint
-        {
-            Color = SKColor.Parse(_viewModel.PencilColorHex),
-            StrokeWidth = strokeWidth,
-            Style = SKPaintStyle.Stroke,
-            StrokeCap = SKStrokeCap.Round,
-            StrokeJoin = SKStrokeJoin.Round,
-            IsAntialias = true
-        };
-
-        canvas.DrawPath(path, paint);
-    }
-
     // Closes on the initial touch-down, not when the finger lifts, so the
     // panel gets out of the way as soon as the user starts drawing instead
     // of staying open over the page for the whole stroke.
     private void OnPencilDrawingLineStarted(object? sender, DrawingLineStartedEventArgs e)
     {
-        ToolPanel.IsVisible = false;
+        ToolSheet.IsVisible = false;
     }
 
     private async void OnPencilDrawingLineCompleted(object? sender, DrawingLineCompletedEventArgs e)
@@ -2197,7 +2285,7 @@ public partial class SheetViewerPage : ContentPage
         if (e.Parameter is string iconKey)
         {
             await _viewModel.PlaceIconCommand.ExecuteAsync(iconKey);
-            ToolPanel.IsVisible = false;
+            ToolSheet.IsVisible = false;
             UpdateSelectionOverlay();
         }
     }
