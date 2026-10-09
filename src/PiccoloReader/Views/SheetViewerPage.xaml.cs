@@ -423,15 +423,54 @@ public partial class SheetViewerPage : ContentPage
 
         MainToolFab.IsVisible = visible;
 
+#if ANDROID
         if (visible)
         {
-#if ANDROID
             RequestAndroidWindowInsetsRefresh();
-#endif
         }
+
+        if (!visible && IsLoaded)
+        {
+            CollapseShellAppBarPadding();
+            Dispatcher.Dispatch(() =>
+            {
+                CollapseShellAppBarPadding();
+                RequestAndroidWindowInsetsRefresh();
+            });
+        }
+#endif
     }
 
 #if ANDROID
+    // Shell keeps its AppBarLayout (shellcontent.appbar) in the view tree
+    // after the nav bar is hidden, and that container keeps the status-bar
+    // inset as its height (128px here): an empty purple strip that also
+    // pushes the page content down (#82). A page opened with the bar already
+    // hidden never gets one, hence no strip initially. Drop that padding
+    // when hiding (then re-apply insets so the page gets its safe-area top
+    // back); showing re-applies insets on its own (RequestApplyInsets above).
+    private static void CollapseShellAppBarPadding()
+    {
+        var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+        var decor = activity?.Window?.DecorView;
+        if (activity is null || decor is null)
+        {
+            return;
+        }
+
+        var id = activity.Resources?.GetIdentifier("shellcontent.appbar", "id", activity.PackageName) ?? 0;
+        if (id == 0)
+        {
+            return;
+        }
+
+        if (decor.FindViewById(id) is { } appBar)
+        {
+            appBar.SetPadding(0, 0, 0, 0);
+            appBar.RequestLayout();
+        }
+    }
+
     private static void RequestAndroidWindowInsetsRefresh()
     {
         var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
