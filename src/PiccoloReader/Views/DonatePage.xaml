@@ -6,6 +6,8 @@
     xmlns:admob="clr-namespace:Plugin.AdMob;assembly=Plugin.AdMob"
     xmlns:converters="clr-namespace:PiccoloReader.Converters"
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource BackgroundDark}}"
     Title="{x:Static strings:AppStrings.DonatePageTitle}">
 
     <ContentPage.Resources>
@@ -14,14 +16,44 @@
 
     <Grid RowDefinitions="*,Auto">
 
-        <VerticalStackLayout Grid.Row="0" Padding="16" Spacing="16" VerticalOptions="Center">
-            <Label Text="{x:Static strings:AppStrings.DonateExplanation}" FontSize="16" />
-            <Button
-                Text="{x:Static strings:AppStrings.SeeAdButton}"
-                Command="{Binding SeeAdCommand}"
-                IsEnabled="{Binding IsAdLoading, Converter={StaticResource InvertedBool}}" />
-            <Label Text="{x:Static strings:AppStrings.DonateSupportWithAdsExplanation}" FontSize="14" />
-        </VerticalStackLayout>
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Spacing="16" Padding="0,0,0,16">
+                <Label
+                    Style="{StaticResource PageTitle}"
+                    Text="{x:Static strings:AppStrings.DonatePageTitle}"
+                    Padding="20,16,20,0"
+                    SemanticProperties.HeadingLevel="Level1"
+                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+                <Border Style="{StaticResource Card}" Margin="20,0" Padding="20">
+                    <VerticalStackLayout Spacing="16">
+                        <Border
+                            WidthRequest="48" HeightRequest="48" Padding="0" StrokeThickness="0"
+                            StrokeShape="RoundRectangle 24" HorizontalOptions="Start"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryContainerLight}, Dark={StaticResource PrimaryContainerDark}}">
+                            <Image HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE87E;" FontFamily="MaterialOutlined" Size="24"
+                                        Color="{AppThemeBinding Light={StaticResource OnPrimaryContainerLight}, Dark={StaticResource OnPrimaryContainerDark}}" />
+                                </Image.Source>
+                            </Image>
+                        </Border>
+                        <Label Text="{x:Static strings:AppStrings.DonateExplanation}" FontSize="16"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Button
+                            AutomationId="DonateButton_SeeAd"
+                            Text="{x:Static strings:AppStrings.SeeAdButton}"
+                            Command="{Binding SeeAdCommand}"
+                            IsEnabled="{Binding IsAdLoading, Converter={StaticResource InvertedBool}}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource Card}" Margin="20,0" Padding="20">
+                    <Label Style="{StaticResource Caption}" FontSize="14"
+                           Text="{x:Static strings:AppStrings.DonateSupportWithAdsExplanation}" />
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
 
         <admob:BannerAd Grid.Row="1" />
 

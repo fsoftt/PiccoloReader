@@ -184,4 +184,7 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="EditorDone" xml:space="preserve"><value>Done</value></data>
   <data name="Symbols" xml:space="preserve"><value>Symbols</value></data>
   <data name="EditorDoneLabel" xml:space="preserve"><value>Finish editing</value></data>
+  <data name="SettingsGeneralSection" xml:space="preserve"><value>General</value></data>
+  <data name="SettingsHelpSection" xml:space="preserve"><value>Help</value></data>
+  <data name="AppVersionFormat" xml:space="preserve"><value>PiccoloReader · version {0}</value></data>
 </root>
