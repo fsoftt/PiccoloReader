@@ -1631,12 +1631,18 @@ public partial class SheetViewerPage : ContentPage
     private async void OnUndoClicked(object? sender, EventArgs e)
     {
         await _viewModel.UndoCommand.ExecuteAsync(null);
+        // Undo/redo of a move or resize mutates the annotation in place (no
+        // collection change), so repaint the glyphs explicitly.
+        AnnotationCanvas.InvalidateSurface();
         UpdateSelectionOverlay();
     }
 
     private async void OnRedoClicked(object? sender, EventArgs e)
     {
         await _viewModel.RedoCommand.ExecuteAsync(null);
+        // Undo/redo of a move or resize mutates the annotation in place (no
+        // collection change), so repaint the glyphs explicitly.
+        AnnotationCanvas.InvalidateSurface();
         UpdateSelectionOverlay();
     }
 
