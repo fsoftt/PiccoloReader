@@ -60,8 +60,14 @@ public partial class LibraryPage : ContentPage
     {
         var name = await DisplayPromptAsync(AppStrings.CreateFolderTitle, AppStrings.FolderNamePrompt, accept: AppStrings.OK, cancel: AppStrings.Cancel);
 
-        if (string.IsNullOrWhiteSpace(name))
+        if (name is null)
         {
+            return;
+        }
+
+        if (FolderNameNormalizer.Normalize(name) is null)
+        {
+            await DisplayAlertAsync(AppStrings.CreateFolderTitle, AppStrings.FolderNameEmptyMessage, AppStrings.OK);
             return;
         }
 

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="PiccoloReader.Views.TutorialPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
+    xmlns:vm="clr-namespace:PiccoloReader.Core.ViewModels;assembly=PiccoloReader.Core"
+    Shell.NavBarIsVisible="False"
+    NavigationPage.HasNavigationBar="False">
+
+    <Grid RowDefinitions="*,Auto,Auto" Padding="24,16">
+
+        <CarouselView
+            Grid.Row="0"
+            x:Name="SlidesCarousel"
+            ItemsSource="{Binding Slides}"
+            Position="{Binding CurrentIndex, Mode=TwoWay}"
+            Loop="False">
+            <CarouselView.ItemTemplate>
+                <DataTemplate x:DataType="vm:TutorialSlide">
+                    <ScrollView>
+                        <VerticalStackLayout Spacing="12" VerticalOptions="Center" Padding="8,12">
+                            <Border
+                                IsVisible="{Binding Source={RelativeSource AncestorType={x:Type vm:TutorialViewModel}}, Path=ShowSlideIcon}"
+                                WidthRequest="120"
+                                HeightRequest="120"
+                                Padding="0"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 60"
+                                HorizontalOptions="Center"
+                                BackgroundColor="{StaticResource Primary}">
+                                <Image HorizontalOptions="Center" VerticalOptions="Center">
+                                    <Image.Source>
+                                        <FontImageSource
+                                            Glyph="{Binding Glyph}"
+                                            FontFamily="MaterialOutlined"
+                                            Size="64"
+                                            Color="White" />
+                                    </Image.Source>
+                                </Image>
+                            </Border>
+                            <Label
+                                Text="{Binding Title}"
+                                FontSize="24"
+                                FontAttributes="Bold"
+                                HorizontalTextAlignment="Center" />
+                            <Label
+                                Text="{Binding Description}"
+                                FontSize="16"
+                                HorizontalTextAlignment="Center"
+                                Opacity="0.8" />
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </DataTemplate>
+            </CarouselView.ItemTemplate>
+        </CarouselView>
+
+        <IndicatorView
+            Grid.Row="1"
+            x:Name="SlideIndicator"
+            HorizontalOptions="Center"
+            Margin="0,8,0,16"
+            IndicatorColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+            SelectedIndicatorColor="{StaticResource Primary}" />
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <Button
+                Grid.Column="0"
+                Text="{x:Static strings:AppStrings.TutorialSkip}"
+                Command="{Binding SkipCommand}"
+                IsVisible="{Binding ShowSkip}"
+                BackgroundColor="Transparent"
+                TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                HorizontalOptions="Start" />
+            <Button
+                Grid.Column="1"
+                Text="{Binding PrimaryButtonText}"
+                Command="{Binding NextCommand}"
+                CornerRadius="8"
+                Padding="24,4" />
+        </Grid>
+    </Grid>
+</ContentPage>
