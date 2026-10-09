@@ -8,9 +8,8 @@ namespace PiccoloReader.Views;
 // One page in the continuous reading mode's list: the rendered page image
 // with its annotations drawn on top (read-only). Its height always follows
 // the page's own aspect ratio, so the image and the annotation overlay
-// cover exactly the same area. Annotations are stored relative to the
-// single-page viewer's container (the page letterboxed in the reading
-// area), so they're mapped onto the page through a PageFrame.
+// cover exactly the same area, which is also what annotations are normalized
+// to, so they are drawn and hit-tested without any mapping.
 public class ContinuousPageView : ContentView
 {
     // Gap below each page. Part of the item itself (not the list's
@@ -23,22 +22,18 @@ public class ContinuousPageView : ContentView
     private readonly Image _image;
     private readonly SKCanvasView _canvas;
     private readonly ActivityIndicator _loadingIndicator;
-    private readonly Func<(double Width, double Height)> _editorSize;
     private ContinuousPage? _page;
 
-    // editorSize is the single-page viewer's container size, which stored
-    // annotation coordinates are relative to. onTapped receives the page and
-    // the tap position in those same annotation coordinates. listZoom is the
-    // list's pinch zoom: the gesture position is measured in screen pixels,
-    // which the zoomed list magnifies, so it's divided back out.
+    // onTapped receives the page and the tap position in annotation (page
+    // normalized) coordinates. listZoom is the list's pinch zoom: the gesture
+    // position is measured in screen pixels, which the zoomed list magnifies,
+    // so it's divided back out.
     public ContinuousPageView(
         AnnotationPainter painter,
-        Func<(double Width, double Height)> editorSize,
         Action<ContinuousPage, double, double> onTapped,
         Func<double> listZoom)
     {
         _painter = painter;
-        _editorSize = editorSize;
 
         _image = new Image { Aspect = Aspect.AspectFit };
         _canvas = new SKCanvasView { InputTransparent = true };
@@ -67,11 +62,10 @@ public class ContinuousPageView : ContentView
             }
 
             var zoom = Math.Max(listZoom(), 1);
-            var frame = CurrentFrame();
             onTapped(
                 _page,
-                frame.ToContainerX(position.Value.X / zoom / _pageArea.Width),
-                frame.ToContainerY(position.Value.Y / zoom / _pageArea.Height));
+                position.Value.X / zoom / _pageArea.Width,
+                position.Value.Y / zoom / _pageArea.Height);
         };
         GestureRecognizers.Add(tap);
 
@@ -145,8 +139,8 @@ public class ContinuousPageView : ContentView
         }
     }
 
-    // The editor's container size (CurrentFrame) changes on rotation while
-    // the list may be hidden, so the page repaints when asked to.
+    // The page repaints when asked to, e.g. after the editor changed its
+    // annotations while the list was hidden.
     public void InvalidateAnnotations() => _canvas.InvalidateSurface();
 
     // Item heights are derived from the list width, which can change while
@@ -157,12 +151,6 @@ public class ContinuousPageView : ContentView
         _canvas.InvalidateSurface();
     }
 
-    private PageFrame CurrentFrame()
-    {
-        var (width, height) = _editorSize();
-        return _page is null ? PageFrame.Full : PageFrame.Fit(width, height, _page.AspectRatio);
-    }
-
     private void OnCanvasPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
     {
         var canvas = e.Surface.Canvas;
@@ -170,7 +158,7 @@ public class ContinuousPageView : ContentView
 
         if (_page is not null)
         {
-            _painter.DrawAnnotations(canvas, e.Info, _page.Annotations, CurrentFrame());
+            _painter.DrawAnnotations(canvas, e.Info, _page.Annotations);
         }
     }
 }
