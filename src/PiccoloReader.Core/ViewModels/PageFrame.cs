@@ -1,11 +1,12 @@
 namespace PiccoloReader.Core.ViewModels;
 
-// Annotations are stored normalized (0-1) to the single-page viewer's
-// PageContainer, which fills the whole reading area with the page image
-// letterboxed (AspectFit) inside it. The continuous list instead draws on
-// an area that is exactly the page. A PageFrame is the page's rectangle
-// within the container, in container-normalized coordinates, and converts
-// between the two spaces.
+// Annotations are stored normalized (0-1) to the page itself. The
+// single-page viewer's PageContainer fills the whole reading area with the
+// page image letterboxed (AspectFit) inside it, while the continuous list
+// draws on an area that is exactly the page. A PageFrame is the page's
+// rectangle within a container, in container-normalized coordinates, and
+// converts between container and page space (page space is also what legacy
+// container-normalized annotations are migrated into).
 public readonly record struct PageFrame(double X, double Y, double Width, double Height)
 {
     public static PageFrame Full { get; } = new(0, 0, 1, 1);
