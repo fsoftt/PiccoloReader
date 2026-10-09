@@ -187,4 +187,8 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="SettingsGeneralSection" xml:space="preserve"><value>General</value></data>
   <data name="SettingsHelpSection" xml:space="preserve"><value>Ayuda</value></data>
   <data name="AppVersionFormat" xml:space="preserve"><value>PiccoloReader · versión {0}</value></data>
+  <data name="NoResultsTitle" xml:space="preserve"><value>Sin resultados</value></data>
+  <data name="NoResultsMessage" xml:space="preserve"><value>Prueba con otra búsqueda.</value></data>
+  <data name="EmptyFolderTitle" xml:space="preserve"><value>Esta carpeta está vacía</value></data>
+  <data name="EmptyFolderMessage" xml:space="preserve"><value>Importa un PDF para añadir partituras aquí.</value></data>
 </root>

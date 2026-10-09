@@ -46,6 +46,15 @@ public partial class FolderViewModel : ObservableObject
     [ObservableProperty]
     private string _summaryText = string.Empty;
 
+    [ObservableProperty]
+    private bool _isFolderEmpty;
+
+    [ObservableProperty]
+    private bool _hasNoSearchResults;
+
+    [ObservableProperty]
+    private bool _hasResults;
+
     public ObservableCollection<Sheet> Sheets { get; } = new();
 
     partial void OnSearchTextChanged(string value) => RefreshSheets();
@@ -127,5 +136,9 @@ public partial class FolderViewModel : ObservableObject
         {
             Sheets.Add(sheet);
         }
+
+        HasResults = Sheets.Count > 0;
+        IsFolderEmpty = _allSheets.Count == 0;
+        HasNoSearchResults = _allSheets.Count > 0 && Sheets.Count == 0;
     }
 }
