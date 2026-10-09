@@ -423,13 +423,12 @@ public partial class SheetViewerPage : ContentPage
 
         MainToolFab.IsVisible = visible;
 
+        if (visible)
+        {
 #if ANDROID
-        // Needed when hiding too (#82): otherwise the Shell appbar's inset
-        // padding stays behind as a purple strip under the status bar. The
-        // delayed pass catches the layout after Shell removes the appbar.
-        RequestAndroidWindowInsetsRefresh();
-        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(150), RequestAndroidWindowInsetsRefresh);
+            RequestAndroidWindowInsetsRefresh();
 #endif
+        }
     }
 
 #if ANDROID
