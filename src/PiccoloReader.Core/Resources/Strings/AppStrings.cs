@@ -142,6 +142,30 @@ public static class AppStrings
     public static string TermsOfServiceDescription => Get(nameof(TermsOfServiceDescription));
     public static string OpenPrivacyPolicy => Get(nameof(OpenPrivacyPolicy));
 
+    public static string ImportPdf => Get(nameof(ImportPdf));
+    public static string NewFolder => Get(nameof(NewFolder));
+    public static string MoreOptions => Get(nameof(MoreOptions));
+    public static string SortLabel => Get(nameof(SortLabel));
+    public static string BackLabel => Get(nameof(BackLabel));
+    public static string LibrarySummaryFormat => Get(nameof(LibrarySummaryFormat));
+    public static string SheetCountFormat => Get(nameof(SheetCountFormat));
+    public static string SheetCountSingularFormat => Get(nameof(SheetCountSingularFormat));
+    public static string FolderCountFormat => Get(nameof(FolderCountFormat));
+    public static string FolderCountSingularFormat => Get(nameof(FolderCountSingularFormat));
+    public static string PagesFormat => Get(nameof(PagesFormat));
+    public static string PagesSingularFormat => Get(nameof(PagesSingularFormat));
+
+    public static string SheetCount(int count) =>
+        string.Format(count == 1 ? SheetCountSingularFormat : SheetCountFormat, count);
+    public static string FolderCount(int count) =>
+        string.Format(count == 1 ? FolderCountSingularFormat : FolderCountFormat, count);
+    public static string Pages(int count) =>
+        string.Format(count == 1 ? PagesSingularFormat : PagesFormat, count);
+    public static string LibrarySummary(int sheets, int folders) =>
+        string.Format(LibrarySummaryFormat, SheetCount(sheets), FolderCount(folders));
+    public static string EmptyLibraryTitle => Get(nameof(EmptyLibraryTitle));
+    public static string EmptyLibraryMessage => Get(nameof(EmptyLibraryMessage));
+
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;
 }
