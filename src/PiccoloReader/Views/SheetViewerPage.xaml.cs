@@ -13,6 +13,10 @@ namespace PiccoloReader.Views;
 public partial class SheetViewerPage : ContentPage
 {
     private const double ZoomedInThreshold = 1.05;
+
+    // Extra slack (fraction of the page) around a stroke that still counts
+    // as a tap on it in the continuous list.
+    private const double StrokeTapTolerance = 0.02;
     private const double PageTurnDragThreshold = 60;
     private const double SelectionHandlePadding = 20;
     private const double TrashHitTestRadius = 60;
@@ -1183,13 +1187,26 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        var hit = page.Annotations.FirstOrDefault(a =>
+        // Strokes are stored without bounds (X/Y/Width/Height stay 0), so
+        // they're hit by distance to their points. They have no selection
+        // box, so the editor just opens (to erase or redraw).
+        var hit = page.Annotations.FirstOrDefault(a => !a.IsStroke &&
             normalizedX >= a.X && normalizedX <= a.X + a.Width &&
             normalizedY >= a.Y && normalizedY <= a.Y + a.Height);
 
         if (hit is not null)
         {
             await EnterContinuousEditAsync(page.PageIndex, hit.Id);
+            return;
+        }
+
+        var strokeHit = page.Annotations.Any(a => a.IsStroke &&
+            StrokeHitTester.DistanceToPolyline(normalizedX, normalizedY, AnnotationService.DeserializePoints(a.Points))
+                <= StrokeTapTolerance + a.StrokeWidth / 2);
+
+        if (strokeHit)
+        {
+            await EnterContinuousEditAsync(page.PageIndex);
             return;
         }
 
