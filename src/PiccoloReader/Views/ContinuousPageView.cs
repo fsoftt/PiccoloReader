@@ -127,22 +127,34 @@ public class ContinuousPageView : ContentView
 
     // Before the first layout pass Width is still unknown, so the screen
     // width is used as an estimate - the list fills the screen width.
-    private void UpdateHeight()
+    private void UpdateHeight(double? listWidth = null)
     {
         if (_page is null)
         {
             return;
         }
 
-        var width = Width > 0
+        var width = listWidth ?? (Width > 0
             ? Width
-            : DeviceDisplay.Current.MainDisplayInfo.Width / DeviceDisplay.Current.MainDisplayInfo.Density;
+            : DeviceDisplay.Current.MainDisplayInfo.Width / DeviceDisplay.Current.MainDisplayInfo.Density);
 
         var height = ContinuousLayout.PageHeight(_page, width) + Spacing;
         if (Math.Abs(HeightRequest - height) > 0.5)
         {
             HeightRequest = height;
         }
+    }
+
+    // The editor's container size (CurrentFrame) changes on rotation while
+    // the list may be hidden, so the page repaints when asked to.
+    public void InvalidateAnnotations() => _canvas.InvalidateSurface();
+
+    // Item heights are derived from the list width, which can change while
+    // the list is hidden (rotation with the editor open); Width is stale then.
+    public void Relayout(double listWidth)
+    {
+        UpdateHeight(listWidth);
+        _canvas.InvalidateSurface();
     }
 
     private PageFrame CurrentFrame()
