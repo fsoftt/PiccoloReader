@@ -219,11 +219,7 @@ public partial class LibraryViewModel : ObservableObject
                 : filtered.OrderByDescending(s => s.Title)
         };
 
-        RootSheets.Clear();
-        foreach (var sheet in sorted)
-        {
-            RootSheets.Add(sheet);
-        }
+        RootSheets.SyncWith(sorted.ToList());
 
         HasSheetResults = RootSheets.Count > 0;
         HasNoSheetResults = _allRootSheets.Count > 0 && RootSheets.Count == 0;
