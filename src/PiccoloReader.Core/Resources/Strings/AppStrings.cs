@@ -165,6 +165,10 @@ public static class AppStrings
         string.Format(LibrarySummaryFormat, SheetCount(sheets), FolderCount(folders));
     public static string EmptyLibraryTitle => Get(nameof(EmptyLibraryTitle));
     public static string EmptyLibraryMessage => Get(nameof(EmptyLibraryMessage));
+    public static string NoResultsTitle => Get(nameof(NoResultsTitle));
+    public static string NoResultsMessage => Get(nameof(NoResultsMessage));
+    public static string EmptyFolderTitle => Get(nameof(EmptyFolderTitle));
+    public static string EmptyFolderMessage => Get(nameof(EmptyFolderMessage));
     public static string ReadingModeNameHorizontal => Get(nameof(ReadingModeNameHorizontal));
     public static string ReadingModeNameVerticalPaged => Get(nameof(ReadingModeNameVerticalPaged));
     public static string ReadingModeNameVerticalContinuous => Get(nameof(ReadingModeNameVerticalContinuous));

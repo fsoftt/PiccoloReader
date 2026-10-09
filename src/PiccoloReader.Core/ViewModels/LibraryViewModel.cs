@@ -75,6 +75,12 @@ public partial class LibraryViewModel : ObservableObject
     [ObservableProperty]
     private bool _isEmpty = true;
 
+    [ObservableProperty]
+    private bool _hasNoSheetResults;
+
+    [ObservableProperty]
+    private bool _hasSheetResults;
+
     partial void OnFolderSearchTextChanged(string value) => RefreshFolders();
 
     partial void OnSheetSearchTextChanged(string value) => RefreshSheets();
@@ -218,6 +224,9 @@ public partial class LibraryViewModel : ObservableObject
         {
             RootSheets.Add(sheet);
         }
+
+        HasSheetResults = RootSheets.Count > 0;
+        HasNoSheetResults = _allRootSheets.Count > 0 && RootSheets.Count == 0;
     }
 
     [RelayCommand]

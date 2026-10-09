@@ -187,4 +187,8 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="SettingsGeneralSection" xml:space="preserve"><value>General</value></data>
   <data name="SettingsHelpSection" xml:space="preserve"><value>Help</value></data>
   <data name="AppVersionFormat" xml:space="preserve"><value>PiccoloReader · version {0}</value></data>
+  <data name="NoResultsTitle" xml:space="preserve"><value>No results</value></data>
+  <data name="NoResultsMessage" xml:space="preserve"><value>Try a different search.</value></data>
+  <data name="EmptyFolderTitle" xml:space="preserve"><value>This folder is empty</value></data>
+  <data name="EmptyFolderMessage" xml:space="preserve"><value>Import a PDF to add sheet music here.</value></data>
 </root>
