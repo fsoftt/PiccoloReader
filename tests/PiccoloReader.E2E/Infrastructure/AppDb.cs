@@ -24,6 +24,8 @@ public record AnnotationRow(
     }
 }
 
+public record FolderRow(int Id, string Name);
+
 public record BookmarkRow(int Id, int SheetId, int PageIndex, string? Name);
 
 public record SheetRow(int Id, int? FolderId, string Title, string FileName, int PageCount, int LastViewedPageIndex);
@@ -106,6 +108,20 @@ public static class AppDb
         while (r.Read())
         {
             rows.Add(new BookmarkRow(r.GetInt32(0), r.GetInt32(1), r.GetInt32(2), r.IsDBNull(3) ? null : r.GetString(3)));
+        }
+
+        return rows;
+    });
+
+    public static List<FolderRow> Folders() => Query(c =>
+    {
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT Id, Name FROM Folder ORDER BY Id";
+        using var r = cmd.ExecuteReader();
+        var rows = new List<FolderRow>();
+        while (r.Read())
+        {
+            rows.Add(new FolderRow(r.GetInt32(0), r.GetString(1)));
         }
 
         return rows;

@@ -75,7 +75,43 @@ public static class Ui
         element.SendKeys(text);
     }
 
-    public static string TextOf(string automationId) => Find(automationId).Text;
+    /// <summary>
+    /// Text of an element or, for containers (MAUI Border/Grid) that carry the AutomationId while
+    /// a child Label carries the text, of its first non-empty descendant.
+    /// </summary>
+    public static string TextOf(string automationId)
+    {
+        var element = Find(automationId);
+        var own = element.Text;
+        if (!string.IsNullOrEmpty(own))
+        {
+            return own;
+        }
+
+        foreach (var node in element.FindElements(By.XPath(".//*")))
+        {
+            var text = node.Text;
+            if (!string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+        }
+
+        return element.GetAttribute("content-desc") ?? string.Empty;
+    }
+
+    public static bool IsChecked(string automationId) =>
+        string.Equals(Find(automationId).GetAttribute("checked"), "true", StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsEnabled(string automationId) =>
+        string.Equals(Find(automationId).GetAttribute("enabled"), "true", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Center of an element in screen pixels.</summary>
+    public static Point CenterOf(string automationId)
+    {
+        var r = RectOf(automationId);
+        return new Point(r.X + r.Width / 2, r.Y + r.Height / 2);
+    }
 
     public static Rectangle RectOf(string automationId)
     {
@@ -107,7 +143,7 @@ public static class Ui
     {
         IWebElement? element = null;
         Poll(
-            () => (element = D.FindElements(By.ClassName("android.widget.EditText")).FirstOrDefault()) is not null,
+            () => (element = D.FindElements(By.ClassName("android.widget.EditText")).LastOrDefault()) is not null,
             timeoutSeconds, "a dialog text field");
         return element!;
     }

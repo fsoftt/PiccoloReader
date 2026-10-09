@@ -12,6 +12,26 @@ public static class PdfFactory
     public const double PortraitWidth = 595;
     public const double PortraitHeight = 842;
 
+    private static readonly Dictionary<string, string> Cache = new();
+
+    /// <summary>A generated PDF, built once per run per shape (pages x orientation).</summary>
+    public static string CreateCached(int pages, bool landscape)
+    {
+        var key = $"{pages}-{landscape}";
+        lock (Cache)
+        {
+            if (!Cache.TryGetValue(key, out var path))
+            {
+                path = Path.Combine(Path.GetTempPath(), "piccolo-e2e", $"sample-{key}.pdf");
+                var size = landscape ? (PortraitHeight, PortraitWidth) : (PortraitWidth, PortraitHeight);
+                Create(path, Enumerable.Repeat(size, pages).ToArray());
+                Cache[key] = path;
+            }
+
+            return path;
+        }
+    }
+
     public static string CreatePortrait(string path, int pages) =>
         Create(path, Enumerable.Repeat((PortraitWidth, PortraitHeight), pages).ToArray());
 
