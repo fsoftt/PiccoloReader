@@ -171,4 +171,13 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="PagesSingularFormat" xml:space="preserve"><value>{0} p.</value></data>
   <data name="EmptyLibraryTitle" xml:space="preserve"><value>Your library is empty</value></data>
   <data name="EmptyLibraryMessage" xml:space="preserve"><value>Import a PDF to start reading your sheet music.</value></data>
+  <data name="ReadingModeNameHorizontal" xml:space="preserve"><value>Horizontal</value></data>
+  <data name="ReadingModeNameVerticalPaged" xml:space="preserve"><value>Vertical, page by page</value></data>
+  <data name="ReadingModeNameVerticalContinuous" xml:space="preserve"><value>Continuous vertical</value></data>
+  <data name="UndoAction" xml:space="preserve"><value>Undo</value></data>
+  <data name="RedoAction" xml:space="preserve"><value>Redo</value></data>
+  <data name="ToolSettingsAction" xml:space="preserve"><value>Tool settings</value></data>
+  <data name="StopToolAction" xml:space="preserve"><value>Stop drawing tool</value></data>
+  <data name="ReadingModeLabel" xml:space="preserve"><value>Reading mode</value></data>
+  <data name="AnnotationToolsLabel" xml:space="preserve"><value>Annotation tools</value></data>
 </root>
