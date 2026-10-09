@@ -1463,6 +1463,15 @@ public partial class SheetViewerPage : ContentPage
             initialValue: _viewModel.CurrentPageDisplay.ToString(),
             keyboard: Keyboard.Numeric);
 
+#if ANDROID
+        // The dialog's keyboard leaves the window insets stale (indicator and
+        // FAB end up lower, under the gesture bar) until something re-applies
+        // them, same as when showing the toolbar. Redo it now and again once
+        // the keyboard's hide animation is over.
+        RequestAndroidWindowInsetsRefresh();
+        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(300), RequestAndroidWindowInsetsRefresh);
+#endif
+
         if (input is null)
         {
             return;
