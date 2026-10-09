@@ -55,6 +55,7 @@
                         </Border.GestureRecognizers>
                         <Border.Behaviors>
                             <toolkit:TouchBehavior
+                                InteractionStatusChanged="OnItemTouchStatusChanged"
                                 LongPressCommand="{Binding Source={x:Reference ThisPage}, Path=SheetLongPressCommand}"
                                 LongPressCommandParameter="{Binding Source={x:Reference SheetItemRoot}, Path=BindingContext}" />
                         </Border.Behaviors>
