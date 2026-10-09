@@ -10,37 +10,38 @@
     xmlns:admob="clr-namespace:Plugin.AdMob;assembly=Plugin.AdMob"
     xmlns:local="clr-namespace:PiccoloReader"
     x:Name="ThisPage"
+    Shell.TabBarIsVisible="False"
     Title="{Binding Title}">
 
     <ContentPage.ToolbarItems>
         <ToolbarItem x:Name="UndoItem" Clicked="OnUndoClicked" IsEnabled="{Binding CanUndo}">
             <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE166;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+                <FontImageSource Glyph="&#xE166;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
         <ToolbarItem x:Name="RedoItem" Clicked="OnRedoClicked" IsEnabled="{Binding CanRedo}">
             <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE15A;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+                <FontImageSource Glyph="&#xE15A;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
         <ToolbarItem x:Name="ToolConfigItem" Clicked="OnToolConfigClicked">
             <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE429;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+                <FontImageSource Glyph="&#xE429;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
         <ToolbarItem x:Name="DeactivateToolItem" Clicked="OnDeactivateToolClicked">
             <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE5CD;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+                <FontImageSource Glyph="&#xE5CD;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
         <ToolbarItem x:Name="ReadingModeItem" Clicked="OnReadingModeClicked">
             <ToolbarItem.IconImageSource>
-                <FontImageSource x:Name="ReadingModeIcon" Glyph="&#xE8D4;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+                <FontImageSource x:Name="ReadingModeIcon" Glyph="&#xE8D4;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
         <ToolbarItem x:Name="BookmarksItem" Clicked="OnBookmarksClicked">
             <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE98B;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+                <FontImageSource Glyph="&#xE98B;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
     </ContentPage.ToolbarItems>
