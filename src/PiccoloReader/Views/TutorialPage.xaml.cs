@@ -14,6 +14,7 @@ public partial class TutorialPage : ContentPage
         SlidesCarousel.IndicatorView = SlideIndicator;
         BindingContext = viewModel;
         ViewModel = viewModel;
+        SizeChanged += (_, _) => viewModel.ShowSlideIcon = Height <= 0 || Width <= Height;
     }
 
     public TutorialViewModel ViewModel { get; }
