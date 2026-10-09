@@ -274,7 +274,7 @@
                 </Border>
 
                 <Grid Grid.Row="2">
-                    <ScrollView x:Name="ToolOptionsScroll">
+                    <ScrollView x:Name="ToolOptionsScroll" VerticalScrollBarVisibility="Never">
                         <Grid Padding="0,0,0,24">
                             <VerticalStackLayout x:Name="PencilSection" IsVisible="False" Spacing="10">
                                 <Label Text="{x:Static strings:AppStrings.Color}" Style="{StaticResource SectionLabel}" />
@@ -361,8 +361,9 @@
                         <ScrollView Grid.Row="0" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
                             <HorizontalStackLayout x:Name="SymbolCategoryTabs" Spacing="8" />
                         </ScrollView>
-                        <ScrollView Grid.Row="1">
-                            <FlexLayout x:Name="SymbolGrid" Wrap="Wrap" Direction="Row" Margin="2,2,0,24">
+                        <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Never">
+                          <Grid Padding="8,8,0,24">
+                            <FlexLayout x:Name="SymbolGrid" Wrap="Wrap" Direction="Row" AlignItems="Start" AlignContent="Start">
                                 <BindableLayout.ItemTemplate>
                                     <DataTemplate>
                                         <Border
@@ -390,6 +391,7 @@
                                     </DataTemplate>
                                 </BindableLayout.ItemTemplate>
                             </FlexLayout>
+                          </Grid>
                         </ScrollView>
                     </Grid>
                 </Grid>
@@ -400,6 +402,7 @@
         <Border
             x:Name="IconsFab"
             AutomationId="ViewerToolIcons"
+            SemanticProperties.Description="{x:Static strings:AppStrings.Symbols}"
             IsVisible="False"
             HorizontalOptions="End"
             VerticalOptions="End"
@@ -427,6 +430,7 @@
         <Border
             x:Name="PencilFab"
             AutomationId="ViewerToolPencil"
+            SemanticProperties.Description="{x:Static strings:AppStrings.Pencil}"
             IsVisible="False"
             HorizontalOptions="End"
             VerticalOptions="End"
@@ -454,6 +458,7 @@
         <Border
             x:Name="EraserFab"
             AutomationId="ViewerToolEraser"
+            SemanticProperties.Description="{x:Static strings:AppStrings.Eraser}"
             IsVisible="False"
             HorizontalOptions="End"
             VerticalOptions="End"
