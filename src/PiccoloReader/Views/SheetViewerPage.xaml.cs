@@ -88,6 +88,10 @@ public partial class SheetViewerPage : ContentPage
             if (e.PropertyName == nameof(VisualElement.IsVisible))
             {
                 UpdateEditingUi();
+                // Defensive: repaint the annotation layer whenever a tool sheet
+                // opens or closes (Bug 16: a glyph stayed unpainted until the next
+                // insert forced a repaint).
+                AnnotationCanvas.InvalidateSurface();
             }
         };
         BuildSymbolCategoryTabs();
@@ -507,6 +511,7 @@ public partial class SheetViewerPage : ContentPage
     // bounds, not the visual union of where its children overflow to.
     private void UpdateSelectionOverlay()
     {
+        AnnotationCanvas.InvalidateSurface();
         RepositionSelectionOverlay();
 
         // A fresh selection (new tap, newly placed icon) always starts
