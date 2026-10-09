@@ -249,6 +249,11 @@ public partial class SheetViewerPage : ContentPage
         // RecyclerView keeps the rows measured at the old width.
         _continuousRecyclerView?.GetAdapter()?.NotifyDataSetChanged();
 #endif
+
+        // The rows now on screen may differ after the relayout without any
+        // scroll event firing, so their pages would never be requested and
+        // their loading spinners would keep running.
+        Dispatcher.Dispatch(async () => await UpdateContinuousViewportAsync());
     }
 
     private void InvalidateContinuousAnnotations()
