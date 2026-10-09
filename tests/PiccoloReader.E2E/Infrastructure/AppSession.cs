@@ -76,7 +76,12 @@ public static class AppSession
         var template = EnsureTemplateDb();
         Wipe();
 
-        WritePreferences(tutorialCompleted: true, readingMode, language, ads);
+        // Preferences are left to the app (tutorial is skipped through the UI below); only a non-default
+        // reading mode is pre-seeded, best effort.
+        if (readingMode != "Horizontal" || ads is not null)
+        {
+            WritePreferences(tutorialCompleted: false, readingMode, language, ads);
+        }
 
         var db = Path.Combine(Path.GetTempPath(), $"piccolo-e2e-seed-{Guid.NewGuid():N}.db3");
         File.Copy(template, db, overwrite: true);
@@ -98,7 +103,9 @@ public static class AppSession
         }
 
         Launch();
-        WaitForLibrary();
+        WaitForLibrary(skipTutorial: true);
+        TestContext.Progress.WriteLine("prefs after launch: " + (ReadPreferencesXml() ?? "<none>").Replace("
+", " "));
     }
 
     /// <summary>First launch of a wiped app: skip the tutorial through the UI, keep the resulting empty DB.</summary>
