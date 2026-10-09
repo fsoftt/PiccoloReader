@@ -132,17 +132,46 @@
         </Grid>
 
         <!-- Continuous (vertical scroll) reading mode. Items are built in
-             code (ContinuousPageView) - see the page constructor. -->
-        <CollectionView
-            x:Name="ContinuousPagesView"
+             code (ContinuousPageView) - see the page constructor. Zoom is a
+             Scale/TranslationX on the list itself, clipped by this host. -->
+        <Grid x:Name="ContinuousHost" IsVisible="False" IsClippedToBounds="True">
+            <CollectionView
+                x:Name="ContinuousPagesView"
+                ItemsSource="{Binding ContinuousPages}"
+                ItemSizingStrategy="MeasureAllItems"
+                Scrolled="OnContinuousPagesScrolled">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="0" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.Footer>
+                    <BoxView x:Name="ContinuousZoomFooter" HeightRequest="0" Color="Transparent" />
+                </CollectionView.Footer>
+            </CollectionView>
+        </Grid>
+
+        <!-- Leaves the single-page editor and returns to the continuous list. -->
+        <Border
+            x:Name="ContinuousEditDoneButton"
             IsVisible="False"
-            ItemsSource="{Binding ContinuousPages}"
-            ItemSizingStrategy="MeasureAllItems"
-            Scrolled="OnContinuousPagesScrolled">
-            <CollectionView.ItemsLayout>
-                <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
-            </CollectionView.ItemsLayout>
-        </CollectionView>
+            WidthRequest="56"
+            HeightRequest="56"
+            Margin="16,0,0,16"
+            HorizontalOptions="Start"
+            VerticalOptions="End"
+            BackgroundColor="{StaticResource Primary}"
+            StrokeThickness="0">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="28" />
+            </Border.StrokeShape>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnContinuousEditDoneTapped" />
+            </Border.GestureRecognizers>
+            <Image HorizontalOptions="Center" VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xE876;" FontFamily="MaterialOutlined" Size="26" Color="White" />
+                </Image.Source>
+            </Image>
+        </Border>
 
         <Label
             x:Name="PageIndicatorLabel"

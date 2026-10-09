@@ -12,13 +12,21 @@ namespace PiccoloReader.Views;
 // line up the same way they do in the single-page viewer.
 public class ContinuousPageView : ContentView
 {
+    // Gap below each page. Part of the item itself (not the list's
+    // ItemSpacing, whose per-platform distribution isn't specified) so
+    // ContinuousLayout can compute page positions exactly.
+    public const double Spacing = 8;
+
     private readonly AnnotationPainter _painter;
+    private readonly Grid _pageArea;
     private readonly Image _image;
     private readonly SKCanvasView _canvas;
     private readonly ActivityIndicator _loadingIndicator;
     private ContinuousPage? _page;
 
-    public ContinuousPageView(AnnotationPainter painter, Action onTapped)
+    // onTapped receives the page and the tap position normalized to it
+    // (0-1), the same coordinates annotations use.
+    public ContinuousPageView(AnnotationPainter painter, Action<ContinuousPage, double, double> onTapped)
     {
         _painter = painter;
 
@@ -31,11 +39,25 @@ public class ContinuousPageView : ContentView
             VerticalOptions = LayoutOptions.Center
         };
 
-        BackgroundColor = Colors.White;
-        Content = new Grid { Children = { _image, _canvas, _loadingIndicator } };
+        _pageArea = new Grid
+        {
+            BackgroundColor = Colors.White,
+            Margin = new Thickness(0, 0, 0, Spacing),
+            Children = { _image, _canvas, _loadingIndicator }
+        };
+        Content = _pageArea;
 
         var tap = new TapGestureRecognizer();
-        tap.Tapped += (_, _) => onTapped();
+        tap.Tapped += (_, e) =>
+        {
+            var position = e.GetPosition(_pageArea);
+            if (_page is null || position is null || _pageArea.Width <= 0 || _pageArea.Height <= 0)
+            {
+                return;
+            }
+
+            onTapped(_page, position.Value.X / _pageArea.Width, position.Value.Y / _pageArea.Height);
+        };
         GestureRecognizers.Add(tap);
 
         SizeChanged += (_, _) => UpdateHeight();
@@ -101,7 +123,7 @@ public class ContinuousPageView : ContentView
             ? Width
             : DeviceDisplay.Current.MainDisplayInfo.Width / DeviceDisplay.Current.MainDisplayInfo.Density;
 
-        var height = Math.Round(width * _page.AspectRatio);
+        var height = ContinuousLayout.PageHeight(_page, width) + Spacing;
         if (Math.Abs(HeightRequest - height) > 0.5)
         {
             HeightRequest = height;

@@ -71,7 +71,7 @@
   <data name="PageIndicatorFormat" xml:space="preserve"><value>Página {0} de {1}</value></data>
   <data name="ReadingModeHorizontalMessage" xml:space="preserve"><value>Modo de lectura: izquierda a derecha</value></data>
   <data name="ReadingModeVerticalPagedMessage" xml:space="preserve"><value>Modo de lectura: arriba a abajo, página por página</value></data>
-  <data name="ReadingModeVerticalContinuousMessage" xml:space="preserve"><value>Modo de lectura: arriba a abajo, desplazamiento continuo (anotaciones solo lectura)</value></data>
+  <data name="ReadingModeVerticalContinuousMessage" xml:space="preserve"><value>Modo de lectura: arriba a abajo, desplazamiento continuo</value></data>
   <data name="CategoryDynamics" xml:space="preserve"><value>Dinámica</value></data>
   <data name="CategoryArticulations" xml:space="preserve"><value>Articulaciones</value></data>
   <data name="CategoryFermataBreath" xml:space="preserve"><value>Calderón y respiración</value></data>
