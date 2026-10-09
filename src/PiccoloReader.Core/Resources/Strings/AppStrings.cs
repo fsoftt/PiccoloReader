@@ -165,6 +165,15 @@ public static class AppStrings
         string.Format(LibrarySummaryFormat, SheetCount(sheets), FolderCount(folders));
     public static string EmptyLibraryTitle => Get(nameof(EmptyLibraryTitle));
     public static string EmptyLibraryMessage => Get(nameof(EmptyLibraryMessage));
+    public static string ReadingModeNameHorizontal => Get(nameof(ReadingModeNameHorizontal));
+    public static string ReadingModeNameVerticalPaged => Get(nameof(ReadingModeNameVerticalPaged));
+    public static string ReadingModeNameVerticalContinuous => Get(nameof(ReadingModeNameVerticalContinuous));
+    public static string UndoAction => Get(nameof(UndoAction));
+    public static string RedoAction => Get(nameof(RedoAction));
+    public static string ToolSettingsAction => Get(nameof(ToolSettingsAction));
+    public static string StopToolAction => Get(nameof(StopToolAction));
+    public static string ReadingModeLabel => Get(nameof(ReadingModeLabel));
+    public static string AnnotationToolsLabel => Get(nameof(AnnotationToolsLabel));
 
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;

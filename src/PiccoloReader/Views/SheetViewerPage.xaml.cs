@@ -81,8 +81,15 @@ public partial class SheetViewerPage : ContentPage
                 // The pencil's on-screen width follows the page's size.
                 UpdatePencilDrawingViewLineWidth();
             }
+            else if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageIndex))
+            {
+                UpdateBookmarkButton();
+            }
         };
+        _viewModel.Bookmarks.CollectionChanged += (_, _) => UpdateBookmarkButton();
         UpdateReadingModeIcon();
+        UpdateReadingModeName();
+        UpdateBookmarkButton();
 
         ContinuousPagesView.ItemTemplate = new DataTemplate(() =>
         {
@@ -95,13 +102,6 @@ public partial class SheetViewerPage : ContentPage
         {
             RelayoutContinuousPages();
         };
-
-        // ToolbarItem has no bindable IsVisible in this MAUI version (it
-        // derives from Element, not VisualElement), so visibility is
-        // managed by adding/removing it from ToolbarItems instead - starts
-        // removed since ActiveTool defaults to MusicIcons.
-        ToolbarItems.Remove(ToolConfigItem);
-        ToolbarItems.Remove(DeactivateToolItem);
 
 #if ANDROID
         AttachAndroidPageContainerTouchListener();
@@ -154,7 +154,7 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnAppearing();
 
-        SetToolbarVisible(false);
+        SetToolbarVisible(false, animate: false);
 
         // The view model is reused across openings: leaving the editor with
         // an icon selected would otherwise bring the selection box and trash
@@ -404,19 +404,17 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    // Shell.SetNavBarIsVisible is the whole nav bar (title, back button and
-    // ToolbarItems together) - there's no separate "toolbar" element.
-    // Confirmed on-device (emulator) that Android doesn't automatically
-    // redo window-inset layout when the bar is dynamically re-shown after
-    // being hidden, leaving it rendered up under the status bar; a manual
-    // DecorView.RequestApplyInsets() call after showing it forces Android
-    // to redo that layout pass, which fixes it. PageIndicatorLabel follows
-    // the same visibility per its own spec.
-    private void SetToolbarVisible(bool visible)
+    // The reading chrome (floating top bar, page indicator pill and tool FAB)
+    // fades in and out together. Hidden chrome is also IsVisible=false so it
+    // can't steal touches meant for the page. The Shell nav bar is always
+    // hidden for this page (Shell.NavBarIsVisible=False in XAML), so there is
+    // no Shell app bar to collapse (#82) and the page keeps a stable layout.
+    private const uint ChromeFadeMs = 150;
+    private int _chromeFadeVersion;
+
+    private void SetToolbarVisible(bool visible, bool animate = true)
     {
         _isToolbarVisible = visible;
-        PageIndicatorLabel.IsVisible = visible;
-        Shell.SetNavBarIsVisible(this, visible);
 
         // MainToolFab is the replacement for what used to be a toolbar
         // button, so it follows the same visibility - collapsing the
@@ -427,70 +425,52 @@ public partial class SheetViewerPage : ContentPage
             SetToolFabExpanded(false);
         }
 
-        MainToolFab.IsVisible = visible;
+        var version = ++_chromeFadeVersion;
+        VisualElement[] chrome = [FloatingBar, PageIndicator, MainToolFab];
 
-#if ANDROID
+        if (!animate || !IsLoaded)
+        {
+            foreach (var element in chrome)
+            {
+                element.AbortAnimation("FadeTo");
+                element.Opacity = visible ? 1 : 0;
+                element.IsVisible = visible;
+            }
+
+            return;
+        }
+
+        _ = FadeChromeAsync(chrome, visible, version);
+    }
+
+    private async Task FadeChromeAsync(VisualElement[] chrome, bool visible, int version)
+    {
         if (visible)
         {
-            RequestAndroidWindowInsetsRefresh();
+            foreach (var element in chrome)
+            {
+                element.IsVisible = true;
+            }
         }
 
-        if (!visible && IsLoaded)
+        await Task.WhenAll(chrome.Select(element => element.FadeTo(visible ? 1 : 0, ChromeFadeMs)));
+
+        if (!visible && version == _chromeFadeVersion)
         {
-            CollapseShellAppBarPadding();
-            Dispatcher.Dispatch(() =>
+            foreach (var element in chrome)
             {
-                CollapseShellAppBarPadding();
-                RequestAndroidWindowInsetsRefresh();
-            });
+                element.IsVisible = false;
+            }
         }
-#endif
     }
 
 #if ANDROID
-    // Shell keeps its AppBarLayout (shellcontent.appbar) in the view tree
-    // after the nav bar is hidden, and that container keeps the status-bar
-    // inset as its height (128px here): an empty purple strip that also
-    // pushes the page content down (#82). A page opened with the bar already
-    // hidden never gets one, hence no strip initially. Drop that padding
-    // when hiding (then re-apply insets so the page gets its safe-area top
-    // back); showing re-applies insets on its own (RequestApplyInsets above).
-    private static void CollapseShellAppBarPadding()
-    {
-        var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
-        var decor = activity?.Window?.DecorView;
-        if (activity is null || decor is null)
-        {
-            return;
-        }
-
-        var id = activity.Resources?.GetIdentifier("shellcontent.appbar", "id", activity.PackageName) ?? 0;
-        if (id == 0)
-        {
-            return;
-        }
-
-        if (decor.FindViewById(id) is { } appBar)
-        {
-            appBar.SetPadding(0, 0, 0, 0);
-            appBar.RequestLayout();
-        }
-    }
-
     private static void RequestAndroidWindowInsetsRefresh()
     {
         var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
         activity?.Window?.DecorView?.RequestApplyInsets();
     }
 #endif
-
-    private void AddToolbarItemIfMissing(ToolbarItem item)
-    {
-        if (!ToolbarItems.Contains(item))
-        {
-            ToolbarItems.Add(item);
-        }
-    }
 
     // Positions/sizes SelectionOverlay over the selected annotation using
     // the same normalized-coordinate convention as everywhere else -
@@ -1322,6 +1302,88 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
+    private async void OnBackClicked(object? sender, EventArgs e) =>
+        await Shell.Current.GoToAsync("..");
+
+    // Secondary actions that used to be separate nav-bar buttons: undo/redo
+    // (only the ones currently possible) and, while Pencil/Eraser is active,
+    // the tool's config panel and the "stop tool" action.
+    private async void OnMoreClicked(object? sender, EventArgs e)
+    {
+        var undo = AppStrings.UndoAction;
+        var redo = AppStrings.RedoAction;
+        var config = AppStrings.ToolSettingsAction;
+        var stop = AppStrings.StopToolAction;
+
+        var options = new List<string> { undo, redo };
+        if (_viewModel.IsDrawingToolActive)
+        {
+            options.Add(config);
+            options.Add(stop);
+        }
+
+        var choice = await DisplayActionSheetAsync(AppStrings.MoreOptions, AppStrings.Cancel, null, options.ToArray());
+        if (choice == undo)
+        {
+            if (_viewModel.CanUndo)
+            {
+                OnUndoClicked(sender, e);
+            }
+        }
+        else if (choice == redo)
+        {
+            if (_viewModel.CanRedo)
+            {
+                OnRedoClicked(sender, e);
+            }
+        }
+        else if (choice == config)
+        {
+            OnToolConfigClicked(sender, e);
+        }
+        else if (choice == stop)
+        {
+            OnDeactivateToolClicked(sender, e);
+        }
+    }
+
+    private void UpdateReadingModeName()
+    {
+        ReadingModeNameLabel.Text = _viewModel.ReadingMode switch
+        {
+            ReadingMode.VerticalPaged => AppStrings.ReadingModeNameVerticalPaged,
+            ReadingMode.VerticalContinuous => AppStrings.ReadingModeNameVerticalContinuous,
+            _ => AppStrings.ReadingModeNameHorizontal
+        };
+    }
+
+    // Bookmark icon is tinted with the Bookmark token while the current
+    // page is bookmarked, otherwise it uses the regular icon color.
+    private void UpdateBookmarkButton()
+    {
+        var bookmarked = _viewModel.Bookmarks.Any(b => b.PageIndex == _viewModel.CurrentPageIndex);
+        var source = new FontImageSource
+        {
+            Glyph = bookmarked ? "" : "",
+            FontFamily = "MaterialOutlined",
+            Size = 24
+        };
+        if (bookmarked)
+        {
+            source.SetAppThemeColor(FontImageSource.ColorProperty,
+                (Color)Application.Current!.Resources["BookmarkLight"],
+                (Color)Application.Current!.Resources["BookmarkDark"]);
+        }
+        else
+        {
+            source.SetAppThemeColor(FontImageSource.ColorProperty,
+                (Color)Application.Current!.Resources["TextPrimaryLight"],
+                (Color)Application.Current!.Resources["TextPrimaryDark"]);
+        }
+
+        BookmarkButton.Source = source;
+    }
+
     private void UpdateReadingModeIcon()
     {
         // swap_horiz / swap_vert / view_agenda - shows the mode in use.
@@ -1339,6 +1401,8 @@ public partial class SheetViewerPage : ContentPage
     private void UpdateReadingModeUi()
     {
         UpdateReadingModeIcon();
+        UpdateReadingModeName();
+        UpdateBookmarkButton();
         ResetContinuousZoom();
 
         if (_viewModel.IsContinuousReading)
@@ -1896,13 +1960,16 @@ public partial class SheetViewerPage : ContentPage
         IconsFab.IsVisible = expanded;
         PencilFab.IsVisible = expanded;
         EraserFab.IsVisible = expanded;
-        MainToolFabIcon.Source = new FontImageSource
+        var glyphSource = new FontImageSource
         {
             Glyph = expanded ? "" : "",
             FontFamily = "MaterialOutlined",
-            Size = 24,
-            Color = Colors.White
+            Size = 24
         };
+        glyphSource.SetAppThemeColor(FontImageSource.ColorProperty,
+            (Color)Application.Current!.Resources["OnPrimaryLight"],
+            (Color)Application.Current!.Resources["OnPrimaryDark"]);
+        MainToolFabIcon.Source = glyphSource;
     }
 
     private void UpdateToolSections()
@@ -1910,17 +1977,6 @@ public partial class SheetViewerPage : ContentPage
         MusicIconsSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.MusicIcons;
         PencilSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Pencil;
         EraserSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Eraser;
-
-        if (_viewModel.IsDrawingToolActive)
-        {
-            AddToolbarItemIfMissing(ToolConfigItem);
-            AddToolbarItemIfMissing(DeactivateToolItem);
-        }
-        else
-        {
-            ToolbarItems.Remove(ToolConfigItem);
-            ToolbarItems.Remove(DeactivateToolItem);
-        }
 
         // InputTransparent is left False permanently in XAML (never toggled
         // here) rather than True/False alongside IsVisible - confirmed
