@@ -283,9 +283,59 @@ public class SheetViewerViewModelTests : IDisposable
 
         Assert.False(_sut.IsContinuousEditing);
         Assert.Null(_sut.SelectedAnnotation);
-        Assert.False(_sut.CanUndo);
         Assert.Single(_sut.ContinuousPages[0].Annotations);
         Assert.True(_sut.NextPageCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task ContinuousEdit_ReEnteringSamePage_KeepsUndoHistory()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.BeginContinuousEditAsync(2);
+        await _sut.PlaceIconCommand.ExecuteAsync("forte");
+        await _sut.EndContinuousEditAsync();
+
+        await _sut.BeginContinuousEditAsync(2);
+
+        Assert.True(_sut.CanUndo);
+        Assert.Single(_sut.CurrentPageAnnotations);
+        await _sut.UndoCommand.ExecuteAsync(null);
+        Assert.Empty(_sut.CurrentPageAnnotations);
+        Assert.True(_sut.CanRedo);
+        Assert.Empty(await _database.Connection.Table<Annotation>().ToListAsync());
+    }
+
+    [Fact]
+    public async Task ContinuousEdit_UndoHistoryIsPerPage()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.BeginContinuousEditAsync(2);
+        await _sut.PlaceIconCommand.ExecuteAsync("forte");
+        await _sut.EndContinuousEditAsync();
+
+        await _sut.BeginContinuousEditAsync(3);
+
+        Assert.False(_sut.CanUndo);
+    }
+
+    [Fact]
+    public async Task LoadAsync_ReopeningDocument_ClearsUndoHistory()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.BeginContinuousEditAsync(2);
+        await _sut.PlaceIconCommand.ExecuteAsync("forte");
+        await _sut.EndContinuousEditAsync();
+
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.BeginContinuousEditAsync(2);
+
+        Assert.False(_sut.CanUndo);
     }
 
     [Fact]
