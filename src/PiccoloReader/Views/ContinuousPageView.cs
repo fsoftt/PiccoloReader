@@ -62,10 +62,11 @@ public class ContinuousPageView : ContentView
             }
 
             var zoom = Math.Max(listZoom(), 1);
+            var frame = PageFrame.Fit(_pageArea.Width, _pageArea.Height, _page.AspectRatio);
             onTapped(
                 _page,
-                position.Value.X / zoom / _pageArea.Width,
-                position.Value.Y / zoom / _pageArea.Height);
+                frame.ToPageX(position.Value.X / zoom / _pageArea.Width),
+                frame.ToPageY(position.Value.Y / zoom / _pageArea.Height));
         };
         GestureRecognizers.Add(tap);
 
@@ -158,7 +159,12 @@ public class ContinuousPageView : ContentView
 
         if (_page is not null)
         {
-            _painter.DrawAnnotations(canvas, e.Info, _page.Annotations);
+            // The image is AspectFit inside _pageArea, whose height can lag the
+            // page aspect for a moment (row relayout after a rotation), so the
+            // page rect is derived from the canvas as it is now rather than
+            // assuming the canvas is exactly the page.
+            var frame = PageFrame.Fit(e.Info.Width, e.Info.Height, _page.AspectRatio);
+            _painter.DrawAnnotations(canvas, e.Info, _page.Annotations, frame);
         }
     }
 }
