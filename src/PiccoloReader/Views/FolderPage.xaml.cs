@@ -153,8 +153,30 @@ public partial class FolderPage : ContentPage
         }
     }
 
+    private bool _suppressNextTap;
+
+    private void OnItemTouchStatusChanged(object? sender, CommunityToolkit.Maui.Core.TouchInteractionStatusChangedEventArgs e)
+    {
+        if (e.TouchInteractionStatus == CommunityToolkit.Maui.Core.TouchInteractionStatus.Started)
+        {
+            _suppressNextTap = false;
+        }
+    }
+
+    private bool ConsumeSuppressedTap()
+    {
+        var suppressed = _suppressNextTap;
+        _suppressNextTap = false;
+        return suppressed;
+    }
+
     private async void OnSheetTapped(object? sender, TappedEventArgs e)
     {
+        if (ConsumeSuppressedTap())
+        {
+            return;
+        }
+
         if (e.Parameter is Sheet sheet)
         {
             await Shell.Current.GoToAsync($"sheetviewer?sheetId={sheet.Id}");
@@ -163,6 +185,8 @@ public partial class FolderPage : ContentPage
 
     private async Task OnSheetLongPressedAsync(Sheet sheet)
     {
+        _suppressNextTap = true;
+
         var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, AppStrings.Move, AppStrings.Delete);
 
         if (choice == AppStrings.Delete)
