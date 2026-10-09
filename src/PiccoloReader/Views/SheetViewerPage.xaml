@@ -122,30 +122,6 @@
             </CollectionView>
         </Grid>
 
-        <!-- Leaves the single-page editor and returns to the continuous list. -->
-        <Border
-            x:Name="ContinuousEditDoneButton"
-            IsVisible="False"
-            WidthRequest="56"
-            HeightRequest="56"
-            Margin="16,0,0,16"
-            HorizontalOptions="Start"
-            VerticalOptions="End"
-            BackgroundColor="{StaticResource Primary}"
-            StrokeThickness="0">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="28" />
-            </Border.StrokeShape>
-            <Border.GestureRecognizers>
-                <TapGestureRecognizer Tapped="OnContinuousEditDoneTapped" />
-            </Border.GestureRecognizers>
-            <Image HorizontalOptions="Center" VerticalOptions="Center">
-                <Image.Source>
-                    <FontImageSource Glyph="&#xE876;" FontFamily="MaterialOutlined" Size="26" Color="White" />
-                </Image.Source>
-            </Image>
-        </Border>
-
         <Border
             x:Name="PageIndicator"
             AutomationId="ViewerPageIndicator"
@@ -200,222 +176,223 @@
             </Image>
         </Border>
 
+        <!-- Tool bottom sheet (pencil / eraser / symbols). Height is set in
+             code (ApplyToolSheetHeight). Hidden when drawing starts. -->
         <Border
-            x:Name="ToolPanel"
+            x:Name="ToolSheet"
+            AutomationId="ToolSheet"
             IsVisible="False"
-            WidthRequest="260"
-            Margin="0,80,0,0"
-            HorizontalOptions="End"
-            VerticalOptions="Fill"
-            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
-            StrokeThickness="0">
-            <Grid>
+            HorizontalOptions="Fill"
+            VerticalOptions="End"
+            HeightRequest="290"
+            Padding="20,10,20,0"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 24,24,0,0"
+            Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
+            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="14">
+                <BoxView
+                    Grid.Row="0"
+                    WidthRequest="36"
+                    HeightRequest="4"
+                    CornerRadius="2"
+                    HorizontalOptions="Center"
+                    Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                    Opacity="0.5" />
 
-                <ScrollView>
-                    <Grid Padding="12">
-
-                        <VerticalStackLayout x:Name="MusicIconsSection" Spacing="4">
-                            <Label Text="{x:Static strings:AppStrings.MusicIcons}" FontAttributes="Bold" FontSize="16" Margin="0,0,0,8" />
-                            <CollectionView ItemsSource="{Binding Source={x:Reference ThisPage}, Path=IconCategories}">
-                                <CollectionView.ItemTemplate>
-                                    <DataTemplate>
-                                        <VerticalStackLayout Spacing="4" Margin="0,0,0,12">
-                                            <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="14" />
-                                            <FlexLayout Wrap="Wrap" Direction="Row" BindableLayout.ItemsSource="{Binding Icons}">
-                                                <BindableLayout.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border
-                                                            WidthRequest="52"
-                                                            HeightRequest="52"
-                                                            Margin="4"
-                                                            Padding="4"
-                                                            BackgroundColor="{StaticResource White}"
-                                                            StrokeThickness="1">
-                                                            <Border.GestureRecognizers>
-                                                                <TapGestureRecognizer
-                                                                    Tapped="OnIconPickerTapped"
-                                                                    CommandParameter="{Binding Key}" />
-                                                            </Border.GestureRecognizers>
-                                                            <skia:SKCanvasView
-                                                                WidthRequest="40"
-                                                                HeightRequest="40"
-                                                                HorizontalOptions="Center"
-                                                                VerticalOptions="Center"
-                                                                PaintSurface="OnIconGlyphPaintSurface" />
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </BindableLayout.ItemTemplate>
-                                            </FlexLayout>
-                                        </VerticalStackLayout>
-                                    </DataTemplate>
-                                </CollectionView.ItemTemplate>
-                            </CollectionView>
-                        </VerticalStackLayout>
-
-                        <VerticalStackLayout x:Name="PencilSection" IsVisible="False" Spacing="8">
-                            <Label Text="{x:Static strings:AppStrings.Pencil}" FontAttributes="Bold" FontSize="16" />
-                            <Label Text="{x:Static strings:AppStrings.Color}" FontSize="14" />
-                            <HorizontalStackLayout Spacing="10">
-                                <Border
-                                    x:Name="ColorRingBlack"
-                                    WidthRequest="40"
-                                    HeightRequest="40"
-                                    StrokeThickness="2"
-                                    Stroke="Transparent"
-                                    BackgroundColor="Transparent"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="20" />
-                                    </Border.StrokeShape>
-                                    <Border
-                                        WidthRequest="28"
-                                        HeightRequest="28"
-                                        BackgroundColor="Black"
-                                        StrokeThickness="0"
-                                        HorizontalOptions="Center"
-                                        VerticalOptions="Center">
-                                        <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="14" />
-                                        </Border.StrokeShape>
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#000000" />
-                                        </Border.GestureRecognizers>
-                                    </Border>
-                                </Border>
-                                <Border
-                                    x:Name="ColorRingRed"
-                                    WidthRequest="40"
-                                    HeightRequest="40"
-                                    StrokeThickness="2"
-                                    Stroke="Transparent"
-                                    BackgroundColor="Transparent"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="20" />
-                                    </Border.StrokeShape>
-                                    <Border
-                                        WidthRequest="28"
-                                        HeightRequest="28"
-                                        BackgroundColor="Red"
-                                        StrokeThickness="0"
-                                        HorizontalOptions="Center"
-                                        VerticalOptions="Center">
-                                        <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="14" />
-                                        </Border.StrokeShape>
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#FF0000" />
-                                        </Border.GestureRecognizers>
-                                    </Border>
-                                </Border>
-                                <Border
-                                    x:Name="ColorRingBlue"
-                                    WidthRequest="40"
-                                    HeightRequest="40"
-                                    StrokeThickness="2"
-                                    Stroke="Transparent"
-                                    BackgroundColor="Transparent"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="20" />
-                                    </Border.StrokeShape>
-                                    <Border
-                                        WidthRequest="28"
-                                        HeightRequest="28"
-                                        BackgroundColor="Blue"
-                                        StrokeThickness="0"
-                                        HorizontalOptions="Center"
-                                        VerticalOptions="Center">
-                                        <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="14" />
-                                        </Border.StrokeShape>
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#0000FF" />
-                                        </Border.GestureRecognizers>
-                                    </Border>
-                                </Border>
-                                <Border
-                                    x:Name="ColorRingGreen"
-                                    WidthRequest="40"
-                                    HeightRequest="40"
-                                    StrokeThickness="2"
-                                    Stroke="Transparent"
-                                    BackgroundColor="Transparent"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="20" />
-                                    </Border.StrokeShape>
-                                    <Border
-                                        WidthRequest="28"
-                                        HeightRequest="28"
-                                        BackgroundColor="Green"
-                                        StrokeThickness="0"
-                                        HorizontalOptions="Center"
-                                        VerticalOptions="Center">
-                                        <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="14" />
-                                        </Border.StrokeShape>
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#008000" />
-                                        </Border.GestureRecognizers>
-                                    </Border>
-                                </Border>
-                                <Border
-                                    x:Name="ColorRingOrange"
-                                    WidthRequest="40"
-                                    HeightRequest="40"
-                                    StrokeThickness="2"
-                                    Stroke="Transparent"
-                                    BackgroundColor="Transparent"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="20" />
-                                    </Border.StrokeShape>
-                                    <Border
-                                        WidthRequest="28"
-                                        HeightRequest="28"
-                                        BackgroundColor="Orange"
-                                        StrokeThickness="0"
-                                        HorizontalOptions="Center"
-                                        VerticalOptions="Center">
-                                        <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="14" />
-                                        </Border.StrokeShape>
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#FFA500" />
-                                        </Border.GestureRecognizers>
-                                    </Border>
-                                </Border>
+                <Border
+                    Grid.Row="1"
+                    Padding="4"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 14"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource BackgroundDark}}">
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="4">
+                        <Border
+                            x:Name="ToolSegmentPencil"
+                            Grid.Column="0"
+                            AutomationId="ToolSegmentPencil"
+                            HeightRequest="44"
+                            Padding="0"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 10"
+                            BackgroundColor="Transparent">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnToolSegmentPencilTapped" />
+                            </Border.GestureRecognizers>
+                            <HorizontalStackLayout Spacing="6" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
+                                    <Image.Source>
+                                        <FontImageSource x:Name="ToolSegmentPencilGlyph" Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="20" />
+                                    </Image.Source>
+                                </Image>
+                                <Label x:Name="ToolSegmentPencilLabel" Text="{x:Static strings:AppStrings.Pencil}" FontSize="14" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
                             </HorizontalStackLayout>
-                            <Label Text="{x:Static strings:AppStrings.Width}" FontSize="14" />
-                            <skia:SKCanvasView
-                                x:Name="PencilWidthPreview"
-                                HeightRequest="48"
-                                HorizontalOptions="Fill"
-                                Margin="0,4"
-                                PaintSurface="OnPencilWidthPreviewPaintSurface" />
-                            <Slider x:Name="PencilWidthSlider" Minimum="0.003" Maximum="0.02" Value="{Binding PencilStrokeWidth}" ValueChanged="OnPencilWidthChanged" />
-                        </VerticalStackLayout>
-
-                        <VerticalStackLayout x:Name="EraserSection" IsVisible="False" Spacing="8">
-                            <Label Text="{x:Static strings:AppStrings.Eraser}" FontAttributes="Bold" FontSize="16" />
-                            <Label Text="{x:Static strings:AppStrings.Size}" FontSize="14" />
-                            <skia:SKCanvasView
-                                x:Name="EraserSizePreview"
-                                HeightRequest="80"
-                                HorizontalOptions="Fill"
-                                Margin="0,4"
-                                PaintSurface="OnEraserSizePreviewPaintSurface" />
-                            <Slider x:Name="EraserRadiusSlider" Minimum="0.02" Maximum="0.08" Value="{Binding EraserRadius}" ValueChanged="OnEraserRadiusChanged" />
-                        </VerticalStackLayout>
-
+                        </Border>
+                        <Border
+                            x:Name="ToolSegmentEraser"
+                            Grid.Column="1"
+                            AutomationId="ToolSegmentEraser"
+                            HeightRequest="44"
+                            Padding="0"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 10"
+                            BackgroundColor="Transparent">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnToolSegmentEraserTapped" />
+                            </Border.GestureRecognizers>
+                            <HorizontalStackLayout Spacing="6" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
+                                    <Image.Source>
+                                        <FontImageSource x:Name="ToolSegmentEraserGlyph" Glyph="&#xE6D0;" FontFamily="MaterialOutlined" Size="20" />
+                                    </Image.Source>
+                                </Image>
+                                <Label x:Name="ToolSegmentEraserLabel" Text="{x:Static strings:AppStrings.Eraser}" FontSize="14" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Border>
+                        <Border
+                            x:Name="ToolSegmentSymbols"
+                            Grid.Column="2"
+                            AutomationId="ToolSegmentSymbols"
+                            HeightRequest="44"
+                            Padding="0"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 10"
+                            BackgroundColor="Transparent">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnToolSegmentSymbolsTapped" />
+                            </Border.GestureRecognizers>
+                            <HorizontalStackLayout Spacing="6" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
+                                    <Image.Source>
+                                        <FontImageSource x:Name="ToolSegmentSymbolsGlyph" Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="20" />
+                                    </Image.Source>
+                                </Image>
+                                <Label x:Name="ToolSegmentSymbolsLabel" Text="{x:Static strings:AppStrings.Symbols}" FontSize="14" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Border>
                     </Grid>
-                </ScrollView>
+                </Border>
+
+                <Grid Grid.Row="2">
+                    <ScrollView x:Name="ToolOptionsScroll">
+                        <Grid Padding="0,0,0,24">
+                            <VerticalStackLayout x:Name="PencilSection" IsVisible="False" Spacing="10">
+                                <Label Text="{x:Static strings:AppStrings.Color}" Style="{StaticResource SectionLabel}" />
+                                <HorizontalStackLayout Spacing="2" Margin="0,0,0,6">
+                                    <Grid WidthRequest="44" HeightRequest="44" AutomationId="PencilColorSwatch_0" SemanticProperties.Description="Black">
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#000000" />
+                                        </Grid.GestureRecognizers>
+                                        <Border x:Name="ColorRingBlack" WidthRequest="42" HeightRequest="42" StrokeThickness="2" Stroke="Transparent" BackgroundColor="Transparent" StrokeShape="RoundRectangle 21" HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Black" StrokeThickness="1" Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" StrokeShape="RoundRectangle 16" HorizontalOptions="Center" VerticalOptions="Center" />
+                                        </Border>
+                                    </Grid>
+                                    <Grid WidthRequest="44" HeightRequest="44" AutomationId="PencilColorSwatch_1" SemanticProperties.Description="Red">
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#FF0000" />
+                                        </Grid.GestureRecognizers>
+                                        <Border x:Name="ColorRingRed" WidthRequest="42" HeightRequest="42" StrokeThickness="2" Stroke="Transparent" BackgroundColor="Transparent" StrokeShape="RoundRectangle 21" HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Red" StrokeThickness="1" Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" StrokeShape="RoundRectangle 16" HorizontalOptions="Center" VerticalOptions="Center" />
+                                        </Border>
+                                    </Grid>
+                                    <Grid WidthRequest="44" HeightRequest="44" AutomationId="PencilColorSwatch_2" SemanticProperties.Description="Blue">
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#0000FF" />
+                                        </Grid.GestureRecognizers>
+                                        <Border x:Name="ColorRingBlue" WidthRequest="42" HeightRequest="42" StrokeThickness="2" Stroke="Transparent" BackgroundColor="Transparent" StrokeShape="RoundRectangle 21" HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Blue" StrokeThickness="1" Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" StrokeShape="RoundRectangle 16" HorizontalOptions="Center" VerticalOptions="Center" />
+                                        </Border>
+                                    </Grid>
+                                    <Grid WidthRequest="44" HeightRequest="44" AutomationId="PencilColorSwatch_3" SemanticProperties.Description="Green">
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#008000" />
+                                        </Grid.GestureRecognizers>
+                                        <Border x:Name="ColorRingGreen" WidthRequest="42" HeightRequest="42" StrokeThickness="2" Stroke="Transparent" BackgroundColor="Transparent" StrokeShape="RoundRectangle 21" HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Green" StrokeThickness="1" Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" StrokeShape="RoundRectangle 16" HorizontalOptions="Center" VerticalOptions="Center" />
+                                        </Border>
+                                    </Grid>
+                                    <Grid WidthRequest="44" HeightRequest="44" AutomationId="PencilColorSwatch_4" SemanticProperties.Description="Orange">
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnPencilColorTapped" CommandParameter="#FFA500" />
+                                        </Grid.GestureRecognizers>
+                                        <Border x:Name="ColorRingOrange" WidthRequest="42" HeightRequest="42" StrokeThickness="2" Stroke="Transparent" BackgroundColor="Transparent" StrokeShape="RoundRectangle 21" HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Orange" StrokeThickness="1" Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" StrokeShape="RoundRectangle 16" HorizontalOptions="Center" VerticalOptions="Center" />
+                                        </Border>
+                                    </Grid>
+                                </HorizontalStackLayout>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Text="{x:Static strings:AppStrings.Width}" Style="{StaticResource SectionLabel}" />
+                                    <Label x:Name="PencilWidthValueLabel" Grid.Column="1" Style="{StaticResource Caption}" />
+                                </Grid>
+                                <Slider
+                                    x:Name="PencilWidthSlider"
+                                    AutomationId="PencilWidthSlider"
+                                    HeightRequest="44"
+                                    Minimum="0.003"
+                                    Maximum="0.02"
+                                    Value="{Binding PencilStrokeWidth}"
+                                    MinimumTrackColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                                    MaximumTrackColor="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+                                    ThumbColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                                    ValueChanged="OnPencilWidthChanged" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout x:Name="EraserSection" IsVisible="False" Spacing="10">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Text="{x:Static strings:AppStrings.Size}" Style="{StaticResource SectionLabel}" />
+                                    <Label x:Name="EraserRadiusValueLabel" Grid.Column="1" Style="{StaticResource Caption}" />
+                                </Grid>
+                                <Slider
+                                    x:Name="EraserRadiusSlider"
+                                    AutomationId="EraserRadiusSlider"
+                                    HeightRequest="44"
+                                    Minimum="0.02"
+                                    Maximum="0.08"
+                                    Value="{Binding EraserRadius}"
+                                    MinimumTrackColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                                    MaximumTrackColor="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+                                    ThumbColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                                    ValueChanged="OnEraserRadiusChanged" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </ScrollView>
+
+                    <Grid x:Name="MusicIconsSection" IsVisible="False" RowDefinitions="Auto,*" RowSpacing="10">
+                        <ScrollView Grid.Row="0" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                            <HorizontalStackLayout x:Name="SymbolCategoryTabs" Spacing="8" />
+                        </ScrollView>
+                        <ScrollView Grid.Row="1">
+                            <FlexLayout x:Name="SymbolGrid" Wrap="Wrap" Direction="Row" Margin="2,2,0,24">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            AutomationId="{Binding Key, StringFormat='SymbolItem_{0}'}"
+                                            WidthRequest="56"
+                                            HeightRequest="56"
+                                            Margin="0,0,8,8"
+                                            Padding="6"
+                                            StrokeThickness="1"
+                                            StrokeShape="RoundRectangle 12"
+                                            Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+                                            BackgroundColor="{StaticResource White}">
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer
+                                                    Tapped="OnIconPickerTapped"
+                                                    CommandParameter="{Binding Key}" />
+                                            </Border.GestureRecognizers>
+                                            <skia:SKCanvasView
+                                                WidthRequest="40"
+                                                HeightRequest="40"
+                                                HorizontalOptions="Center"
+                                                VerticalOptions="Center"
+                                                PaintSurface="OnIconGlyphPaintSurface" />
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </FlexLayout>
+                        </ScrollView>
+                    </Grid>
+                </Grid>
             </Grid>
         </Border>
 
@@ -539,7 +516,8 @@
             StrokeShape="RoundRectangle 28"
             Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
-            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="2">
+            <Grid>
+            <Grid x:Name="ReadingBarContent" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="2">
                 <ImageButton
                     x:Name="BackButton"
                     Grid.Column="0"
@@ -599,6 +577,69 @@
                         <FontImageSource Glyph="&#xE5D4;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
                     </ImageButton.Source>
                 </ImageButton>
+            </Grid>
+            <Grid x:Name="EditingBarContent" IsVisible="False" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="4">
+                <ImageButton
+                    x:Name="UndoButton"
+                    Grid.Column="0"
+                    Style="{StaticResource IconButton}"
+                    AutomationId="EditorUndoButton"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.UndoAction}"
+                    Clicked="OnUndoClicked">
+                    <ImageButton.Source>
+                        <FontImageSource x:Name="UndoGlyph" Glyph="&#xE166;" FontFamily="MaterialOutlined" Size="24" />
+                    </ImageButton.Source>
+                </ImageButton>
+
+                <ImageButton
+                    x:Name="RedoButton"
+                    Grid.Column="1"
+                    Style="{StaticResource IconButton}"
+                    AutomationId="EditorRedoButton"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.RedoAction}"
+                    Clicked="OnRedoClicked">
+                    <ImageButton.Source>
+                        <FontImageSource x:Name="RedoGlyph" Glyph="&#xE15A;" FontFamily="MaterialOutlined" Size="24" />
+                    </ImageButton.Source>
+                </ImageButton>
+
+                <Label
+                    x:Name="EditorPageLabel"
+                    Grid.Column="2"
+                    HorizontalTextAlignment="Center"
+                    VerticalOptions="Center"
+                    FontSize="14"
+                    FontFamily="OpenSansSemibold"
+                    TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+
+                <Border
+                    x:Name="EditorDoneButton"
+                    Grid.Column="3"
+                    AutomationId="EditorDoneButton"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.EditorDoneLabel}"
+                    HeightRequest="44"
+                    Padding="16,0"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 22"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnEditorDoneTapped" />
+                    </Border.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                        <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE876;" FontFamily="MaterialOutlined" Size="20" Color="{AppThemeBinding Light={StaticResource OnPrimaryLight}, Dark={StaticResource OnPrimaryDark}}" />
+                            </Image.Source>
+                        </Image>
+                        <Label
+                            Text="{x:Static strings:AppStrings.EditorDone}"
+                            FontSize="14"
+                            FontFamily="OpenSansSemibold"
+                            VerticalOptions="Center"
+                            TextColor="{AppThemeBinding Light={StaticResource OnPrimaryLight}, Dark={StaticResource OnPrimaryDark}}" />
+                    </HorizontalStackLayout>
+                </Border>
+            </Grid>
             </Grid>
         </Border>
 
