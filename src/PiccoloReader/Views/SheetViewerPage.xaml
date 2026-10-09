@@ -190,8 +190,9 @@
             StrokeShape="RoundRectangle 24,24,0,0"
             Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
-            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="14">
+            <Grid x:Name="ToolSheetGrid" RowDefinitions="Auto,Auto,*" RowSpacing="14">
                 <BoxView
+                    x:Name="ToolSheetHandle"
                     Grid.Row="0"
                     WidthRequest="36"
                     HeightRequest="4"
@@ -275,8 +276,9 @@
 
                 <Grid Grid.Row="2">
                     <ScrollView x:Name="ToolOptionsScroll" VerticalScrollBarVisibility="Never">
-                        <Grid Padding="0,0,0,24">
-                            <VerticalStackLayout x:Name="PencilSection" IsVisible="False" Spacing="10">
+                        <Grid x:Name="ToolOptionsPad" Padding="0,0,0,24">
+                            <Grid x:Name="PencilSection" IsVisible="False" RowDefinitions="Auto,Auto" ColumnDefinitions="*" RowSpacing="10" ColumnSpacing="24">
+                                <VerticalStackLayout x:Name="PencilColorBlock" Grid.Row="0" Spacing="10">
                                 <Label Text="{x:Static strings:AppStrings.Color}" Style="{StaticResource SectionLabel}" />
                                 <HorizontalStackLayout Spacing="2" Margin="0,0,0,6">
                                     <Grid WidthRequest="44" HeightRequest="44" AutomationId="PencilColorSwatch_0" SemanticProperties.Description="Black">
@@ -320,6 +322,8 @@
                                         </Border>
                                     </Grid>
                                 </HorizontalStackLayout>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout x:Name="PencilWidthBlock" Grid.Row="1" Spacing="10">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Text="{x:Static strings:AppStrings.Width}" Style="{StaticResource SectionLabel}" />
                                     <Label x:Name="PencilWidthValueLabel" Grid.Column="1" Style="{StaticResource Caption}" />
@@ -335,7 +339,8 @@
                                     MaximumTrackColor="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
                                     ThumbColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
                                     ValueChanged="OnPencilWidthChanged" />
-                            </VerticalStackLayout>
+                                </VerticalStackLayout>
+                            </Grid>
 
                             <VerticalStackLayout x:Name="EraserSection" IsVisible="False" Spacing="10">
                                 <Grid ColumnDefinitions="*,Auto">
@@ -358,11 +363,11 @@
                     </ScrollView>
 
                     <Grid x:Name="MusicIconsSection" IsVisible="False" RowDefinitions="Auto,*" RowSpacing="10">
-                        <ScrollView Grid.Row="0" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <ScrollView x:Name="SymbolCategoryScroll" Grid.Row="0" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
                             <HorizontalStackLayout x:Name="SymbolCategoryTabs" Spacing="8" />
                         </ScrollView>
-                        <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Never">
-                          <Grid Padding="8,8,0,24">
+                        <ScrollView x:Name="SymbolGridScroll" Grid.Row="1" VerticalScrollBarVisibility="Never">
+                          <Grid x:Name="SymbolGridPad" Padding="8,8,0,24">
                             <FlexLayout x:Name="SymbolGrid" Wrap="Wrap" Direction="Row" AlignItems="Start" AlignContent="Start">
                                 <BindableLayout.ItemTemplate>
                                     <DataTemplate>
