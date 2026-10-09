@@ -36,7 +36,7 @@
                         <VerticalStackLayout Spacing="2">
                             <Label Style="{StaticResource RowTitle}" FontSize="14" MaxLines="1" LineBreakMode="TailTruncation"
                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
-                                   Text="{Binding Name}" />
+                                   AutomationId="LibraryFolderName" Text="{Binding Name}" />
                             <Label Style="{StaticResource Caption}" FontSize="12" MaxLines="1" LineBreakMode="TailTruncation"
                                    Text="{Binding SheetCount, Converter={StaticResource SheetCount}}" />
                         </VerticalStackLayout>
@@ -260,7 +260,7 @@
                         <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
                             <Label Style="{StaticResource RowTitle}" MaxLines="1" LineBreakMode="TailTruncation"
                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
-                                   Text="{Binding Title}" />
+                                   AutomationId="LibrarySheetTitle" Text="{Binding Title}" />
                             <Label Style="{StaticResource Caption}" MaxLines="1" LineBreakMode="TailTruncation"
                                    Text="{Binding ., Converter={StaticResource SheetMeta}}" />
                         </VerticalStackLayout>

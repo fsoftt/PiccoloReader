@@ -165,7 +165,7 @@
                         <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
                             <Label Style="{StaticResource RowTitle}" MaxLines="1" LineBreakMode="TailTruncation"
                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
-                                   Text="{Binding Title}" />
+                                   AutomationId="LibrarySheetTitle" Text="{Binding Title}" />
                             <Label Style="{StaticResource Caption}" MaxLines="1" LineBreakMode="TailTruncation"
                                    Text="{Binding ., Converter={StaticResource SheetMeta}}" />
                         </VerticalStackLayout>
