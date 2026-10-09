@@ -4,67 +4,181 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource BackgroundDark}}"
     Title="{x:Static strings:AppStrings.Settings}">
 
-    <VerticalStackLayout Padding="16" Spacing="12">
+    <ContentPage.Resources>
+        <!-- Row building blocks: 56dp min height, 20dp icons. -->
+        <Style x:Key="RowGrid" TargetType="Grid">
+            <Setter Property="MinimumHeightRequest" Value="56" />
+            <Setter Property="Padding" Value="16,0,14,0" />
+            <Setter Property="ColumnSpacing" Value="14" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+        </Style>
+        <Style x:Key="RowDivider" TargetType="BoxView">
+            <Setter Property="HeightRequest" Value="1" />
+            <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" />
+        </Style>
+    </ContentPage.Resources>
 
-        <Label Text="{x:Static strings:AppStrings.LanguageSectionHeader}" FontAttributes="Bold" FontSize="16" />
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="0,0,0,24">
 
-        <Border Style="{StaticResource ListItemCard}">
-            <Picker
-                x:Name="LanguagePicker"
-                ItemsSource="{Binding LanguageDisplayNames}"
-                SelectedIndexChanged="OnLanguagePickerSelectedIndexChanged" />
-        </Border>
+            <Label
+                Style="{StaticResource PageTitle}"
+                Text="{x:Static strings:AppStrings.Settings}"
+                Padding="20,16,20,0"
+                SemanticProperties.HeadingLevel="Level1"
+                TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
 
-        <Border Style="{StaticResource ListItemCard}">
-            <Grid ColumnDefinitions="*,Auto">
-                <Label Grid.Column="0" Text="{x:Static strings:AppStrings.SupportWithAdsOption}" VerticalOptions="Center" />
-                <Switch Grid.Column="1" IsToggled="{Binding SupportWithAdsEnabled}" />
-            </Grid>
-        </Border>
-
-        <Border Style="{StaticResource ListItemCard}">
-            <Button
-                Text="{x:Static strings:AppStrings.ShowTutorial}"
-                Clicked="OnShowTutorialClicked"
-                Padding="8,4"
-                CornerRadius="8" />
-        </Border>
-
-        <Label Text="{x:Static strings:AppStrings.LegalSectionHeader}" FontAttributes="Bold" FontSize="16" Margin="0,8,0,0" />
-
-        <Border Style="{StaticResource ListItemCard}">
-            <VerticalStackLayout Spacing="8">
-                <Button
-                    x:Name="PrivacyPolicyButton"
-                    Text="{x:Static strings:AppStrings.PrivacyPolicyLabel}"
-                    Clicked="OnPrivacyPolicyClicked"
-                    Padding="8,4"
-                    CornerRadius="8" />
-                <Label
-                    Text="{x:Static strings:AppStrings.PrivacyPolicyDescription}"
-                    FontSize="12"
-                    Opacity="0.7"
-                    Margin="0,-4,0,0" />
+            <!-- GENERAL -->
+            <VerticalStackLayout Spacing="8" Margin="20,0">
+                <Label Style="{StaticResource SectionLabel}" Margin="4,0,0,0" Text="{x:Static strings:AppStrings.SettingsGeneralSection}" />
+                <Border Style="{StaticResource Card}" Padding="0">
+                    <VerticalStackLayout>
+                        <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsLanguageRow" ColumnDefinitions="20,*,Auto,20"
+                              SemanticProperties.Description="{x:Static strings:AppStrings.LanguageSectionHeader}">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLanguageRowTapped" />
+                            </Grid.GestureRecognizers>
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE894;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <Label Grid.Column="1" Style="{StaticResource RowTitle}" VerticalOptions="Center"
+                                   Text="{x:Static strings:AppStrings.LanguageSectionHeader}"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                            <Label Grid.Column="2" x:Name="LanguageValueLabel" Style="{StaticResource Caption}" FontSize="14" VerticalOptions="Center" />
+                            <Image Grid.Column="3" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE5CC;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                                </Image.Source>
+                            </Image>
+                        </Grid>
+                        <BoxView Style="{StaticResource RowDivider}" />
+                        <Grid Style="{StaticResource RowGrid}" ColumnDefinitions="20,*,Auto">
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE87E;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <Label Grid.Column="1" Style="{StaticResource RowTitle}" VerticalOptions="Center"
+                                   Text="{x:Static strings:AppStrings.SupportWithAdsOption}"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                            <Switch Grid.Column="2" AutomationId="SettingsAdsSwitch" VerticalOptions="Center"
+                                    SemanticProperties.Description="{x:Static strings:AppStrings.SupportWithAdsOption}"
+                                    OnColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                                    IsToggled="{Binding SupportWithAdsEnabled}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
             </VerticalStackLayout>
-        </Border>
 
-        <Border Style="{StaticResource ListItemCard}">
-            <VerticalStackLayout Spacing="8">
-                <Button
-                    x:Name="TermsOfServiceButton"
-                    Text="{x:Static strings:AppStrings.TermsOfServiceLabel}"
-                    Clicked="OnTermsOfServiceClicked"
-                    Padding="8,4"
-                    CornerRadius="8" />
-                <Label
-                    Text="{x:Static strings:AppStrings.TermsOfServiceDescription}"
-                    FontSize="12"
-                    Opacity="0.7"
-                    Margin="0,-4,0,0" />
+            <!-- AYUDA -->
+            <VerticalStackLayout Spacing="8" Margin="20,0">
+                <Label Style="{StaticResource SectionLabel}" Margin="4,0,0,0" Text="{x:Static strings:AppStrings.SettingsHelpSection}" />
+                <Border Style="{StaticResource Card}" Padding="0">
+                    <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsTutorialRow" ColumnDefinitions="20,*,20"
+                          SemanticProperties.Description="{x:Static strings:AppStrings.ShowTutorial}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnShowTutorialClicked" />
+                        </Grid.GestureRecognizers>
+                        <Image Grid.Column="0" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE8FD;" FontFamily="MaterialOutlined" Size="20"
+                                    Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                            </Image.Source>
+                        </Image>
+                        <Label Grid.Column="1" Style="{StaticResource RowTitle}" VerticalOptions="Center"
+                               Text="{x:Static strings:AppStrings.ShowTutorial}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Image Grid.Column="2" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE5CC;" FontFamily="MaterialOutlined" Size="20"
+                                    Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                            </Image.Source>
+                        </Image>
+                    </Grid>
+                </Border>
             </VerticalStackLayout>
-        </Border>
 
-    </VerticalStackLayout>
+            <!-- LEGAL -->
+            <VerticalStackLayout Spacing="8" Margin="20,0">
+                <Label Style="{StaticResource SectionLabel}" Margin="4,0,0,0" Text="{x:Static strings:AppStrings.LegalSectionHeader}" />
+                <Border Style="{StaticResource Card}" Padding="0">
+                    <VerticalStackLayout>
+                        <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsPrivacyRow" ColumnDefinitions="20,*,20"
+                              SemanticProperties.Description="{x:Static strings:AppStrings.PrivacyPolicyLabel}">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnPrivacyPolicyClicked" />
+                            </Grid.GestureRecognizers>
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE32A;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center" Padding="0,8">
+                                <Label Style="{StaticResource RowTitle}" Text="{x:Static strings:AppStrings.PrivacyPolicyLabel}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                <Label Style="{StaticResource Caption}" FontSize="12" Text="{x:Static strings:AppStrings.PrivacyPolicyDescription}" />
+                            </VerticalStackLayout>
+                            <Image Grid.Column="2" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE89E;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                                </Image.Source>
+                            </Image>
+                        </Grid>
+                        <BoxView Style="{StaticResource RowDivider}" />
+                        <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsTermsRow" ColumnDefinitions="20,*,20"
+                              SemanticProperties.Description="{x:Static strings:AppStrings.TermsOfServiceLabel}">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTermsOfServiceClicked" />
+                            </Grid.GestureRecognizers>
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE873;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center" Padding="0,8">
+                                <Label Style="{StaticResource RowTitle}" Text="{x:Static strings:AppStrings.TermsOfServiceLabel}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                <Label Style="{StaticResource Caption}" FontSize="12" Text="{x:Static strings:AppStrings.TermsOfServiceDescription}" />
+                            </VerticalStackLayout>
+                            <Image Grid.Column="2" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE89E;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                                </Image.Source>
+                            </Image>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Footer -->
+            <VerticalStackLayout Spacing="0" HorizontalOptions="Center" Margin="0,8,0,0">
+                <Label x:Name="VersionLabel" Style="{StaticResource Caption}" FontSize="12" HorizontalTextAlignment="Center" />
+                <HorizontalStackLayout Spacing="4" HorizontalOptions="Center">
+                    <Label Style="{StaticResource Caption}" FontSize="12" VerticalOptions="Center"
+                           Text="{x:Static strings:AppStrings.MadeWithLoveBy}" />
+                    <Label AutomationId="SettingsCreditLink" Text="@fsoftt" FontSize="12" VerticalOptions="Center"
+                           Padding="4,14" TextDecorations="Underline"
+                           TextColor="{AppThemeBinding Light={StaticResource OnPrimaryContainerLight}, Dark={StaticResource OnPrimaryContainerDark}}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnCreditLinkTapped" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

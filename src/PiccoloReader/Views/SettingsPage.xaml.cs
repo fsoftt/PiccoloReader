@@ -19,17 +19,20 @@ public partial class SettingsPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        LanguagePicker.SelectedIndex = Array.IndexOf(_viewModel.LanguageCodes, _viewModel.SelectedLanguageCode);
+        RefreshLanguageValue();
+        VersionLabel.Text = string.Format(CultureInfo.CurrentUICulture, AppStrings.AppVersionFormat, AppInfo.VersionString);
     }
 
-    // Fires both for user selection AND the OnAppearing sync above (MAUI's
-    // Picker raises this whenever SelectedIndex changes, programmatically
-    // or not) - the SelectedLanguageCode equality check below is what
-    // makes the sync-on-appear a no-op instead of popping the restart
-    // dialog every time the page loads.
-    private async void OnLanguagePickerSelectedIndexChanged(object? sender, EventArgs e)
+    private void RefreshLanguageValue()
     {
-        var index = LanguagePicker.SelectedIndex;
+        var index = Array.IndexOf(_viewModel.LanguageCodes, _viewModel.SelectedLanguageCode);
+        LanguageValueLabel.Text = index >= 0 ? _viewModel.LanguageDisplayNames[index] : string.Empty;
+    }
+
+    private async void OnLanguageRowTapped(object? sender, TappedEventArgs e)
+    {
+        var selected = await DisplayActionSheetAsync(AppStrings.LanguageSectionHeader, AppStrings.Cancel, null, _viewModel.LanguageDisplayNames);
+        var index = Array.IndexOf(_viewModel.LanguageDisplayNames, selected);
         if (index < 0)
         {
             return;
@@ -42,11 +45,24 @@ public partial class SettingsPage : ContentPage
         }
 
         _viewModel.SetLanguageCommand.Execute(code);
+        RefreshLanguageValue();
 
         await DisplayAlertAsync(AppStrings.RestartRequiredTitle, AppStrings.RestartRequiredMessage, AppStrings.OK);
     }
 
-    private async void OnShowTutorialClicked(object? sender, EventArgs e)
+    private async void OnCreditLinkTapped(object? sender, TappedEventArgs e)
+    {
+        try
+        {
+            await Launcher.Default.OpenAsync(new Uri("https://fsoftt.github.io"));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to open credit URL: {ex.Message}");
+        }
+    }
+
+    private async void OnShowTutorialClicked(object? sender, TappedEventArgs e)
     {
         var tutorialPage = Handler?.MauiContext?.Services.GetService<TutorialPage>();
         if (tutorialPage is null)
@@ -58,7 +74,7 @@ public partial class SettingsPage : ContentPage
         await Navigation.PushModalAsync(tutorialPage);
     }
 
-    private async void OnPrivacyPolicyClicked(object? sender, EventArgs e)
+    private async void OnPrivacyPolicyClicked(object? sender, TappedEventArgs e)
     {
         try
         {
@@ -71,7 +87,7 @@ public partial class SettingsPage : ContentPage
         }
     }
 
-    private async void OnTermsOfServiceClicked(object? sender, EventArgs e)
+    private async void OnTermsOfServiceClicked(object? sender, TappedEventArgs e)
     {
         try
         {
