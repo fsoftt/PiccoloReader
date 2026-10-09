@@ -76,6 +76,21 @@ public partial class SheetViewerPage : ContentPage
             {
                 UpdateReadingModeUi();
             }
+
+            if (e.PropertyName is nameof(SheetViewerViewModel.ReadingMode)
+                or nameof(SheetViewerViewModel.IsContinuousEditing)
+                or nameof(SheetViewerViewModel.ActiveTool)
+                or nameof(SheetViewerViewModel.SelectedAnnotation))
+            {
+                UpdateOrientationLock();
+            }
+        };
+        ToolPanel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(VisualElement.IsVisible))
+            {
+                UpdateOrientationLock();
+            }
         };
         UpdateReadingModeIcon();
 
@@ -99,9 +114,69 @@ public partial class SheetViewerPage : ContentPage
 
     public IReadOnlyList<MusicIconCategory> IconCategories => MusicIconCatalog.Categories;
 
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+
+        if (Window is { } window)
+        {
+            window.Stopped -= OnWindowStopped;
+            window.Resumed -= OnWindowResumed;
+            window.Destroying -= OnWindowStopped;
+        }
+
+        SetOrientationLocked(false);
+    }
+
+    private void OnWindowStopped(object? sender, EventArgs e) => SetOrientationLocked(false);
+
+    private void OnWindowResumed(object? sender, EventArgs e) => UpdateOrientationLock();
+
+    // Annotations are stored normalized to PageContainer (the whole reading
+    // area), so rotating while editing distorts them. Until page-normalized
+    // storage exists, the screen is kept in portrait for as long as the
+    // editor is open: continuous single-page editor, or (paged modes) an
+    // active Pencil/Eraser tool, the icon panel or a selected annotation.
+    private bool IsEditorOpen =>
+        _viewModel.IsContinuousEditing
+        || (!_viewModel.IsContinuousReading
+            && (_viewModel.ActiveTool != AnnotationTool.MusicIcons
+                || ToolPanel.IsVisible
+                || _viewModel.SelectedAnnotation is not null));
+
+    private bool _orientationLocked;
+
+    private void UpdateOrientationLock() => SetOrientationLocked(IsEditorOpen);
+
+    private void SetOrientationLocked(bool locked)
+    {
+        if (_orientationLocked == locked)
+        {
+            return;
+        }
+
+        _orientationLocked = locked;
+#if ANDROID
+        var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+        if (activity is not null)
+        {
+            activity.RequestedOrientation = locked
+                ? Android.Content.PM.ScreenOrientation.Portrait
+                : Android.Content.PM.ScreenOrientation.Unspecified;
+        }
+#endif
+    }
+
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+
+        if (Window is { } window)
+        {
+            window.Stopped += OnWindowStopped;
+            window.Resumed += OnWindowResumed;
+            window.Destroying += OnWindowStopped;
+        }
 
         SetToolbarVisible(false);
 
@@ -136,13 +211,20 @@ public partial class SheetViewerPage : ContentPage
 
         base.OnSizeAllocated(width, height);
 
-        if (changed && hadSize && _viewModel.IsContinuousEditing)
+        // Entering the editor from landscape rotates to portrait (see
+        // UpdateOrientationLock), which lands here: re-center the page and
+        // re-place the selection overlay for the new size.
+        if (changed && hadSize)
         {
             Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(100), () =>
             {
                 if (_viewModel.IsContinuousEditing)
                 {
                     ResetZoom();
+                }
+                else
+                {
+                    UpdateSelectionOverlay();
                 }
             });
         }
