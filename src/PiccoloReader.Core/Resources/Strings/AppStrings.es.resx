@@ -157,4 +157,14 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="TutorialBookmarksText" xml:space="preserve"><value>Marca las páginas a las que más vuelves y salta directamente a ellas cuando quieras.</value></data>
   <data name="TutorialSettingsTitle" xml:space="preserve"><value>Ajustes y apoyo</value></data>
   <data name="TutorialSettingsText" xml:space="preserve"><value>Cambia el idioma de la app en Ajustes. Si disfrutas Piccolo Reader, puedes apoyarlo activando los anuncios. Puedes volver a abrir este tutorial cuando quieras desde Ajustes.</value></data>
+  <data name="ImportPdf" xml:space="preserve"><value>Importar PDF</value></data>
+  <data name="NewFolder" xml:space="preserve"><value>Nueva carpeta</value></data>
+  <data name="MoreOptions" xml:space="preserve"><value>Más opciones</value></data>
+  <data name="SortLabel" xml:space="preserve"><value>Ordenar</value></data>
+  <data name="BackLabel" xml:space="preserve"><value>Atrás</value></data>
+  <data name="LibrarySummaryFormat" xml:space="preserve"><value>{0} partituras · {1} carpetas</value></data>
+  <data name="SheetCountFormat" xml:space="preserve"><value>{0} partituras</value></data>
+  <data name="PagesFormat" xml:space="preserve"><value>{0} págs</value></data>
+  <data name="EmptyLibraryTitle" xml:space="preserve"><value>Tu biblioteca está vacía</value></data>
+  <data name="EmptyLibraryMessage" xml:space="preserve"><value>Importa un PDF para empezar a leer tus partituras.</value></data>
 </root>

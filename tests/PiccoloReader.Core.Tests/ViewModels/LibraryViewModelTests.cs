@@ -310,4 +310,36 @@ public class LibraryViewModelTests : IDisposable
 
         Assert.Empty(_sut.RootSheets);
     }
+
+    [Fact]
+    public async Task LoadAsync_EmptyLibrary_IsEmptyTrue()
+    {
+        await _sut.LoadAsync();
+
+        Assert.True(_sut.IsEmpty);
+    }
+
+    [Fact]
+    public async Task LoadAsync_SheetsInRootAndFolder_SummaryAndFolderCountReflectTotals()
+    {
+        var originalCulture = System.Globalization.CultureInfo.CurrentUICulture;
+        System.Globalization.CultureInfo.CurrentUICulture = new System.Globalization.CultureInfo("en");
+        try
+        {
+            _sut.NewFolderName = "Choir";
+            await _sut.CreateFolderCommand.ExecuteAsync(null);
+            await ImportSheetAsync("a");
+            await ImportSheetAsync("b");
+            var sheet = _sut.RootSheets[0];
+            await _sut.MoveSheetCommand.ExecuteAsync((sheet, (int?)_sut.Folders[0].Id));
+
+            Assert.False(_sut.IsEmpty);
+            Assert.Equal("2 sheets · 1 folders", _sut.SummaryText);
+            Assert.Equal(1, _sut.Folders[0].SheetCount);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = originalCulture;
+        }
+    }
 }

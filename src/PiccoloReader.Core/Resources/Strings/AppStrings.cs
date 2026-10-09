@@ -142,6 +142,17 @@ public static class AppStrings
     public static string TermsOfServiceDescription => Get(nameof(TermsOfServiceDescription));
     public static string OpenPrivacyPolicy => Get(nameof(OpenPrivacyPolicy));
 
+    public static string ImportPdf => Get(nameof(ImportPdf));
+    public static string NewFolder => Get(nameof(NewFolder));
+    public static string MoreOptions => Get(nameof(MoreOptions));
+    public static string SortLabel => Get(nameof(SortLabel));
+    public static string BackLabel => Get(nameof(BackLabel));
+    public static string LibrarySummaryFormat => Get(nameof(LibrarySummaryFormat));
+    public static string SheetCountFormat => Get(nameof(SheetCountFormat));
+    public static string PagesFormat => Get(nameof(PagesFormat));
+    public static string EmptyLibraryTitle => Get(nameof(EmptyLibraryTitle));
+    public static string EmptyLibraryMessage => Get(nameof(EmptyLibraryMessage));
+
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;
 }

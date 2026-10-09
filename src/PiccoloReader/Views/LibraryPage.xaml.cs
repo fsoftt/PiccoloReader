@@ -17,9 +17,29 @@ public partial class LibraryPage : ContentPage
         _viewModel = viewModel;
         _libraryService = libraryService;
         BindingContext = _viewModel;
+        _viewModel.Folders.CollectionChanged += (_, _) => RebuildFolderGrid();
 
         FolderLongPressCommand = new Command<Folder>(async folder => await OnFolderLongPressedAsync(folder));
         SheetLongPressCommand = new Command<Sheet>(async sheet => await OnSheetLongPressedAsync(sheet));
+    }
+
+    private void RebuildFolderGrid()
+    {
+        FolderGrid.Children.Clear();
+        FolderGrid.RowDefinitions.Clear();
+
+        var template = (DataTemplate)Resources["FolderCardTemplate"];
+        for (var i = 0; i < _viewModel.Folders.Count; i++)
+        {
+            if (i % 3 == 0)
+            {
+                FolderGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            }
+
+            var card = (View)template.CreateContent();
+            card.BindingContext = _viewModel.Folders[i];
+            FolderGrid.Add(card, i % 3, i / 3);
+        }
     }
 
     public ICommand FolderLongPressCommand { get; }
@@ -32,7 +52,7 @@ public partial class LibraryPage : ContentPage
         await _viewModel.LoadAsync();
     }
 
-    private async void OnImportPdfClicked(object? sender, TappedEventArgs e)
+    private async void OnImportPdfClicked(object? sender, EventArgs e)
     {
         var results = await FilePicker.Default.PickMultipleAsync(new PickOptions
         {
@@ -56,7 +76,7 @@ public partial class LibraryPage : ContentPage
         }
     }
 
-    private async void OnCreateFolderClicked(object? sender, TappedEventArgs e)
+    private async void OnCreateFolderClicked(object? sender, EventArgs e)
     {
         var name = await DisplayPromptAsync(AppStrings.CreateFolderTitle, AppStrings.FolderNamePrompt, accept: AppStrings.OK, cancel: AppStrings.Cancel);
 
@@ -75,7 +95,7 @@ public partial class LibraryPage : ContentPage
         await _viewModel.CreateFolderCommand.ExecuteAsync(null);
     }
 
-    private void OnFolderSearchClicked(object? sender, TappedEventArgs e)
+    private void OnFolderSearchClicked(object? sender, EventArgs e)
     {
         _viewModel.IsFolderSearchVisible = !_viewModel.IsFolderSearchVisible;
 
@@ -85,7 +105,7 @@ public partial class LibraryPage : ContentPage
         }
     }
 
-    private void OnSheetSearchClicked(object? sender, TappedEventArgs e)
+    private void OnSheetSearchClicked(object? sender, EventArgs e)
     {
         _viewModel.IsSheetSearchVisible = !_viewModel.IsSheetSearchVisible;
 
@@ -95,17 +115,17 @@ public partial class LibraryPage : ContentPage
         }
     }
 
-    private void OnFolderSearchClearClicked(object? sender, TappedEventArgs e)
+    private void OnFolderSearchClearClicked(object? sender, EventArgs e)
     {
         _viewModel.FolderSearchText = string.Empty;
     }
 
-    private void OnSheetSearchClearClicked(object? sender, TappedEventArgs e)
+    private void OnSheetSearchClearClicked(object? sender, EventArgs e)
     {
         _viewModel.SheetSearchText = string.Empty;
     }
 
-    private async void OnFolderSortClicked(object? sender, TappedEventArgs e)
+    private async void OnFolderSortClicked(object? sender, EventArgs e)
     {
         var choice = await DisplayActionSheetAsync(
             AppStrings.SortFoldersByTitle,
@@ -131,7 +151,7 @@ public partial class LibraryPage : ContentPage
         }
     }
 
-    private async void OnSheetSortClicked(object? sender, TappedEventArgs e)
+    private async void OnSheetSortClicked(object? sender, EventArgs e)
     {
         var choice = await DisplayActionSheetAsync(
             AppStrings.SortSheetsByTitle,
@@ -216,10 +236,22 @@ public partial class LibraryPage : ContentPage
         }
     }
 
+    private async void OnSheetMoreClicked(object? sender, EventArgs e)
+    {
+        if ((sender as BindableObject)?.BindingContext is Sheet sheet)
+        {
+            await ShowSheetMenuAsync(sheet);
+        }
+    }
+
     private async Task OnSheetLongPressedAsync(Sheet sheet)
     {
         _suppressNextTap = true;
+        await ShowSheetMenuAsync(sheet);
+    }
 
+    private async Task ShowSheetMenuAsync(Sheet sheet)
+    {
         var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, AppStrings.Move, AppStrings.Delete);
 
         if (choice == AppStrings.Delete)
