@@ -1,3 +1,5 @@
+using System.Globalization;
+using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.ViewModels;
 
@@ -44,11 +46,23 @@ public partial class SettingsPage : ContentPage
         await DisplayAlertAsync(AppStrings.RestartRequiredTitle, AppStrings.RestartRequiredMessage, AppStrings.OK);
     }
 
+    private async void OnShowTutorialClicked(object? sender, EventArgs e)
+    {
+        var tutorialPage = Handler?.MauiContext?.Services.GetService<TutorialPage>();
+        if (tutorialPage is null)
+        {
+            return;
+        }
+
+        tutorialPage.ViewModel.Finished += async (_, _) => await Navigation.PopModalAsync();
+        await Navigation.PushModalAsync(tutorialPage);
+    }
+
     private async void OnPrivacyPolicyClicked(object? sender, EventArgs e)
     {
         try
         {
-            await Launcher.Default.OpenAsync(new Uri("https://fsoftt.github.io/PiccoloReader/privacy-policy"));
+            await Launcher.Default.OpenAsync(new Uri(LegalLinks.GetPrivacyPolicyUrl(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)));
         }
         catch (Exception ex)
         {
@@ -61,7 +75,7 @@ public partial class SettingsPage : ContentPage
     {
         try
         {
-            await Launcher.Default.OpenAsync(new Uri("https://fsoftt.github.io/PiccoloReader/terms-of-service"));
+            await Launcher.Default.OpenAsync(new Uri(LegalLinks.GetTermsOfServiceUrl(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)));
         }
         catch (Exception ex)
         {

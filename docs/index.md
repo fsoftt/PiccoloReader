@@ -1,3 +1,5 @@
+[Leer en español](https://fsoftt.github.io/PiccoloReader/es/)
+
 # Piccolo Reader — Documentation & Legal
 
 Welcome to the Piccolo Music Reader documentation site. Here you'll find legal policies, terms, and information about how Piccolo handles your data.

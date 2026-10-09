@@ -1,3 +1,5 @@
+using PiccoloReader.Core.Services;
+
 namespace PiccoloReader.Views;
 
 public partial class SplashPage : ContentPage
@@ -34,6 +36,18 @@ public partial class SplashPage : ContentPage
 
         if (Application.Current is not null)
         {
+            var services = IPlatformApplication.Current?.Services;
+            var preferences = services?.GetService<ITutorialPreferenceService>();
+            var tutorialPage = services?.GetService<TutorialPage>();
+
+            if (preferences is not null && tutorialPage is not null && !preferences.GetTutorialCompleted())
+            {
+                var window = Application.Current.Windows[0];
+                tutorialPage.ViewModel.Finished += (_, _) => window.Page = new AppShell();
+                window.Page = tutorialPage;
+                return;
+            }
+
             Application.Current.Windows[0].Page = new AppShell();
         }
     }

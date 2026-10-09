@@ -24,6 +24,7 @@ public partial class SheetViewerPage : ContentPage
     private double _xOffset;
     private double _yOffset;
     private double _panTotalX;
+    private double _panTotalY;
 
     private double _resizeStartWidth;
     private double _resizeStartHeight;
@@ -56,6 +57,14 @@ public partial class SheetViewerPage : ContentPage
         BindingContext = _viewModel;
 
         _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => AnnotationCanvas.InvalidateSurface();
+        _viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SheetViewerViewModel.ReadingDirection))
+            {
+                UpdateReadingDirectionIcon();
+            }
+        };
+        UpdateReadingDirectionIcon();
 
         // ToolbarItem has no bindable IsVisible in this MAUI version (it
         // derives from Element, not VisualElement), so visibility is
@@ -177,14 +186,18 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        if (normalizedX < SideTapZoneFraction)
+        // In vertical reading the same 30% zones sit at the top (previous)
+        // and bottom (next) edges instead of left/right.
+        var tapPosition = _viewModel.IsVerticalReading ? normalizedY : normalizedX;
+
+        if (tapPosition < SideTapZoneFraction)
         {
             if (_currentScale <= ZoomedInThreshold)
             {
                 TryGoToPreviousPage();
             }
         }
-        else if (normalizedX > 1 - SideTapZoneFraction)
+        else if (tapPosition > 1 - SideTapZoneFraction)
         {
             if (_currentScale <= ZoomedInThreshold)
             {
@@ -683,6 +696,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         _panTotalX = totalX;
+        _panTotalY = totalY;
     }
 
     private void ApplyPanEnded()
@@ -692,16 +706,22 @@ public partial class SheetViewerPage : ContentPage
             _xOffset = PageContainer.TranslationX;
             _yOffset = PageContainer.TranslationY;
         }
-        else if (_panTotalX <= -PageTurnDragThreshold)
+        else
         {
-            TryGoToNextPage();
-        }
-        else if (_panTotalX >= PageTurnDragThreshold)
-        {
-            TryGoToPreviousPage();
+            // Horizontal: swipe left = next. Vertical: swipe up = next.
+            var pageTurnDrag = _viewModel.IsVerticalReading ? _panTotalY : _panTotalX;
+            if (pageTurnDrag <= -PageTurnDragThreshold)
+            {
+                TryGoToNextPage();
+            }
+            else if (pageTurnDrag >= PageTurnDragThreshold)
+            {
+                TryGoToPreviousPage();
+            }
         }
 
         _panTotalX = 0;
+        _panTotalY = 0;
     }
 
 #if ANDROID
@@ -989,6 +1009,22 @@ public partial class SheetViewerPage : ContentPage
             _viewModel.PreviousPageCommand.Execute(null);
             ResetZoom();
         }
+    }
+
+    private void UpdateReadingDirectionIcon()
+    {
+        // swap_vert / swap_horiz - shows the direction currently in use.
+        ReadingDirectionIcon.Glyph = _viewModel.IsVerticalReading ? "\uE8D5" : "\uE8D4";
+    }
+
+    private async void OnReadingDirectionClicked(object? sender, EventArgs e)
+    {
+        _viewModel.ToggleReadingDirectionCommand.Execute(null);
+
+        var message = _viewModel.IsVerticalReading
+            ? AppStrings.ReadingDirectionVerticalMessage
+            : AppStrings.ReadingDirectionHorizontalMessage;
+        await CommunityToolkit.Maui.Alerts.Toast.Make(message).Show();
     }
 
     private async void OnPageIndicatorTapped(object? sender, TappedEventArgs e)

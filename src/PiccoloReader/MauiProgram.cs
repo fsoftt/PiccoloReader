@@ -70,6 +70,8 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ILanguagePreferenceService, MauiLanguagePreferenceService>();
 		builder.Services.AddSingleton<IDonateAdService, MauiDonateAdService>();
 		builder.Services.AddSingleton<IAdsPreferenceService, MauiAdsPreferenceService>();
+		builder.Services.AddSingleton<ITutorialPreferenceService, MauiTutorialPreferenceService>();
+		builder.Services.AddSingleton<IReadingPreferenceService, MauiReadingPreferenceService>();
 #if ANDROID
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.Android.PdfPageRenderer>();
 #elif IOS
@@ -100,12 +102,14 @@ public static class MauiProgram
 		builder.Services.AddTransient<SheetViewerViewModel>();
 		builder.Services.AddTransient<SettingsViewModel>();
 		builder.Services.AddTransient<DonateViewModel>();
+		builder.Services.AddTransient<TutorialViewModel>();
 
 		builder.Services.AddTransient<LibraryPage>();
 		builder.Services.AddTransient<FolderPage>();
 		builder.Services.AddTransient<SheetViewerPage>();
 		builder.Services.AddTransient<SettingsPage>();
 		builder.Services.AddTransient<DonatePage>();
+		builder.Services.AddTransient<TutorialPage>();
 
 		return builder.Build();
 	}
