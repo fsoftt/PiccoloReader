@@ -104,7 +104,7 @@ public static class AppSession
 
         Launch();
         WaitForLibrary(skipTutorial: true);
-        TestContext.Progress.WriteLine("prefs after launch: " + (ReadPreferencesXml() ?? "<none>").Replace('\n', ' '));
+        TestContext.Progress.WriteLine("prefs after launch: " + (ReadPreferencesXml() ?? "<none>").Replace((char)10, (char)32) + " ls=" + Adb.RunAs("ls shared_prefs", allowFailure: true).Replace((char)10, (char)32));
     }
 
     /// <summary>First launch of a wiped app: skip the tutorial through the UI, keep the resulting empty DB.</summary>
@@ -209,7 +209,11 @@ public static class AppSession
     }
 
     /// <summary>Reads the raw preferences file (null while the app has not written one).</summary>
-    public static string? ReadPreferencesXml() => Adb.ReadTextFromApp(PreferencesFile);
+    public static string? ReadPreferencesXml()
+    {
+        var all = Adb.RunAs("sh -c 'cat shared_prefs/*.xml'", allowFailure: true);
+        return string.IsNullOrWhiteSpace(all) ? null : all;
+    }
 
     /// <summary>Reads a string preference straight from the app's shared-prefs file.</summary>
     public static string? ReadStringPreference(string name)
