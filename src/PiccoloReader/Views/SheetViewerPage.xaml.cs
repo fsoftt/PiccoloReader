@@ -518,6 +518,42 @@ public partial class SheetViewerPage : ContentPage
         // RepositionSelectionOverlay() directly instead of this method.
         SetDragControlsVisible(_viewModel.SelectedAnnotation is not null);
         UpdateEditingUi();
+        CollapseSheetIfSelectionHidden();
+    }
+
+    private bool _collapsingToolSheet;
+
+    // Landscape leaves little height: a selection hidden under the open tool
+    // sheet is collapsed so the annotation stays visible. Only done when the
+    // selection itself changes (never from the layout/visibility callbacks
+    // that run when the user explicitly opens the sheet), and guarded against
+    // re-entrancy: collapse -> UpdateEditingUi -> reposition used to loop.
+    private void CollapseSheetIfSelectionHidden()
+    {
+        if (_collapsingToolSheet || !ToolSheet.IsVisible || Width <= Height
+            || _viewModel.SelectedAnnotation is not { } annotation
+            || PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return;
+        }
+
+        var pageRect = EditorPageRect();
+        var bottom = PageContainer.Y + PageContainer.TranslationY
+            + (pageRect.Top + (annotation.Y + annotation.Height) * pageRect.Height) * _currentScale;
+        if (bottom <= Height - ToolSheet.HeightRequest)
+        {
+            return;
+        }
+
+        _collapsingToolSheet = true;
+        try
+        {
+            ToolSheet.IsVisible = false;
+        }
+        finally
+        {
+            _collapsingToolSheet = false;
+        }
     }
 
     private void RepositionSelectionOverlay()
@@ -547,15 +583,6 @@ public partial class SheetViewerPage : ContentPage
         ResizeHandle.TranslationX = SelectionHandlePadding + width - ResizeHandle.WidthRequest / 2;
         ResizeHandle.TranslationY = SelectionHandlePadding + height - ResizeHandle.HeightRequest / 2;
         UpdateResizeHandleScale();
-
-        // Landscape leaves little height: a selection hidden under the open
-        // tool sheet is collapsed so the annotation stays visible.
-        if (ToolSheet.IsVisible && Width > Height
-            && PageContainer.Y + PageContainer.TranslationY + (pageRect.Top + (annotation.Y + annotation.Height) * pageRect.Height) * _currentScale > Height - ToolSheet.HeightRequest)
-        {
-            ToolSheet.IsVisible = false;
-            UpdateEditingUi();
-        }
 
         if (ResizeHandle.IsVisible)
         {
@@ -2249,7 +2276,9 @@ public partial class SheetViewerPage : ContentPage
         // The sheet covers the bottom of the screen: the page pill and the
         // tool FAB would sit on top of it.
         var showBottomChrome = _isToolbarVisible && !ToolSheet.IsVisible;
-        PageIndicator.IsVisible = showBottomChrome;
+        // The pill is also hidden while an annotation is selected: it would
+        // cover the resize handle of a selection near the bottom edge.
+        PageIndicator.IsVisible = showBottomChrome && _viewModel.SelectedAnnotation is null;
         MainToolFab.IsVisible = showBottomChrome;
         if (ToolSheet.IsVisible)
         {

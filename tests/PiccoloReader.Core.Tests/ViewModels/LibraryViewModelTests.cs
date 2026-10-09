@@ -312,6 +312,12 @@ public class LibraryViewModelTests : IDisposable
     }
 
     [Fact]
+    public void IsEmpty_BeforeFirstLoad_IsFalse()
+    {
+        Assert.False(_sut.IsEmpty);
+    }
+
+    [Fact]
     public async Task LoadAsync_EmptyLibrary_IsEmptyTrue()
     {
         await _sut.LoadAsync();

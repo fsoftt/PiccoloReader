@@ -73,7 +73,7 @@ public partial class LibraryViewModel : ObservableObject
     private string _summaryText = string.Empty;
 
     [ObservableProperty]
-    private bool _isEmpty = true;
+    private bool _isEmpty;
 
     [ObservableProperty]
     private bool _hasNoSheetResults;
