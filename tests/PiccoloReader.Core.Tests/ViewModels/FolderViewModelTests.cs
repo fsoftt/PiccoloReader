@@ -40,6 +40,24 @@ public class FolderViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadAsync_FolderDeleted_ReturnsFalseAndEmptiesSheets()
+    {
+        var folder = await _libraryService.CreateFolderAsync("Orchestra");
+        _sut.FolderId = folder.Id;
+        var sourcePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pdf");
+        await File.WriteAllTextAsync(sourcePath, "fake-pdf");
+        await _sut.ImportPdfCommand.ExecuteAsync(sourcePath);
+        Assert.Single(_sut.Sheets);
+
+        await _libraryService.DeleteFolderAsync(folder.Id, deleteSheets: true);
+        var exists = await _sut.LoadAsync();
+
+        Assert.False(exists);
+        Assert.Empty(_sut.Sheets);
+        File.Delete(sourcePath);
+    }
+
+    [Fact]
     public async Task MoveSheetCommand_MovesSheetOutOfCurrentFolder()
     {
         var folder = await _libraryService.CreateFolderAsync("Orchestra");
