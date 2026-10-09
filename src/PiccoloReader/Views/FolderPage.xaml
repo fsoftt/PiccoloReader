@@ -9,6 +9,7 @@
     xmlns:admob="clr-namespace:Plugin.AdMob;assembly=Plugin.AdMob"
     xmlns:local="clr-namespace:PiccoloReader"
     x:Name="ThisPage"
+    Shell.TabBarIsVisible="False"
     Title="{x:Static strings:AppStrings.Folder}">
 
     <ContentPage.Resources>

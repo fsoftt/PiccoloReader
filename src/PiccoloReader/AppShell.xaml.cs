@@ -11,8 +11,4 @@ public partial class AppShell : Shell
 		Routing.RegisterRoute("sheetviewer", typeof(SheetViewerPage));
 	}
 
-	private async void OnAboutLinkTapped(object? sender, TappedEventArgs e)
-	{
-		await Launcher.Default.OpenAsync(new Uri("https://fsoftt.github.io"));
-	}
 }

@@ -20,7 +20,7 @@
             Text="Piccolo"
             FontFamily="Pacifico"
             FontSize="26"
-            TextColor="{StaticResource White}"
+            TextColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
             VerticalOptions="Center" />
     </Shell.TitleView>
 

@@ -6,6 +6,7 @@
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
     xmlns:vm="clr-namespace:PiccoloReader.Core.ViewModels;assembly=PiccoloReader.Core"
     Shell.NavBarIsVisible="False"
+    Shell.TabBarIsVisible="False"
     NavigationPage.HasNavigationBar="False">
 
     <Grid RowDefinitions="*,Auto,Auto" Padding="24,16">
