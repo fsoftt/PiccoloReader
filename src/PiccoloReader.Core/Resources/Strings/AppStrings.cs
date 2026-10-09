@@ -149,7 +149,20 @@ public static class AppStrings
     public static string BackLabel => Get(nameof(BackLabel));
     public static string LibrarySummaryFormat => Get(nameof(LibrarySummaryFormat));
     public static string SheetCountFormat => Get(nameof(SheetCountFormat));
+    public static string SheetCountSingularFormat => Get(nameof(SheetCountSingularFormat));
+    public static string FolderCountFormat => Get(nameof(FolderCountFormat));
+    public static string FolderCountSingularFormat => Get(nameof(FolderCountSingularFormat));
     public static string PagesFormat => Get(nameof(PagesFormat));
+    public static string PagesSingularFormat => Get(nameof(PagesSingularFormat));
+
+    public static string SheetCount(int count) =>
+        string.Format(count == 1 ? SheetCountSingularFormat : SheetCountFormat, count);
+    public static string FolderCount(int count) =>
+        string.Format(count == 1 ? FolderCountSingularFormat : FolderCountFormat, count);
+    public static string Pages(int count) =>
+        string.Format(count == 1 ? PagesSingularFormat : PagesFormat, count);
+    public static string LibrarySummary(int sheets, int folders) =>
+        string.Format(LibrarySummaryFormat, SheetCount(sheets), FolderCount(folders));
     public static string EmptyLibraryTitle => Get(nameof(EmptyLibraryTitle));
     public static string EmptyLibraryMessage => Get(nameof(EmptyLibraryMessage));
 

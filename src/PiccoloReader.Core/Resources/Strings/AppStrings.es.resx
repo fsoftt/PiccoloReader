@@ -162,9 +162,13 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="MoreOptions" xml:space="preserve"><value>Más opciones</value></data>
   <data name="SortLabel" xml:space="preserve"><value>Ordenar</value></data>
   <data name="BackLabel" xml:space="preserve"><value>Atrás</value></data>
-  <data name="LibrarySummaryFormat" xml:space="preserve"><value>{0} partituras · {1} carpetas</value></data>
+  <data name="LibrarySummaryFormat" xml:space="preserve"><value>{0} · {1}</value></data>
   <data name="SheetCountFormat" xml:space="preserve"><value>{0} partituras</value></data>
+  <data name="SheetCountSingularFormat" xml:space="preserve"><value>{0} partitura</value></data>
+  <data name="FolderCountFormat" xml:space="preserve"><value>{0} carpetas</value></data>
+  <data name="FolderCountSingularFormat" xml:space="preserve"><value>{0} carpeta</value></data>
   <data name="PagesFormat" xml:space="preserve"><value>{0} págs</value></data>
+  <data name="PagesSingularFormat" xml:space="preserve"><value>{0} pág</value></data>
   <data name="EmptyLibraryTitle" xml:space="preserve"><value>Tu biblioteca está vacía</value></data>
   <data name="EmptyLibraryMessage" xml:space="preserve"><value>Importa un PDF para empezar a leer tus partituras.</value></data>
 </root>
