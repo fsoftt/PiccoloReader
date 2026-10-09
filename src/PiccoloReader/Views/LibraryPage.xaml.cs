@@ -103,7 +103,17 @@ public partial class LibraryPage : ContentPage
         {
             _viewModel.FolderSearchText = string.Empty;
         }
+        else
+        {
+            FocusSearchEntry(FolderSearchEntry);
+        }
     }
+
+    // The entry only becomes visible after the binding updates, so focus on the next dispatch.
+    private void FocusSearchEntry(Entry entry) => Dispatcher.Dispatch(() =>
+    {
+        entry.Focus();
+    });
 
     private void OnSheetSearchClicked(object? sender, EventArgs e)
     {
@@ -112,6 +122,10 @@ public partial class LibraryPage : ContentPage
         if (!_viewModel.IsSheetSearchVisible)
         {
             _viewModel.SheetSearchText = string.Empty;
+        }
+        else
+        {
+            FocusSearchEntry(SheetSearchEntry);
         }
     }
 
