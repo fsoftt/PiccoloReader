@@ -180,4 +180,8 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="StopToolAction" xml:space="preserve"><value>Dejar la herramienta</value></data>
   <data name="ReadingModeLabel" xml:space="preserve"><value>Modo de lectura</value></data>
   <data name="AnnotationToolsLabel" xml:space="preserve"><value>Herramientas de anotación</value></data>
+  <data name="EditorPageFormat" xml:space="preserve"><value>Página {0}</value></data>
+  <data name="EditorDone" xml:space="preserve"><value>Listo</value></data>
+  <data name="Symbols" xml:space="preserve"><value>Símbolos</value></data>
+  <data name="EditorDoneLabel" xml:space="preserve"><value>Terminar edición</value></data>
 </root>

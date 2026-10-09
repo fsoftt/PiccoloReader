@@ -180,4 +180,8 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="StopToolAction" xml:space="preserve"><value>Stop drawing tool</value></data>
   <data name="ReadingModeLabel" xml:space="preserve"><value>Reading mode</value></data>
   <data name="AnnotationToolsLabel" xml:space="preserve"><value>Annotation tools</value></data>
+  <data name="EditorPageFormat" xml:space="preserve"><value>Page {0}</value></data>
+  <data name="EditorDone" xml:space="preserve"><value>Done</value></data>
+  <data name="Symbols" xml:space="preserve"><value>Symbols</value></data>
+  <data name="EditorDoneLabel" xml:space="preserve"><value>Finish editing</value></data>
 </root>

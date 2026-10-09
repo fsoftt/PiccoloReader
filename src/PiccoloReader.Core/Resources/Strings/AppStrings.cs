@@ -175,6 +175,11 @@ public static class AppStrings
     public static string ReadingModeLabel => Get(nameof(ReadingModeLabel));
     public static string AnnotationToolsLabel => Get(nameof(AnnotationToolsLabel));
 
+    public static string EditorPageFormat => Get(nameof(EditorPageFormat));
+    public static string EditorDone => Get(nameof(EditorDone));
+    public static string Symbols => Get(nameof(Symbols));
+    public static string EditorDoneLabel => Get(nameof(EditorDoneLabel));
+
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;
 }
