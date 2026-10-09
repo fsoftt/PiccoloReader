@@ -204,4 +204,19 @@ public class FolderViewModelTests : IDisposable
         Assert.Single(_sut.Sheets);
         Directory.Delete(tempDir, recursive: true);
     }
+
+    [Fact]
+    public async Task LoadAsync_FolderWithSheet_SummaryTextContainsCount()
+    {
+        var folder = await _libraryService.CreateFolderAsync("Choir");
+        _sut.FolderId = folder.Id;
+        var tempDir = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var path = Path.Combine(tempDir, "Ave.pdf");
+        await File.WriteAllTextAsync(path, "fake-pdf");
+        await _sut.ImportPdfCommand.ExecuteAsync(path);
+
+        Assert.Contains("1", _sut.SummaryText);
+        Directory.Delete(tempDir, recursive: true);
+    }
 }

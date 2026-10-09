@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PiccoloReader.Core.Data.Models;
+using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 
 namespace PiccoloReader.Core.ViewModels;
@@ -68,6 +69,12 @@ public partial class LibraryViewModel : ObservableObject
     [ObservableProperty]
     private bool _showAdsBanner;
 
+    [ObservableProperty]
+    private string _summaryText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isEmpty = true;
+
     partial void OnFolderSearchTextChanged(string value) => RefreshFolders();
 
     partial void OnSheetSearchTextChanged(string value) => RefreshSheets();
@@ -77,6 +84,12 @@ public partial class LibraryViewModel : ObservableObject
         ShowAdsBanner = _adsPreferenceService.GetSupportWithAdsEnabled();
 
         _allFolders = (await _libraryService.GetFoldersAsync()).ToList();
+        var counts = await _libraryService.GetSheetCountsByFolderAsync();
+        foreach (var folder in _allFolders)
+        {
+            folder.SheetCount = counts.GetValueOrDefault(folder.Id);
+        }
+
         HasFolders = _allFolders.Count > 0;
         HasMultipleFolders = _allFolders.Count > 1;
 
@@ -99,6 +112,10 @@ public partial class LibraryViewModel : ObservableObject
         }
 
         RefreshSheets();
+
+        var totalSheets = _allRootSheets.Count + counts.Values.Sum();
+        SummaryText = string.Format(AppStrings.LibrarySummaryFormat, totalSheets, _allFolders.Count);
+        IsEmpty = _allFolders.Count == 0 && _allRootSheets.Count == 0;
     }
 
     [RelayCommand]

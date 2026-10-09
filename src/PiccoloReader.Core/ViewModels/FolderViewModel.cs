@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PiccoloReader.Core.Data.Models;
+using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 
 namespace PiccoloReader.Core.ViewModels;
@@ -42,6 +43,9 @@ public partial class FolderViewModel : ObservableObject
     [ObservableProperty]
     private bool _showAdsBanner;
 
+    [ObservableProperty]
+    private string _summaryText = string.Empty;
+
     public ObservableCollection<Sheet> Sheets { get; } = new();
 
     partial void OnSearchTextChanged(string value) => RefreshSheets();
@@ -62,6 +66,7 @@ public partial class FolderViewModel : ObservableObject
 
         _allSheets = (await _libraryService.GetSheetsAsync(FolderId)).ToList();
         HasMultipleSheets = _allSheets.Count > 1;
+        SummaryText = string.Format(AppStrings.SheetCountFormat, _allSheets.Count);
 
         if (!HasMultipleSheets)
         {
