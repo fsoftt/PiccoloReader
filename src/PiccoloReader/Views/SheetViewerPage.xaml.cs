@@ -34,9 +34,7 @@ public partial class SheetViewerPage : ContentPage
     private bool _isToolbarVisible = true;
     private bool _isToolFabExpanded;
 
-    private SKTypeface? _bravuraTypeface;
-    private readonly Dictionary<int, SKRect> _glyphBoundsCache = new();
-    private readonly SKPaint _glyphPaint = new() { Color = SKColors.Black, IsAntialias = true };
+    private readonly AnnotationPainter _annotationPainter = new();
 
     // Computed per-call, not a static field, so it reflects the theme at
     // the moment each preview redraw happens. Uses the same Primary/
@@ -59,12 +57,14 @@ public partial class SheetViewerPage : ContentPage
         _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => AnnotationCanvas.InvalidateSurface();
         _viewModel.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(SheetViewerViewModel.ReadingDirection))
+            if (e.PropertyName == nameof(SheetViewerViewModel.ReadingMode))
             {
-                UpdateReadingDirectionIcon();
+                UpdateReadingModeUi();
             }
         };
-        UpdateReadingDirectionIcon();
+        UpdateReadingModeIcon();
+
+        ContinuousPagesView.ItemTemplate = new DataTemplate(() => new ContinuousPageView(_annotationPainter, OnContinuousPageTapped));
 
         // ToolbarItem has no bindable IsVisible in this MAUI version (it
         // derives from Element, not VisualElement), so visibility is
@@ -104,6 +104,7 @@ public partial class SheetViewerPage : ContentPage
         await _viewModel.LoadAsync(sheetId, targetWidthPx, targetHeightPx);
         ResetZoom();
         AnnotationCanvas.InvalidateSurface();
+        UpdateReadingModeUi();
     }
 
     private void ResetZoom()
@@ -188,7 +189,7 @@ public partial class SheetViewerPage : ContentPage
 
         // In vertical reading the same 30% zones sit at the top (previous)
         // and bottom (next) edges instead of left/right.
-        var tapPosition = _viewModel.IsVerticalReading ? normalizedY : normalizedX;
+        var tapPosition = _viewModel.IsVerticalPaged ? normalizedY : normalizedX;
 
         if (tapPosition < SideTapZoneFraction)
         {
@@ -238,7 +239,8 @@ public partial class SheetViewerPage : ContentPage
             SetToolFabExpanded(false);
         }
 
-        MainToolFab.IsVisible = visible;
+        // Annotation tools aren't available in continuous mode (read-only).
+        MainToolFab.IsVisible = visible && !_viewModel.IsContinuousReading;
 
         if (visible)
         {
@@ -709,7 +711,7 @@ public partial class SheetViewerPage : ContentPage
         else
         {
             // Horizontal: swipe left = next. Vertical: swipe up = next.
-            var pageTurnDrag = _viewModel.IsVerticalReading ? _panTotalY : _panTotalX;
+            var pageTurnDrag = _viewModel.IsVerticalPaged ? _panTotalY : _panTotalX;
             if (pageTurnDrag <= -PageTurnDragThreshold)
             {
                 TryGoToNextPage();
@@ -1011,20 +1013,100 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    private void UpdateReadingDirectionIcon()
+    private void UpdateReadingModeIcon()
     {
-        // swap_vert / swap_horiz - shows the direction currently in use.
-        ReadingDirectionIcon.Glyph = _viewModel.IsVerticalReading ? "\uE8D5" : "\uE8D4";
+        // swap_horiz / swap_vert / view_agenda - shows the mode in use.
+        ReadingModeIcon.Glyph = _viewModel.ReadingMode switch
+        {
+            ReadingMode.VerticalPaged => "\uE8D5",
+            ReadingMode.VerticalContinuous => "\uE8E9",
+            _ => "\uE8D4"
+        };
     }
 
-    private async void OnReadingDirectionClicked(object? sender, EventArgs e)
+    // Swaps between the single-page viewer (PageContainer) and the
+    // continuous list. Continuous mode is read-only, so any active tool,
+    // open panel or selection is closed when entering it.
+    private void UpdateReadingModeUi()
     {
-        _viewModel.ToggleReadingDirectionCommand.Execute(null);
+        UpdateReadingModeIcon();
 
-        var message = _viewModel.IsVerticalReading
-            ? AppStrings.ReadingDirectionVerticalMessage
-            : AppStrings.ReadingDirectionHorizontalMessage;
+        var continuous = _viewModel.IsContinuousReading;
+        PageContainer.IsVisible = !continuous;
+        ContinuousPagesView.IsVisible = continuous;
+        MainToolFab.IsVisible = _isToolbarVisible && !continuous;
+
+        if (continuous)
+        {
+            ToolPanel.IsVisible = false;
+            SetToolFabExpanded(false);
+            _viewModel.SelectedAnnotation = null;
+            _viewModel.ActiveTool = AnnotationTool.MusicIcons;
+            UpdateToolSections();
+            UpdateSelectionOverlay();
+            ResetZoom();
+            ScrollContinuousToCurrentPage();
+        }
+        else
+        {
+            AnnotationCanvas.InvalidateSurface();
+        }
+    }
+
+    // Dispatched so it runs after the list has become visible and laid
+    // out - ScrollTo on a list that hasn't been measured yet is ignored.
+    private void ScrollContinuousToCurrentPage()
+    {
+        var pageIndex = _viewModel.CurrentPageIndex;
+        Dispatcher.Dispatch(() =>
+        {
+            if (_viewModel.IsContinuousReading && pageIndex < _viewModel.ContinuousPages.Count)
+            {
+                ContinuousPagesView.ScrollTo(pageIndex, position: ScrollToPosition.Start, animate: false);
+            }
+        });
+    }
+
+    private async void OnContinuousPagesScrolled(object? sender, ItemsViewScrolledEventArgs e)
+    {
+        if (!_viewModel.IsContinuousReading)
+        {
+            return;
+        }
+
+        await _viewModel.UpdateContinuousViewportAsync(e.FirstVisibleItemIndex, e.LastVisibleItemIndex, e.CenterItemIndex);
+    }
+
+    // Same as a center tap in the paged modes: show/hide the toolbar.
+    private void OnContinuousPageTapped()
+    {
+        SetToolbarVisible(!_isToolbarVisible);
+    }
+
+    private async void OnReadingModeClicked(object? sender, EventArgs e)
+    {
+        await _viewModel.CycleReadingModeCommand.ExecuteAsync(null);
+
+        var message = _viewModel.ReadingMode switch
+        {
+            ReadingMode.VerticalPaged => AppStrings.ReadingModeVerticalPagedMessage,
+            ReadingMode.VerticalContinuous => AppStrings.ReadingModeVerticalContinuousMessage,
+            _ => AppStrings.ReadingModeHorizontalMessage
+        };
         await CommunityToolkit.Maui.Alerts.Toast.Make(message).Show();
+    }
+
+    // After jumping to a page (page indicator / bookmark).
+    private void OnJumpedToPage()
+    {
+        if (_viewModel.IsContinuousReading)
+        {
+            ScrollContinuousToCurrentPage();
+        }
+        else
+        {
+            ResetZoom();
+        }
     }
 
     private async void OnPageIndicatorTapped(object? sender, TappedEventArgs e)
@@ -1045,7 +1127,7 @@ public partial class SheetViewerPage : ContentPage
         if (int.TryParse(input, out var pageNumber) && pageNumber >= 1 && pageNumber <= _viewModel.PageCount)
         {
             await _viewModel.GoToPageAsync(pageNumber - 1);
-            ResetZoom();
+            OnJumpedToPage();
         }
     }
 
@@ -1089,7 +1171,7 @@ public partial class SheetViewerPage : ContentPage
         if (index >= 0 && index < ordered.Count)
         {
             await _viewModel.GoToPageAsync(ordered[index].PageIndex);
-            ResetZoom();
+            OnJumpedToPage();
         }
     }
 
@@ -1432,7 +1514,7 @@ public partial class SheetViewerPage : ContentPage
 
     private async Task EnsureBravuraTypefaceLoadedAsync()
     {
-        if (_bravuraTypeface is not null)
+        if (_annotationPainter.Typeface is not null)
         {
             return;
         }
@@ -1441,7 +1523,7 @@ public partial class SheetViewerPage : ContentPage
         using var memoryStream = new MemoryStream();
         await stream.CopyToAsync(memoryStream);
         memoryStream.Position = 0;
-        _bravuraTypeface = SKTypeface.FromStream(memoryStream);
+        _annotationPainter.Typeface = SKTypeface.FromStream(memoryStream);
     }
 
     private async void OnIconPickerTapped(object? sender, TappedEventArgs e)
@@ -1465,116 +1547,13 @@ public partial class SheetViewerPage : ContentPage
         }
 
         var info = e.Info;
-        DrawGlyphFitted(canvas, icon.Codepoint, new SKRect(0, 0, info.Width, info.Height), icon.VisualScale);
+        _annotationPainter.DrawGlyphFitted(canvas, icon.Codepoint, new SKRect(0, 0, info.Width, info.Height), icon.VisualScale);
     }
 
     private void OnAnnotationCanvasPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
     {
         var canvas = e.Surface.Canvas;
         canvas.Clear(SKColors.Transparent);
-
-        var info = e.Info;
-
-        foreach (var annotation in _viewModel.CurrentPageAnnotations)
-        {
-            if (annotation.IsStroke)
-            {
-                DrawStroke(canvas, annotation, info);
-                continue;
-            }
-
-            var icon = MusicIconCatalog.FindByKey(annotation.IconKey);
-            if (icon is null)
-            {
-                continue;
-            }
-
-            var targetRect = new SKRect(
-                (float)(annotation.X * info.Width),
-                (float)(annotation.Y * info.Height),
-                (float)((annotation.X + annotation.Width) * info.Width),
-                (float)((annotation.Y + annotation.Height) * info.Height));
-
-            DrawGlyphFitted(canvas, icon.Codepoint, targetRect, icon.VisualScale);
-        }
-    }
-
-    private void DrawStroke(SKCanvas canvas, Annotation annotation, SKImageInfo info)
-    {
-        var points = AnnotationService.DeserializePoints(annotation.Points);
-        if (points.Count < 2 || annotation.ColorHex is null)
-        {
-            return;
-        }
-
-        using var path = new SKPath();
-        path.MoveTo((float)(points[0].X * info.Width), (float)(points[0].Y * info.Height));
-        for (var i = 1; i < points.Count; i++)
-        {
-            path.LineTo((float)(points[i].X * info.Width), (float)(points[i].Y * info.Height));
-        }
-
-        using var paint = new SKPaint
-        {
-            Color = SKColor.Parse(annotation.ColorHex),
-            StrokeWidth = (float)(annotation.StrokeWidth * info.Width),
-            Style = SKPaintStyle.Stroke,
-            StrokeCap = SKStrokeCap.Round,
-            StrokeJoin = SKStrokeJoin.Round,
-            IsAntialias = true
-        };
-
-        canvas.DrawPath(path, paint);
-    }
-
-    // Fits a glyph tightly to targetRect instead of relying on the font's
-    // own em-box sizing - Bravura (like most music fonts) reserves a lot
-    // of vertical em-box space for staff-line alignment around each
-    // glyph's actual ink, so naively scaling a font size leaves the
-    // *displayed* glyph the same apparent size regardless (confirmed by
-    // testing FontImageSource.Size 28 through 72 on a clean install with
-    // zero visible difference). Measuring the glyph's own ink bounds via
-    // Skia and fitting *that* to targetRect sidesteps it entirely.
-    // Shared by the icon picker buttons and the on-page annotation
-    // overlay so both render identically.
-    //
-    // A dragged icon's move/resize repaints this every frame (AnnotationCanvas
-    // is invalidated on every PanUpdated "Running" event), so this used to
-    // allocate two SKFont objects and run MeasureText twice per icon per
-    // frame - on the emulator's software rendering that was slow enough to
-    // visibly drop frames mid-drag (reported as "shaky" move/resize).
-    // measuredBounds only depends on the typeface+codepoint, never on
-    // targetRect, so it's cached once per codepoint instead of remeasured
-    // every repaint; _glyphPaint is similarly a single reused instance
-    // instead of a fresh allocation per glyph per frame.
-    private void DrawGlyphFitted(SKCanvas canvas, int codepoint, SKRect targetRect, double visualScale = 1.0)
-    {
-        if (_bravuraTypeface is null || targetRect.Width <= 0 || targetRect.Height <= 0)
-        {
-            return;
-        }
-
-        var text = char.ConvertFromUtf32(codepoint);
-
-        if (!_glyphBoundsCache.TryGetValue(codepoint, out var measuredBounds))
-        {
-            using var measureFont = new SKFont(_bravuraTypeface, 100);
-            measureFont.MeasureText(text, out measuredBounds);
-            _glyphBoundsCache[codepoint] = measuredBounds;
-        }
-
-        if (measuredBounds.Width <= 0 || measuredBounds.Height <= 0)
-        {
-            return;
-        }
-
-        var scale = Math.Min(targetRect.Width / measuredBounds.Width, targetRect.Height / measuredBounds.Height) * 0.9f * (float)visualScale;
-        using var font = new SKFont(_bravuraTypeface, 100f * scale);
-        font.MeasureText(text, out var fittedBounds);
-
-        var x = targetRect.MidX - fittedBounds.MidX;
-        var y = targetRect.MidY - fittedBounds.MidY;
-
-        canvas.DrawText(text, x, y, font, _glyphPaint);
+        _annotationPainter.DrawAnnotations(canvas, e.Info, _viewModel.CurrentPageAnnotations);
     }
 }

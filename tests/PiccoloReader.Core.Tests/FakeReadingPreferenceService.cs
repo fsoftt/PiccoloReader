@@ -5,9 +5,9 @@ namespace PiccoloReader.Core.Tests;
 
 public class FakeReadingPreferenceService : IReadingPreferenceService
 {
-    public ReadingDirection Direction { get; set; } = ReadingDirection.Horizontal;
+    public ReadingMode Mode { get; set; } = ReadingMode.Horizontal;
 
-    public ReadingDirection GetReadingDirection() => Direction;
+    public ReadingMode GetReadingMode() => Mode;
 
-    public void SetReadingDirection(ReadingDirection direction) => Direction = direction;
+    public void SetReadingMode(ReadingMode mode) => Mode = mode;
 }

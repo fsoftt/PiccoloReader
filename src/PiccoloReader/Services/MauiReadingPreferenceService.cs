@@ -5,13 +5,13 @@ namespace PiccoloReader.Services;
 
 public class MauiReadingPreferenceService : IReadingPreferenceService
 {
-    private const string ReadingDirectionKey = "ReadingDirection";
+    private const string ReadingModeKey = "ReadingMode";
 
-    public ReadingDirection GetReadingDirection() =>
-        Enum.TryParse<ReadingDirection>(Preferences.Default.Get(ReadingDirectionKey, nameof(ReadingDirection.Horizontal)), out var direction)
-            ? direction
-            : ReadingDirection.Horizontal;
+    public ReadingMode GetReadingMode() =>
+        Enum.TryParse<ReadingMode>(Preferences.Default.Get(ReadingModeKey, nameof(ReadingMode.Horizontal)), out var mode)
+            ? mode
+            : ReadingMode.Horizontal;
 
-    public void SetReadingDirection(ReadingDirection direction) =>
-        Preferences.Default.Set(ReadingDirectionKey, direction.ToString());
+    public void SetReadingMode(ReadingMode mode) =>
+        Preferences.Default.Set(ReadingModeKey, mode.ToString());
 }

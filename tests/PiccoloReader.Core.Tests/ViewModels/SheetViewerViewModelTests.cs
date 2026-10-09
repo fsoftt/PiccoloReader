@@ -142,28 +142,117 @@ public class SheetViewerViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ReadingDirection_DefaultsToSavedPreference()
+    public void ReadingMode_DefaultsToSavedPreference()
     {
-        _readingPreferences.Direction = ReadingDirection.Vertical;
+        _readingPreferences.Mode = ReadingMode.VerticalPaged;
 
         var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences);
 
-        Assert.Equal(ReadingDirection.Vertical, sut.ReadingDirection);
-        Assert.True(sut.IsVerticalReading);
+        Assert.Equal(ReadingMode.VerticalPaged, sut.ReadingMode);
+        Assert.True(sut.IsVerticalPaged);
+        Assert.False(sut.IsContinuousReading);
     }
 
     [Fact]
-    public void ToggleReadingDirectionCommand_SwitchesAndPersists()
+    public async Task CycleReadingModeCommand_CyclesThroughAllModesAndPersists()
     {
-        _sut.ToggleReadingDirectionCommand.Execute(null);
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
 
-        Assert.Equal(ReadingDirection.Vertical, _sut.ReadingDirection);
-        Assert.Equal(ReadingDirection.Vertical, _readingPreferences.Direction);
+        await _sut.CycleReadingModeCommand.ExecuteAsync(null);
+        Assert.Equal(ReadingMode.VerticalPaged, _sut.ReadingMode);
+        Assert.Equal(ReadingMode.VerticalPaged, _readingPreferences.Mode);
 
-        _sut.ToggleReadingDirectionCommand.Execute(null);
+        await _sut.CycleReadingModeCommand.ExecuteAsync(null);
+        Assert.Equal(ReadingMode.VerticalContinuous, _sut.ReadingMode);
+        Assert.True(_sut.IsContinuousReading);
+        Assert.Equal(ReadingMode.VerticalContinuous, _readingPreferences.Mode);
 
-        Assert.Equal(ReadingDirection.Horizontal, _sut.ReadingDirection);
-        Assert.Equal(ReadingDirection.Horizontal, _readingPreferences.Direction);
+        await _sut.CycleReadingModeCommand.ExecuteAsync(null);
+        Assert.Equal(ReadingMode.Horizontal, _sut.ReadingMode);
+        Assert.Equal(ReadingMode.Horizontal, _readingPreferences.Mode);
+    }
+
+    [Fact]
+    public async Task LoadAsync_CreatesOneContinuousPagePerPage()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 4);
+
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.Equal(new[] { 0, 1, 2, 3 }, _sut.ContinuousPages.Select(p => p.PageIndex));
+        Assert.All(_sut.ContinuousPages, p => Assert.Equal(1.25, p.AspectRatio));
+    }
+
+    [Fact]
+    public async Task LoadAsync_ContinuousMode_LoadsCurrentPageAndNeighboursOnly()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10, lastViewedPageIndex: 4);
+
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        var loaded = _sut.ContinuousPages.Where(p => p.ImageBytes is not null).Select(p => p.PageIndex);
+        Assert.Equal(new[] { 3, 4, 5 }, loaded);
+        Assert.Equal(new byte[] { 4 }, _sut.ContinuousPages[4].ImageBytes);
+        Assert.Null(_sut.CurrentPageImageBytes);
+    }
+
+    [Fact]
+    public async Task UpdateContinuousViewportAsync_UpdatesCurrentPageAndPersistsIt()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.UpdateContinuousViewportAsync(firstVisibleIndex: 5, lastVisibleIndex: 6, centerIndex: 6);
+
+        Assert.Equal(6, _sut.CurrentPageIndex);
+        var reloaded = await _libraryService.GetSheetAsync(sheet.Id);
+        Assert.Equal(6, reloaded.LastViewedPageIndex);
+    }
+
+    [Fact]
+    public async Task UpdateContinuousViewportAsync_ReleasesPagesThatScrolledAway()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        Assert.NotNull(_sut.ContinuousPages[0].ImageBytes);
+
+        await _sut.UpdateContinuousViewportAsync(firstVisibleIndex: 7, lastVisibleIndex: 8, centerIndex: 8);
+
+        var loaded = _sut.ContinuousPages.Where(p => p.ImageBytes is not null).Select(p => p.PageIndex);
+        Assert.Equal(new[] { 6, 7, 8, 9 }, loaded);
+    }
+
+    [Fact]
+    public async Task UpdateContinuousViewportAsync_LoadsAnnotationsForVisiblePages()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _annotationService.AddIconAsync(sheet.Id, 2, "forte", 0.1, 0.1, 0.1, 0.1);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.UpdateContinuousViewportAsync(firstVisibleIndex: 2, lastVisibleIndex: 2, centerIndex: 2);
+
+        Assert.Single(_sut.ContinuousPages[2].Annotations);
+        Assert.Empty(_sut.ContinuousPages[3].Annotations);
+    }
+
+    [Fact]
+    public async Task CycleReadingModeCommand_LeavingContinuous_RendersPageScrolledTo()
+    {
+        _readingPreferences.Mode = ReadingMode.VerticalContinuous;
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.UpdateContinuousViewportAsync(firstVisibleIndex: 6, lastVisibleIndex: 7, centerIndex: 7);
+
+        await _sut.CycleReadingModeCommand.ExecuteAsync(null);
+
+        Assert.Equal(ReadingMode.Horizontal, _sut.ReadingMode);
+        Assert.Equal(7, _sut.CurrentPageIndex);
+        Assert.Equal(new byte[] { 7 }, _sut.CurrentPageImageBytes);
     }
 
     [Fact]

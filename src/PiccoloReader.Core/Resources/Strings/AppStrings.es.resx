@@ -69,8 +69,9 @@
   <data name="Eraser" xml:space="preserve"><value>Borrador</value></data>
   <data name="Size" xml:space="preserve"><value>Tamaño</value></data>
   <data name="PageIndicatorFormat" xml:space="preserve"><value>Página {0} de {1}</value></data>
-  <data name="ReadingDirectionHorizontalMessage" xml:space="preserve"><value>Dirección de lectura: izquierda a derecha</value></data>
-  <data name="ReadingDirectionVerticalMessage" xml:space="preserve"><value>Dirección de lectura: arriba a abajo</value></data>
+  <data name="ReadingModeHorizontalMessage" xml:space="preserve"><value>Modo de lectura: izquierda a derecha</value></data>
+  <data name="ReadingModeVerticalPagedMessage" xml:space="preserve"><value>Modo de lectura: arriba a abajo, página por página</value></data>
+  <data name="ReadingModeVerticalContinuousMessage" xml:space="preserve"><value>Modo de lectura: arriba a abajo, desplazamiento continuo (anotaciones solo lectura)</value></data>
   <data name="CategoryDynamics" xml:space="preserve"><value>Dinámica</value></data>
   <data name="CategoryArticulations" xml:space="preserve"><value>Articulaciones</value></data>
   <data name="CategoryFermataBreath" xml:space="preserve"><value>Calderón y respiración</value></data>
@@ -143,7 +144,7 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="TutorialFoldersTitle" xml:space="preserve"><value>Organiza tu biblioteca</value></data>
   <data name="TutorialFoldersText" xml:space="preserve"><value>Crea carpetas, mueve partituras entre ellas, ordénalas por nombre o fecha de incorporación y usa la búsqueda para encontrar todo rápido.</value></data>
   <data name="TutorialReadingTitle" xml:space="preserve"><value>Lectura</value></data>
-  <data name="TutorialReadingText" xml:space="preserve"><value>Toca el borde izquierdo o derecho, o desliza, para pasar de página. Toca el centro para mostrar u ocultar la barra de herramientas, pellizca para hacer zoom y toca el indicador de página para saltar a una página. Con el botón de la barra puedes cambiar la dirección de lectura entre horizontal (izquierda a derecha) y vertical (arriba a abajo); en modo vertical se toca el borde superior o inferior, o se desliza hacia arriba o abajo.</value></data>
+  <data name="TutorialReadingText" xml:space="preserve"><value>Toca el borde izquierdo o derecho, o desliza, para pasar de página. Toca el centro para mostrar u ocultar la barra de herramientas, pellizca para hacer zoom y toca el indicador de página para saltar a una página. El botón de la barra alterna entre tres modos de lectura: izquierda a derecha; arriba a abajo página por página (toca el borde superior o inferior, o desliza hacia arriba o abajo); y arriba a abajo con desplazamiento continuo, donde el final de una página sigue visible mientras entra la siguiente.</value></data>
   <data name="TutorialAnnotationsTitle" xml:space="preserve"><value>Anotaciones</value></data>
   <data name="TutorialAnnotationsText" xml:space="preserve"><value>Añade símbolos musicales, dibuja con el lápiz o borra con la goma. ¿Te equivocaste? Deshaz y rehaz cualquier cambio.</value></data>
   <data name="TutorialBookmarksTitle" xml:space="preserve"><value>Marcadores</value></data>

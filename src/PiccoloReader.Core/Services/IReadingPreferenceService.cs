@@ -4,7 +4,7 @@ namespace PiccoloReader.Core.Services;
 
 public interface IReadingPreferenceService
 {
-    ReadingDirection GetReadingDirection();
+    ReadingMode GetReadingMode();
 
-    void SetReadingDirection(ReadingDirection direction);
+    void SetReadingMode(ReadingMode mode);
 }
