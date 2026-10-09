@@ -8,8 +8,9 @@ namespace PiccoloReader.Views;
 // One page in the continuous reading mode's list: the rendered page image
 // with its annotations drawn on top (read-only). Its height always follows
 // the page's own aspect ratio, so the image and the annotation overlay
-// cover exactly the same area and the normalized annotation coordinates
-// line up the same way they do in the single-page viewer.
+// cover exactly the same area. Annotations are stored relative to the
+// single-page viewer's container (the page letterboxed in the reading
+// area), so they're mapped onto the page through a PageFrame.
 public class ContinuousPageView : ContentView
 {
     // Gap below each page. Part of the item itself (not the list's
@@ -22,13 +23,19 @@ public class ContinuousPageView : ContentView
     private readonly Image _image;
     private readonly SKCanvasView _canvas;
     private readonly ActivityIndicator _loadingIndicator;
+    private readonly Func<(double Width, double Height)> _editorSize;
     private ContinuousPage? _page;
 
-    // onTapped receives the page and the tap position normalized to it
-    // (0-1), the same coordinates annotations use.
-    public ContinuousPageView(AnnotationPainter painter, Action<ContinuousPage, double, double> onTapped)
+    // editorSize is the single-page viewer's container size, which stored
+    // annotation coordinates are relative to. onTapped receives the page and
+    // the tap position in those same annotation coordinates.
+    public ContinuousPageView(
+        AnnotationPainter painter,
+        Func<(double Width, double Height)> editorSize,
+        Action<ContinuousPage, double, double> onTapped)
     {
         _painter = painter;
+        _editorSize = editorSize;
 
         _image = new Image { Aspect = Aspect.AspectFit };
         _canvas = new SKCanvasView { InputTransparent = true };
@@ -56,7 +63,11 @@ public class ContinuousPageView : ContentView
                 return;
             }
 
-            onTapped(_page, position.Value.X / _pageArea.Width, position.Value.Y / _pageArea.Height);
+            var frame = CurrentFrame();
+            onTapped(
+                _page,
+                frame.ToContainerX(position.Value.X / _pageArea.Width),
+                frame.ToContainerY(position.Value.Y / _pageArea.Height));
         };
         GestureRecognizers.Add(tap);
 
@@ -130,6 +141,12 @@ public class ContinuousPageView : ContentView
         }
     }
 
+    private PageFrame CurrentFrame()
+    {
+        var (width, height) = _editorSize();
+        return _page is null ? PageFrame.Full : PageFrame.Fit(width, height, _page.AspectRatio);
+    }
+
     private void OnCanvasPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
     {
         var canvas = e.Surface.Canvas;
@@ -137,7 +154,7 @@ public class ContinuousPageView : ContentView
 
         if (_page is not null)
         {
-            _painter.DrawAnnotations(canvas, e.Info, _page.Annotations);
+            _painter.DrawAnnotations(canvas, e.Info, _page.Annotations, CurrentFrame());
         }
     }
 }

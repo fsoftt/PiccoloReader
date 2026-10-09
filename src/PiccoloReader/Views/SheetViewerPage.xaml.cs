@@ -73,7 +73,7 @@ public partial class SheetViewerPage : ContentPage
         };
         UpdateReadingModeIcon();
 
-        ContinuousPagesView.ItemTemplate = new DataTemplate(() => new ContinuousPageView(_annotationPainter, OnContinuousPageTapped));
+        ContinuousPagesView.ItemTemplate = new DataTemplate(() => new ContinuousPageView(_annotationPainter, EditorContainerSize, OnContinuousPageTapped));
 
         // ToolbarItem has no bindable IsVisible in this MAUI version (it
         // derives from Element, not VisualElement), so visibility is
@@ -1158,6 +1158,13 @@ public partial class SheetViewerPage : ContentPage
 #endif
         return _continuousScrollOffsetFallback;
     }
+
+    // Size that annotation coordinates are normalized against: PageContainer
+    // fills the same area as the list, but has no size while hidden.
+    private (double Width, double Height) EditorContainerSize() =>
+        PageContainer.Width > 0 && PageContainer.Height > 0
+            ? (PageContainer.Width, PageContainer.Height)
+            : (ContinuousPagesView.Width, ContinuousPagesView.Height);
 
     // A tap on an annotation opens that page in the editor with the
     // annotation selected (to move, resize or delete it); anywhere else
