@@ -1578,6 +1578,14 @@ public partial class SheetViewerPage : ContentPage
     // toggles the toolbar, like a center tap in the paged modes.
     private async void OnContinuousPageTapped(ContinuousPage page, double normalizedX, double normalizedY)
     {
+#if ANDROID
+        // A pan/scroll that ends over the page is not a tap (see IsTap).
+        if (_continuousZoomTouchListener is { IsTap: false })
+        {
+            return;
+        }
+#endif
+
         if (ToolSheet.IsVisible)
         {
             ToolSheet.IsVisible = false;

@@ -26,8 +26,11 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
     private readonly Action _onPinchEnd;
     private readonly Action<double> _onHorizontalPan;
     private readonly float _density;
+    private readonly float _touchSlop;
 
     private bool _isPinching;
+    private float _downX;
+    private float _downY;
     private double _previousSpan;
     private float _lastPanX;
     private bool _hasLastPanX;
@@ -44,7 +47,17 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
         _onPinchEnd = onPinchEnd;
         _onHorizontalPan = onHorizontalPan;
         _density = context.Resources?.DisplayMetrics?.Density ?? 1f;
+        _touchSlop = ViewConfiguration.Get(context)?.ScaledTouchSlop ?? 8 * _density;
     }
+
+    // True while the current gesture is still a candidate tap (one finger,
+    // moved less than the touch slop since ACTION_DOWN). The list's MAUI tap
+    // recognizer can't tell a pan from a tap here: while the finger drags
+    // the zoomed list sideways, the list translates under it, so the finger's
+    // position in the list's own coordinates barely changes and the gesture
+    // detector still sees a tap on release. Tap handlers consult this (it
+    // stays valid after ACTION_UP, until the next ACTION_DOWN).
+    public bool IsTap { get; private set; }
 
     private static float StableX(MotionEvent e, int pointerIndex, View v) => e.GetX(pointerIndex) * v.ScaleX + v.TranslationX;
 
@@ -63,12 +76,16 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
         {
             case MotionEventActions.Down:
                 _isPinching = false;
-                _lastPanX = StableX(e, 0, rv);
+                _downX = StableX(e, 0, rv);
+                _downY = StableY(e, 0, rv);
+                IsTap = true;
+                _lastPanX = _downX;
                 _hasLastPanX = true;
                 return false;
 
             case MotionEventActions.PointerDown when e.PointerCount == 2:
                 _isPinching = true;
+                IsTap = false;
                 _hasLastPanX = false;
                 _previousSpan = Span(e, rv);
                 rv.Parent?.RequestDisallowInterceptTouchEvent(true);
@@ -77,6 +94,11 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
 
             case MotionEventActions.Move when e.PointerCount == 1 && _hasLastPanX:
                 var x = StableX(e, 0, rv);
+                if (IsTap && (Math.Abs(x - _downX) > _touchSlop || Math.Abs(StableY(e, 0, rv) - _downY) > _touchSlop))
+                {
+                    IsTap = false;
+                }
+
                 _onHorizontalPan((x - _lastPanX) / _density);
                 _lastPanX = x;
                 return false;
