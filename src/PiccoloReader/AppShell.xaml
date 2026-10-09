@@ -6,94 +6,41 @@
     xmlns:views="clr-namespace:PiccoloReader.Views"
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
     xmlns:local="clr-namespace:PiccoloReader"
-    FlyoutBehavior="Flyout"
-    FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
+    FlyoutBehavior="Disabled"
+    Shell.BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource BackgroundDark}}"
+    Shell.ForegroundColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+    Shell.TitleColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
     Title="PiccoloReader">
 
-    <Shell.FlyoutHeader>
-        <Grid HeightRequest="160" BackgroundColor="{StaticResource Primary}">
-            <VerticalStackLayout
-                HorizontalOptions="Center"
-                VerticalOptions="Center"
-                Spacing="8">
-                <Border
-                    WidthRequest="72"
-                    HeightRequest="72"
-                    Padding="0"
-                    StrokeThickness="0"
-                    StrokeShape="RoundRectangle 36"
-                    BackgroundColor="{StaticResource White}">
-                    <Image
-                        Source="piccolo_mark"
-                        WidthRequest="44"
-                        HeightRequest="44"
-                        HorizontalOptions="Center"
-                        VerticalOptions="Center" />
-                </Border>
-                <Label
-                    Text="Piccolo"
-                    FontFamily="Pacifico"
-                    FontSize="22"
-                    TextColor="{StaticResource White}"
-                    HorizontalOptions="Center" />
-            </VerticalStackLayout>
-        </Grid>
-    </Shell.FlyoutHeader>
+    <!--
+        Bottom tab bar replaces the old flyout. Pushed pages (folder, sheet
+        viewer, ...) are registered routes and hide the tab bar via
+        Shell.TabBarIsVisible="False" on the page.
+    -->
+    <TabBar>
+        <Tab Title="{x:Static strings:AppStrings.Library}" Route="library">
+            <Tab.Icon>
+                <FontImageSource Glyph="&#xE2C7;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+            </Tab.Icon>
+            <ShellContent ContentTemplate="{DataTemplate views:LibraryPage}" />
+        </Tab>
 
-    <FlyoutItem Title="{x:Static strings:AppStrings.Library}" Route="library">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource
-                Glyph="&#xE2C7;"
-                FontFamily="MaterialOutlined"
-                Size="24"
-                Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate views:LibraryPage}" />
-    </FlyoutItem>
+        <Tab
+            Title="{x:Static strings:AppStrings.DonateMenuItem}"
+            Route="donate"
+            IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
+            <Tab.Icon>
+                <FontImageSource Glyph="&#xE87E;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+            </Tab.Icon>
+            <ShellContent ContentTemplate="{DataTemplate views:DonatePage}" />
+        </Tab>
 
-    <FlyoutItem
-        Title="{x:Static strings:AppStrings.DonateMenuItem}"
-        Route="donate"
-        IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource
-                Glyph="&#xE87E;"
-                FontFamily="MaterialOutlined"
-                Size="24"
-                Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate views:DonatePage}" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="{x:Static strings:AppStrings.Settings}" Route="settings">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource
-                Glyph="&#xE429;"
-                FontFamily="MaterialOutlined"
-                Size="24"
-                Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" />
-    </FlyoutItem>
-
-    <Shell.FlyoutFooter>
-        <HorizontalStackLayout
-            Padding="0,0,0,20"
-            HorizontalOptions="Center"
-            Spacing="4">
-            <Label
-                Text="{x:Static strings:AppStrings.MadeWithLoveBy}"
-                FontSize="12"
-                TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray300}}" />
-            <Label
-                Text="@fsoftt"
-                FontSize="12"
-                TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}">
-                <Label.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnAboutLinkTapped" />
-                </Label.GestureRecognizers>
-            </Label>
-        </HorizontalStackLayout>
-    </Shell.FlyoutFooter>
+        <Tab Title="{x:Static strings:AppStrings.Settings}" Route="settings">
+            <Tab.Icon>
+                <FontImageSource Glyph="&#xE429;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+            </Tab.Icon>
+            <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" />
+        </Tab>
+    </TabBar>
 
 </Shell>
