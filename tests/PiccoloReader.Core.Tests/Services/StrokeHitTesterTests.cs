@@ -72,4 +72,14 @@ public class StrokeHitTesterTests
 
         Assert.Equal(3, distance, precision: 10);
     }
+
+    [Fact]
+    public void DistanceToPolyline_YScale_MeasuresVerticalDistanceInWidthUnits()
+    {
+        var points = new List<StrokePoint> { new(0, 0), new(1, 0) };
+
+        var distance = StrokeHitTester.DistanceToPolyline(0.5, 0.2, points, yScale: 1.5);
+
+        Assert.Equal(0.3, distance, precision: 10);
+    }
 }

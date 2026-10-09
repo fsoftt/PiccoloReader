@@ -167,4 +167,68 @@ public class AnnotationServiceTests : IDisposable
         Assert.Single(loaded);
         Assert.Equal("dynamicForte", loaded[0].IconKey);
     }
+
+    [Fact]
+    public async Task AddIconAndStroke_AreStoredInPageSpace()
+    {
+        await _sut.AddIconAsync(1, 0, "dynamicForte", 0.1, 0.1, 0.1, 0.1);
+        await _sut.AddStrokeAsync(1, 0, "#000000", 0.01, new List<StrokePoint> { new(0, 0), new(1, 1) });
+
+        var loaded = await _sut.GetAnnotationsAsync(1, 0);
+
+        Assert.All(loaded, a => Assert.Equal(AnnotationCoordinateSpace.Page, a.CoordinateSpace));
+    }
+
+    [Fact]
+    public async Task GetPageAnnotationsAsync_LegacyRow_IsConvertedAndPersistedOnce()
+    {
+        // Legacy icon: 400x800 reference container, 400x600 page (y offset 0.125).
+        await _sut.InsertAnnotationAsync(new Annotation
+        {
+            SheetId = 1,
+            PageIndex = 0,
+            Type = AnnotationType.Icon,
+            IconKey = "dynamicForte",
+            X = 0.5,
+            Y = 0.5,
+            Width = 0.1,
+            Height = 0.075,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        var first = await _sut.GetPageAnnotationsAsync(1, 0, 1.5, 800, 400);
+        Assert.Equal(0.5, first[0].Y, 6);
+        Assert.Equal(0.1, first[0].Height, 6);
+        Assert.Equal(AnnotationCoordinateSpace.Page, first[0].CoordinateSpace);
+
+        // A later load with a different container/page must not convert again.
+        var second = await _sut.GetPageAnnotationsAsync(1, 0, 1.0, 300, 900);
+        Assert.Equal(0.5, second[0].Y, 6);
+        Assert.Equal(0.1, second[0].Height, 6);
+
+        var raw = await _sut.GetAnnotationsAsync(1, 0);
+        Assert.Equal(AnnotationCoordinateSpace.Page, raw[0].CoordinateSpace);
+    }
+
+    [Fact]
+    public async Task GetPageAnnotationsAsync_UnknownAspect_LeavesLegacyRowForLater()
+    {
+        await _sut.InsertAnnotationAsync(new Annotation
+        {
+            SheetId = 1,
+            PageIndex = 0,
+            Type = AnnotationType.Icon,
+            IconKey = "dynamicForte",
+            X = 0.5,
+            Y = 0.5,
+            Width = 0.1,
+            Height = 0.075,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await _sut.GetPageAnnotationsAsync(1, 0, 0, 400, 800);
+
+        var raw = await _sut.GetAnnotationsAsync(1, 0);
+        Assert.Equal(AnnotationCoordinateSpace.Legacy, raw[0].CoordinateSpace);
+    }
 }

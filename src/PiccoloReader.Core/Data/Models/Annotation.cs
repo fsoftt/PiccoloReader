@@ -31,6 +31,13 @@ public class Annotation
 
     public DateTime CreatedAt { get; set; }
 
+    // Which rectangle X/Y/Width/Height, stroke points and StrokeWidth are
+    // normalized (0-1) to: AnnotationCoordinateSpace.Legacy (0) is the
+    // reading area container, Page (1) is the page itself. Rows from before
+    // the column existed read back as 0 and are converted lazily when they
+    // are first shown on a page of known aspect ratio.
+    public int CoordinateSpace { get; set; }
+
     // Existing rows predate the Type column and read back with Type
     // null/empty from SQLite (sqlite-net-pcl overwrites the field
     // initializer's default with the column's actual NULL value on
@@ -44,4 +51,10 @@ public static class AnnotationType
 {
     public const string Icon = "Icon";
     public const string Stroke = "Stroke";
+}
+
+public static class AnnotationCoordinateSpace
+{
+    public const int Legacy = 0;
+    public const int Page = 1;
 }

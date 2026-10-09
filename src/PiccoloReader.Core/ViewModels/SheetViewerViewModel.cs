@@ -48,6 +48,16 @@ public partial class SheetViewerViewModel : ObservableObject
     private int _targetWidthPx;
     private int _targetHeightPx;
 
+    // Size of the reading area as last laid out by the view; (0, 0) until
+    // known, in which case the render target size stands in for it. Only its
+    // shape matters: it sets the portrait reference container used to
+    // convert legacy annotations.
+    public (double Width, double Height) ReadingAreaSize { get; set; }
+
+    // Height / width of the page shown in the single-page viewer (0 while
+    // unknown). Annotations are normalized to that page rectangle.
+    public double CurrentPageAspectRatio { get; private set; }
+
     public SheetViewerViewModel(
         LibraryService libraryService,
         IAppStorageProvider storageProvider,
@@ -311,7 +321,7 @@ public partial class SheetViewerViewModel : ObservableObject
 
         if (_sheet is not null)
         {
-            var annotations = await _annotationService.GetAnnotationsAsync(_sheet.Id, page.PageIndex);
+            var annotations = await LoadPageAnnotationsAsync(page.PageIndex, page.AspectRatio);
             if (page.IsLoadRequested)
             {
                 page.Annotations = annotations.ToList();
@@ -366,7 +376,7 @@ public partial class SheetViewerViewModel : ObservableObject
         if (_sheet is not null && CurrentPageIndex < ContinuousPages.Count)
         {
             var page = ContinuousPages[CurrentPageIndex];
-            var annotations = await _annotationService.GetAnnotationsAsync(_sheet.Id, page.PageIndex);
+            var annotations = await LoadPageAnnotationsAsync(page.PageIndex, page.AspectRatio);
             page.Annotations = annotations.ToList();
         }
     }
@@ -444,7 +454,13 @@ public partial class SheetViewerViewModel : ObservableObject
         var aspectRatio = icon?.AspectRatio ?? 1.0;
 
         var width = DefaultIconWidth;
+        // Width and height are fractions of the page's own width and height.
         var height = width / aspectRatio;
+        if (CurrentPageAspectRatio > 0)
+        {
+            height /= CurrentPageAspectRatio;
+        }
+
         var x = 0.5 - width / 2;
         var y = 0.5 - height / 2;
 
@@ -654,11 +670,14 @@ public partial class SheetViewerViewModel : ObservableObject
             return;
         }
 
+        CurrentPageAspectRatio = imageBytes is not null && PngDimensions.TryRead(imageBytes, out var imageWidth, out var imageHeight)
+            ? (double)imageHeight / imageWidth
+            : 0;
         CurrentPageImageBytes = imageBytes;
 
         if (_sheet is not null)
         {
-            var annotations = await _annotationService.GetAnnotationsAsync(_sheet.Id, pageIndex);
+            var annotations = await LoadPageAnnotationsAsync(pageIndex, CurrentPageAspectRatio);
             if (pageIndex != CurrentPageIndex)
             {
                 return;
@@ -683,6 +702,19 @@ public partial class SheetViewerViewModel : ObservableObject
         }
 
         return task;
+    }
+
+    // Reads a page's annotations in page coordinates, converting legacy ones
+    // on the way. An unknown page aspect falls back to the render target's.
+    private Task<List<Annotation>> LoadPageAnnotationsAsync(int pageIndex, double pageAspectRatio)
+    {
+        var targetAspect = _targetWidthPx > 0 ? (double)_targetHeightPx / _targetWidthPx : 0;
+        var (areaWidth, areaHeight) = ReadingAreaSize is { Width: > 0, Height: > 0 }
+            ? ReadingAreaSize
+            : (_targetWidthPx, _targetHeightPx);
+
+        return _annotationService.GetPageAnnotationsAsync(
+            _sheet!.Id, pageIndex, pageAspectRatio > 0 ? pageAspectRatio : targetAspect, areaWidth, areaHeight);
     }
 
     private async Task<byte[]?> RenderPageGatedAsync(int pageIndex)
