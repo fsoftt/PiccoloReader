@@ -40,6 +40,8 @@ public partial class SheetViewerPage : ContentPage
 
     private const double MaxContinuousZoom = 5;
     private double _continuousZoom = 1;
+    private double _lastPageWidth;
+    private double _lastPageHeight;
     private double _continuousScrollOffsetFallback;
 #if ANDROID
     private AndroidX.RecyclerView.Widget.RecyclerView? _continuousRecyclerView;
@@ -119,6 +121,31 @@ public partial class SheetViewerPage : ContentPage
         ResetZoom();
         AnnotationCanvas.InvalidateSurface();
         UpdateReadingModeUi();
+    }
+
+    // The editor's zoom/translation (set by ApplyEditorZoomFromContinuous)
+    // is in the old orientation's coordinates, so after a rotation it leaves
+    // the page shifted and clipped. Resetting re-centers the page. Only an
+    // orientation flip counts: the toolbar showing/hiding also resizes the page.
+    protected override void OnSizeAllocated(double width, double height)
+    {
+        var changed = width > 0 && height > 0 && (width > height) != (_lastPageWidth > _lastPageHeight);
+        var hadSize = _lastPageWidth > 0;
+        _lastPageWidth = width;
+        _lastPageHeight = height;
+
+        base.OnSizeAllocated(width, height);
+
+        if (changed && hadSize && _viewModel.IsContinuousEditing)
+        {
+            Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(100), () =>
+            {
+                if (_viewModel.IsContinuousEditing)
+                {
+                    ResetZoom();
+                }
+            });
+        }
     }
 
     private void ResetZoom()
