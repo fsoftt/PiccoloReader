@@ -31,8 +31,8 @@ matched by the app's own `AppStrings` text (tests force the English UI).
 3. Install Appium once and start it:
 
    ```
-   npm install -g appium@2
-   appium driver install uiautomator2
+   npm install -g appium@2.19.0
+   appium driver install uiautomator2@3.10.0
    appium
    ```
 
@@ -49,7 +49,6 @@ matched by the app's own `AppStrings` text (tests force the English UI).
 | `APPIUM_URL` | Appium server, default `http://127.0.0.1:4723` |
 | `E2E_ARTIFACTS` | where failure screenshots / UI dumps / logcat go (default `bin/.../e2e-artifacts`) |
 | `PICCOLO_RESET` | `none` disables the `pm clear` between tests |
-| `PICCOLO_IMPORT_MODE` | `seed` writes the PDF + DB row directly instead of using the system file picker |
 | `ANDROID_SERIAL` | adb device to use |
 
 The tests change global emulator settings (rotation lock) and write PDFs to `/sdcard/Download`.
@@ -59,5 +58,5 @@ The tests change global emulator settings (rotation lock) and write PDFs to `/sd
 - `Infrastructure/` - `AppSession` (driver, reset, prefs), `Adb`, `AppDb` (reads the app SQLite
   via `adb exec-out run-as ... cat`), `Gestures` (tap, long-press, drag, pinch via W3C actions),
   `PdfFactory` (hand-written test PDFs), `Ui` (AutomationId lookup).
-- `Screens/` - page objects (`LibraryScreen`, `ViewerScreen`) holding the AutomationIds.
-- `Tests/` - the tests. Each starts from a fresh app with one imported 3-page PDF.
+- `Screens/` - page objects (`LibraryScreen`, `ViewerScreen`) holding the AutomationIds. Only the import test goes through the system file picker; every other test starts with the PDFs already seeded into the library (files + DB rows), on top of an empty database captured once per run from a real first launch (which skips the tutorial through `TutorialSkipButton`).
+- `Tests/` - `LibraryTests`, `ImportTests`, `ViewerTests`, `EditorTests`, `SettingsTests`. Annotations are drawn on a Skia canvas, so editor tests assert on the app SQLite database. Each starts from a fresh app (`pm clear`, English, portrait).

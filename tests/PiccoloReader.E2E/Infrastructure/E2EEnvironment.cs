@@ -26,17 +26,5 @@ public static class E2EEnvironment
         }
     }
 
-    /// <summary>
-    /// "pmclear" (default): wipe app data between tests with <c>pm clear</c>. Only safe for
-    /// self-contained APKs - on a Fast Deployment Debug build it deletes the .NET runtime
-    /// payload and the app no longer starts. PICCOLO_RESET=none: do not wipe (state leaks between tests).
-    /// </summary>
-    public static bool ResetWithPmClear =>
-        !string.Equals(Environment.GetEnvironmentVariable("PICCOLO_RESET"), "none", StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>"picker" (default) imports through the system document picker; "seed" writes the DB row + file directly.</summary>
-    public static bool ImportViaSeed =>
-        string.Equals(Environment.GetEnvironmentVariable("PICCOLO_IMPORT_MODE"), "seed", StringComparison.OrdinalIgnoreCase);
-
     public static string? AdbSerial => Environment.GetEnvironmentVariable("ANDROID_SERIAL");
 }

@@ -29,7 +29,10 @@ adb logcat -c
 adb logcat -v time > "$OUT/logcat.txt" 2>&1 &
 LOGCAT_PID=$!
 
-dotnet test "$WORKSPACE/tests/PiccoloReader.E2E/PiccoloReader.E2E.csproj" -c Release --no-build \
+FILTER_ARGS=()
+if [ -n "${E2E_FILTER:-}" ]; then FILTER_ARGS=(--filter "$E2E_FILTER"); fi
+
+dotnet test "$WORKSPACE/tests/PiccoloReader.E2E/PiccoloReader.E2E.csproj" -c Release --no-build "${FILTER_ARGS[@]}" \
   --logger "trx;LogFileName=e2e.trx" --results-directory "$OUT/results" \
   --logger "console;verbosity=normal"
 RESULT=$?

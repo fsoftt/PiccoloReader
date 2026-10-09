@@ -1,37 +1,26 @@
 using OpenQA.Selenium;
-using PiccoloReader.E2E.Screens;
 
 namespace PiccoloReader.E2E.Infrastructure;
 
 /// <summary>
-/// Base for every E2E fixture: gives each test a fresh app (empty library, tutorial skipped,
-/// English, portrait) and attaches a screenshot / page source / logcat when a test fails.
+/// Base for every E2E fixture: gives each test a fresh app (wiped data, tutorial done, English,
+/// portrait, the fixture's sheets already in the library) and attaches a screenshot / page source /
+/// logcat when a test fails.
 /// </summary>
 public abstract class E2ETestBase
 {
+    /// <summary>Title of the default 3-page portrait sample sheet.</summary>
     protected const string SheetTitle = "e2e-sheet";
     protected const int SheetPages = 3;
 
-    private static string? _samplePdf;
-
-    /// <summary>A 3-page portrait PDF, generated once per run.</summary>
-    protected static string SamplePdf =>
-        _samplePdf ??= PdfFactory.CreatePortrait(
-            Path.Combine(Path.GetTempPath(), "piccolo-e2e", $"{SheetTitle}.pdf"), SheetPages);
+    /// <summary>Sheets in the library at the start of every test of the fixture.</summary>
+    protected virtual IReadOnlyList<SeedSheet> Sheets => new[] { new SeedSheet(SheetTitle, SheetPages) };
 
     /// <summary>Reading mode written into the app's preferences before launch.</summary>
     protected virtual string InitialReadingMode => "Horizontal";
 
     [SetUp]
-    public void ResetAndImport()
-    {
-        AppSession.ResetApp(InitialReadingMode);
-        LibraryScreen.WaitLoaded();
-        LibraryScreen.ImportPdf(SamplePdf);
-    }
-
-    /// <summary>Opens the imported sample sheet in the viewer.</summary>
-    protected static void OpenSample() => LibraryScreen.OpenSheet(SheetTitle);
+    public void ResetAndSeed() => AppSession.ResetApp(InitialReadingMode, Sheets);
 
     [TearDown]
     public void CaptureOnFailure()
