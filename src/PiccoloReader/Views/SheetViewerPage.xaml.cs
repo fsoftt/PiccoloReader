@@ -156,6 +156,12 @@ public partial class SheetViewerPage : ContentPage
 
         SetToolbarVisible(false);
 
+        // The view model is reused across openings: leaving the editor with
+        // an icon selected would otherwise bring the selection box and trash
+        // button back on the next document. Always start with no selection.
+        _viewModel.SelectedAnnotation = null;
+        UpdateSelectionOverlay();
+
         if (!int.TryParse(SheetId, out var sheetId))
         {
             return;
@@ -541,6 +547,11 @@ public partial class SheetViewerPage : ContentPage
         ResizeHandle.TranslationX = SelectionHandlePadding + width - ResizeHandle.WidthRequest / 2;
         ResizeHandle.TranslationY = SelectionHandlePadding + height - ResizeHandle.HeightRequest / 2;
         UpdateResizeHandleScale();
+
+        if (ResizeHandle.IsVisible)
+        {
+            UpdateTrashPlacement(annotation);
+        }
     }
 
     // ResizeHandle lives inside PageContainer, so without this it would
@@ -560,6 +571,48 @@ public partial class SheetViewerPage : ContentPage
         ResizeHandle.Scale = _currentScale > 0 ? 1.0 / _currentScale : 1.0;
     }
 
+    // The trash button sits bottom-center, which is exactly where the resize
+    // handle ends up when the selected icon is centered near the bottom of
+    // the screen: the button covered the handle and it couldn't be grabbed.
+    // While the handle is showing, if it would overlap the button, park the
+    // button top-center instead (same size, same tap/drop behavior). It's
+    // not moved mid-drag (the handle is hidden then) so the drop target
+    // doesn't jump under the finger; bottom-center stays the default.
+    private const double TrashMargin = 88;
+    private const double TrashTopMargin = 16;
+
+    private void UpdateTrashPlacement(Annotation annotation)
+    {
+        if (TrashTarget.Parent is not VisualElement host || host.Width <= 0 || host.Height <= 0)
+        {
+            return;
+        }
+
+        var pageRect = EditorPageRect();
+        var handleX = PageContainer.X + PageContainer.TranslationX + (pageRect.Left + (annotation.X + annotation.Width) * pageRect.Width) * _currentScale;
+        var handleY = PageContainer.Y + PageContainer.TranslationY + (pageRect.Top + (annotation.Y + annotation.Height) * pageRect.Height) * _currentScale;
+
+        var reach = ResizeHandle.WidthRequest / 2 + 12;
+        var half = TrashTarget.WidthRequest / 2;
+        var bottomTop = host.Height - TrashMargin - TrashTarget.HeightRequest;
+        var overlapsBottom =
+            Math.Abs(handleX - host.Width / 2) < half + reach
+            && handleY > bottomTop - reach
+            && handleY < bottomTop + TrashTarget.HeightRequest + reach;
+
+        var atTop = TrashTarget.VerticalOptions.Alignment == LayoutAlignment.Start;
+        if (overlapsBottom && !atTop)
+        {
+            TrashTarget.VerticalOptions = LayoutOptions.Start;
+            TrashTarget.Margin = new Thickness(0, TrashTopMargin, 0, 0);
+        }
+        else if (!overlapsBottom && atTop)
+        {
+            TrashTarget.VerticalOptions = LayoutOptions.End;
+            TrashTarget.Margin = new Thickness(0, 0, 0, TrashMargin);
+        }
+    }
+
     // Hides the resize handle while a move/resize drag is in progress,
     // leaving only the thin border outline - reported feedback was that
     // positioning an icon precisely under a note while zoomed in was
@@ -573,6 +626,10 @@ public partial class SheetViewerPage : ContentPage
     private void SetDragControlsVisible(bool visible)
     {
         ResizeHandle.IsVisible = visible;
+        if (visible && _viewModel.SelectedAnnotation is { } selected)
+        {
+            UpdateTrashPlacement(selected);
+        }
     }
 
     private void OnSelectionMovePanUpdated(object? sender, PanUpdatedEventArgs e)
