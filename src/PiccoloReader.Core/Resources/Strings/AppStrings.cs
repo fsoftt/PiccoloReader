@@ -55,8 +55,9 @@ public static class AppStrings
     public static string Eraser => Get(nameof(Eraser));
     public static string Size => Get(nameof(Size));
     public static string PageIndicatorFormat => Get(nameof(PageIndicatorFormat));
-    public static string ReadingDirectionHorizontalMessage => Get(nameof(ReadingDirectionHorizontalMessage));
-    public static string ReadingDirectionVerticalMessage => Get(nameof(ReadingDirectionVerticalMessage));
+    public static string ReadingModeHorizontalMessage => Get(nameof(ReadingModeHorizontalMessage));
+    public static string ReadingModeVerticalPagedMessage => Get(nameof(ReadingModeVerticalPagedMessage));
+    public static string ReadingModeVerticalContinuousMessage => Get(nameof(ReadingModeVerticalContinuousMessage));
     public static string CategoryDynamics => Get(nameof(CategoryDynamics));
     public static string CategoryArticulations => Get(nameof(CategoryArticulations));
     public static string CategoryFermataBreath => Get(nameof(CategoryFermataBreath));

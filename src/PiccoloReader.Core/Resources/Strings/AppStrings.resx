@@ -69,8 +69,9 @@
   <data name="Eraser" xml:space="preserve"><value>Eraser</value></data>
   <data name="Size" xml:space="preserve"><value>Size</value></data>
   <data name="PageIndicatorFormat" xml:space="preserve"><value>Page {0} of {1}</value></data>
-  <data name="ReadingDirectionHorizontalMessage" xml:space="preserve"><value>Reading direction: left to right</value></data>
-  <data name="ReadingDirectionVerticalMessage" xml:space="preserve"><value>Reading direction: top to bottom</value></data>
+  <data name="ReadingModeHorizontalMessage" xml:space="preserve"><value>Reading mode: left to right</value></data>
+  <data name="ReadingModeVerticalPagedMessage" xml:space="preserve"><value>Reading mode: top to bottom, page by page</value></data>
+  <data name="ReadingModeVerticalContinuousMessage" xml:space="preserve"><value>Reading mode: top to bottom, continuous scroll (annotations are read-only)</value></data>
   <data name="CategoryDynamics" xml:space="preserve"><value>Dynamics</value></data>
   <data name="CategoryArticulations" xml:space="preserve"><value>Articulations</value></data>
   <data name="CategoryFermataBreath" xml:space="preserve"><value>Fermata &amp; Breath</value></data>
@@ -149,7 +150,7 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="TutorialFoldersTitle" xml:space="preserve"><value>Organize your library</value></data>
   <data name="TutorialFoldersText" xml:space="preserve"><value>Create folders, move sheets between them, sort by name or date added, and use the search bar to find anything fast.</value></data>
   <data name="TutorialReadingTitle" xml:space="preserve"><value>Reading</value></data>
-  <data name="TutorialReadingText" xml:space="preserve"><value>Tap the left or right edge, or swipe, to turn pages. Tap the center to show or hide the toolbar, pinch to zoom, and tap the page indicator to jump to a page. Use the toolbar button to switch the reading direction between horizontal (left to right) and vertical (top to bottom); in vertical mode, tap the top or bottom edge or swipe up or down.</value></data>
+  <data name="TutorialReadingText" xml:space="preserve"><value>Tap the left or right edge, or swipe, to turn pages. Tap the center to show or hide the toolbar, pinch to zoom, and tap the page indicator to jump to a page. The toolbar button switches between three reading modes: left to right, top to bottom page by page (tap the top or bottom edge or swipe up or down), and top to bottom with continuous scrolling, where the end of one page stays visible as the next one comes in.</value></data>
   <data name="TutorialAnnotationsTitle" xml:space="preserve"><value>Annotations</value></data>
   <data name="TutorialAnnotationsText" xml:space="preserve"><value>Add music symbols, draw with the pencil or erase with the eraser. Made a mistake? Undo and redo any change.</value></data>
   <data name="TutorialBookmarksTitle" xml:space="preserve"><value>Bookmarks</value></data>
