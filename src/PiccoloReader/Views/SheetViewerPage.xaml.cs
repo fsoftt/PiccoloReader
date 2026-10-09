@@ -1237,23 +1237,33 @@ public partial class SheetViewerPage : ContentPage
         // PageContainer was hidden until now - give it a layout pass before
         // reading its size/position.
         Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(50), () =>
-            ApplyEditorZoomFromContinuous(listWidth, listZoom, listTranslationX, pageScreenTop));
+            ApplyEditorZoomFromContinuous(pageIndex, listWidth, listZoom, listTranslationX, pageScreenTop));
     }
 
-    // Both views share the same origin (the page area's top-left). In the
+    // Both views share the same origin (the reading area's top-left). In the
     // list the page is listWidth wide at listZoom with its left edge at
     // listTranslationX and its top at pageScreenTop; this sets
-    // PageContainer's zoom/translation to put it at the same place.
-    private void ApplyEditorZoomFromContinuous(double listWidth, double listZoom, double listTranslationX, double pageScreenTop)
+    // PageContainer's zoom/translation to put it at the same place. The
+    // page sits letterboxed inside PageContainer, so its top is offset
+    // from the container's by pageTopInContainer (unscaled).
+    private void ApplyEditorZoomFromContinuous(int pageIndex, double listWidth, double listZoom, double listTranslationX, double pageScreenTop)
     {
         if (!_viewModel.IsContinuousEditing || PageContainer.Width <= 0 || PageContainer.Height <= 0)
         {
             return;
         }
 
+        var pageTopInContainer = pageIndex < _viewModel.ContinuousPages.Count
+            ? PageFrame.Fit(PageContainer.Width, PageContainer.Height, _viewModel.ContinuousPages[pageIndex].AspectRatio).Y * PageContainer.Height
+            : 0;
+
         var scale = listZoom * listWidth / PageContainer.Width;
         if (scale <= ZoomedInThreshold)
         {
+            // Not zoomed in: only shift vertically (unclamped, there is no
+            // zoom range to pan within) so the page stays where it was in
+            // the list instead of jumping to the centered position.
+            PageContainer.TranslationY = pageScreenTop - PageContainer.Y - pageTopInContainer;
             UpdateSelectionOverlay();
             return;
         }
@@ -1263,7 +1273,7 @@ public partial class SheetViewerPage : ContentPage
         PageContainer.AnchorY = 0;
         PageContainer.Scale = scale;
         PageContainer.TranslationX = Math.Clamp(listTranslationX - PageContainer.X, -PageContainer.Width * (scale - 1), 0);
-        PageContainer.TranslationY = Math.Clamp(pageScreenTop - PageContainer.Y, -PageContainer.Height * (scale - 1), 0);
+        PageContainer.TranslationY = Math.Clamp(pageScreenTop - PageContainer.Y - pageTopInContainer * scale, -PageContainer.Height * (scale - 1), 0);
         _xOffset = PageContainer.TranslationX;
         _yOffset = PageContainer.TranslationY;
         UpdateResizeHandleScale();
