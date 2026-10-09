@@ -170,7 +170,26 @@ public static class Ui
                 throw new WebDriverTimeoutException($"Timed out after {timeoutSeconds}s waiting for {what}");
             }
 
+            DismissSystemDialogs();
             Thread.Sleep(300);
+        }
+    }
+
+    /// <summary>
+    /// Emulators on shared CI runners regularly show "X isn't responding" (launcher, Google apps)
+    /// on top of the app, hiding it from UiAutomator. Choosing "Wait" gets it out of the way.
+    /// </summary>
+    public static void DismissSystemDialogs()
+    {
+        try
+        {
+            var wait = D.FindElements(MobileBy.AndroidUIAutomator(
+                "new UiSelector().resourceId(\"android:id/aerr_wait\")")).FirstOrDefault();
+            wait?.Click();
+        }
+        catch (WebDriverException)
+        {
+            // best effort
         }
     }
 }

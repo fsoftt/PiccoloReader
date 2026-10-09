@@ -15,6 +15,8 @@ adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
 adb shell settings put system accelerometer_rotation 0
+# Never let "X isn't responding" / crash dialogs of other apps cover the app under test.
+adb shell settings put global hide_error_dialogs 1
 
 appium --log-level info --log "$OUT/appium.log" > "$OUT/appium.stdout.log" 2>&1 &
 APPIUM_PID=$!

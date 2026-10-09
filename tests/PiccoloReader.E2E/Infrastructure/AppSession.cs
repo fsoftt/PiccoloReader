@@ -19,6 +19,7 @@ public static class AppSession
 
     private static AndroidDriver? _driver;
     private static string? _templateDb;
+    private static Exception? _templateError;
 
     public static AndroidDriver Driver => _driver ??= Create();
 
@@ -108,6 +109,26 @@ public static class AppSession
             return _templateDb;
         }
 
+        if (_templateError is not null)
+        {
+            throw new InvalidOperationException("The first-launch setup already failed in this run: " + _templateError.Message, _templateError);
+        }
+
+        try
+        {
+            CreateTemplateDb();
+        }
+        catch (Exception ex)
+        {
+            _templateError = ex;
+            throw;
+        }
+
+        return _templateDb!;
+    }
+
+    private static void CreateTemplateDb()
+    {
         _ = Driver; // installs the APK
         Wipe();
         WritePreferences(tutorialCompleted: false, "Horizontal", "en", null);
@@ -117,7 +138,6 @@ public static class AppSession
         Driver.TerminateApp(E2EEnvironment.PackageName);
 
         _templateDb = AppDb.PullToTemp();
-        return _templateDb;
     }
 
     private static void Wipe()
