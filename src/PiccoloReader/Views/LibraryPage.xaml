@@ -58,7 +58,7 @@
                 <VerticalStackLayout Spacing="0">
 
                     <!-- Page header: title + summary, new folder / import actions. -->
-                    <Grid ColumnDefinitions="*,Auto" Padding="20,16,12,12">
+                    <Grid ColumnDefinitions="*,Auto" Padding="20,16,20,12">
                         <VerticalStackLayout Grid.Column="0" Spacing="4" VerticalOptions="Center">
                             <Label Style="{StaticResource PageTitle}" Text="{x:Static strings:AppStrings.Library}"
                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
@@ -220,7 +220,22 @@
                         Style="{StaticResource SectionLabel}"
                         Padding="20,4,20,6"
                         Text="{x:Static strings:AppStrings.Sheets}"
-                        IsVisible="{Binding HasRootSheets}" />
+                        IsVisible="{Binding HasSheetResults}" />
+
+                    <!-- Compact empty state: search with no matches -->
+                    <VerticalStackLayout IsVisible="{Binding HasNoSheetResults}" Spacing="4" Margin="32,40,32,24" AutomationId="LibraryNoResults">
+                        <Image HorizontalOptions="Center" Margin="0,0,0,6">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE8B6;" FontFamily="MaterialOutlined" Size="32"
+                                    Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                            </Image.Source>
+                        </Image>
+                        <Label Style="{StaticResource RowTitle}" HorizontalTextAlignment="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                               Text="{x:Static strings:AppStrings.NoResultsTitle}" />
+                        <Label Style="{StaticResource Caption}" HorizontalTextAlignment="Center"
+                               Text="{x:Static strings:AppStrings.NoResultsMessage}" />
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </CollectionView.Header>
 
