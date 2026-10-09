@@ -1,7 +1,12 @@
 name: E2E (Android UI tests)
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      filter:
+        description: "Optional dotnet test --filter expression (e.g. FullyQualifiedName~ViewerTests)"
+        required: false
+        default: ""
   pull_request:
     branches: [main]
     paths:
@@ -9,7 +14,7 @@ on:
       - 'tests/PiccoloReader.E2E/**'
       - '.github/workflows/e2e.yml'
   push:
-    branches: [test/e2e-appium]
+    branches: [test/e2e-new-ui]
     paths:
       - 'src/**'
       - 'tests/PiccoloReader.E2E/**'
@@ -22,7 +27,7 @@ on:
 # So: Debug configuration with EmbedAssembliesIntoApk=true, signed with the repo's
 # committed debug.keystore (see build-apk.yml for why).
 #
-# The push trigger on test/e2e-appium is only for iterating on this suite; it is
+# The push trigger on test/e2e-new-ui is only for iterating on this suite; it is
 # harmless once the branch is merged/deleted.
 
 concurrency:
@@ -32,9 +37,10 @@ concurrency:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     env:
       E2E_ARTIFACTS: ${{ github.workspace }}/e2e-artifacts
+      E2E_FILTER: ${{ github.event.inputs.filter }}
     steps:
       - uses: actions/checkout@v4
 
@@ -87,7 +93,7 @@ jobs:
 
       - name: Install Appium 2 + UiAutomator2 driver
         run: |
-          npm install -g appium@2
+          npm install -g appium@2.19.0
           appium driver install uiautomator2@3.10.0
           appium --version
 
