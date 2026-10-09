@@ -42,13 +42,22 @@ public partial class SplashPage : ContentPage
 
             if (preferences is not null && tutorialPage is not null && !preferences.GetTutorialCompleted())
             {
-                var window = Application.Current.Windows[0];
+                var window = Window ?? Application.Current.Windows.FirstOrDefault();
+                if (window is null)
+                {
+                    return;
+                }
+
                 tutorialPage.ViewModel.Finished += (_, _) => window.Page = new AppShell();
                 window.Page = tutorialPage;
                 return;
             }
 
-            Application.Current.Windows[0].Page = new AppShell();
+            var target = Window ?? Application.Current.Windows.FirstOrDefault();
+            if (target is not null)
+            {
+                target.Page = new AppShell();
+            }
         }
     }
 }
