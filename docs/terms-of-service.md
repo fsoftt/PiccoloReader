@@ -1,3 +1,5 @@
+[Leer en español](https://fsoftt.github.io/PiccoloReader/es/terms-of-service)
+
 # Terms of Service
 
 **Last Updated:** January 2026

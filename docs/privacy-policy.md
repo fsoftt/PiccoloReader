@@ -1,3 +1,5 @@
+[Leer en español](https://fsoftt.github.io/PiccoloReader/es/privacy-policy)
+
 # Privacy Policy
 
 **Last Updated:** January 2026

@@ -49,6 +49,7 @@
   <data name="RootOption" xml:space="preserve"><value>Root</value></data>
   <data name="MoveToTitle" xml:space="preserve"><value>Move to…</value></data>
   <data name="NoFoldersToMoveMessage" xml:space="preserve"><value>Create a folder first to move sheets into.</value></data>
+  <data name="FolderNameEmptyMessage" xml:space="preserve"><value>Folder name can't be empty.</value></data>
   <data name="OK" xml:space="preserve"><value>OK</value></data>
   <data name="Folder" xml:space="preserve"><value>Folder</value></data>
   <data name="GoToPageTitle" xml:space="preserve"><value>Go to Page</value></data>
@@ -68,6 +69,8 @@
   <data name="Eraser" xml:space="preserve"><value>Eraser</value></data>
   <data name="Size" xml:space="preserve"><value>Size</value></data>
   <data name="PageIndicatorFormat" xml:space="preserve"><value>Page {0} of {1}</value></data>
+  <data name="ReadingDirectionHorizontalMessage" xml:space="preserve"><value>Reading direction: left to right</value></data>
+  <data name="ReadingDirectionVerticalMessage" xml:space="preserve"><value>Reading direction: top to bottom</value></data>
   <data name="CategoryDynamics" xml:space="preserve"><value>Dynamics</value></data>
   <data name="CategoryArticulations" xml:space="preserve"><value>Articulations</value></data>
   <data name="CategoryFermataBreath" xml:space="preserve"><value>Fermata &amp; Breath</value></data>
@@ -137,4 +140,20 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="TermsOfServiceLabel" xml:space="preserve"><value>Terms of Service</value></data>
   <data name="TermsOfServiceDescription" xml:space="preserve"><value>Usage rights, restrictions, and liability disclaimers</value></data>
   <data name="OpenPrivacyPolicy" xml:space="preserve"><value>Open in Browser</value></data>
+  <data name="TutorialSkip" xml:space="preserve"><value>Skip</value></data>
+  <data name="TutorialNext" xml:space="preserve"><value>Next</value></data>
+  <data name="TutorialGetStarted" xml:space="preserve"><value>Get started</value></data>
+  <data name="ShowTutorial" xml:space="preserve"><value>Show tutorial</value></data>
+  <data name="TutorialWelcomeTitle" xml:space="preserve"><value>Welcome to Piccolo Reader</value></data>
+  <data name="TutorialWelcomeText" xml:space="preserve"><value>Your sheet music, always at hand. Import your PDFs into the Library and start reading.</value></data>
+  <data name="TutorialFoldersTitle" xml:space="preserve"><value>Organize your library</value></data>
+  <data name="TutorialFoldersText" xml:space="preserve"><value>Create folders, move sheets between them, sort by name or date added, and use the search bar to find anything fast.</value></data>
+  <data name="TutorialReadingTitle" xml:space="preserve"><value>Reading</value></data>
+  <data name="TutorialReadingText" xml:space="preserve"><value>Tap the left or right edge, or swipe, to turn pages. Tap the center to show or hide the toolbar, pinch to zoom, and tap the page indicator to jump to a page. Use the toolbar button to switch the reading direction between horizontal (left to right) and vertical (top to bottom); in vertical mode, tap the top or bottom edge or swipe up or down.</value></data>
+  <data name="TutorialAnnotationsTitle" xml:space="preserve"><value>Annotations</value></data>
+  <data name="TutorialAnnotationsText" xml:space="preserve"><value>Add music symbols, draw with the pencil or erase with the eraser. Made a mistake? Undo and redo any change.</value></data>
+  <data name="TutorialBookmarksTitle" xml:space="preserve"><value>Bookmarks</value></data>
+  <data name="TutorialBookmarksText" xml:space="preserve"><value>Bookmark the pages you come back to most and jump straight to them whenever you need.</value></data>
+  <data name="TutorialSettingsTitle" xml:space="preserve"><value>Settings and support</value></data>
+  <data name="TutorialSettingsText" xml:space="preserve"><value>Change the app language in Settings. If you enjoy Piccolo Reader, you can support it by turning on ads. You can reopen this tutorial any time from Settings.</value></data>
 </root>

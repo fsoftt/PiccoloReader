@@ -33,6 +33,11 @@
                 <FontImageSource Glyph="&#xE5CD;" FontFamily="MaterialOutlined" Size="24" Color="White" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
+        <ToolbarItem x:Name="ReadingDirectionItem" Clicked="OnReadingDirectionClicked">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource x:Name="ReadingDirectionIcon" Glyph="&#xE8D4;" FontFamily="MaterialOutlined" Size="24" Color="White" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
         <ToolbarItem x:Name="BookmarksItem" Clicked="OnBookmarksClicked">
             <ToolbarItem.IconImageSource>
                 <FontImageSource Glyph="&#xE98B;" FontFamily="MaterialOutlined" Size="24" Color="White" />

@@ -12,6 +12,7 @@ public class SheetViewerViewModelTests : IDisposable
     private readonly AppDatabase _database;
     private readonly LibraryService _libraryService;
     private readonly FakePdfPageRenderer _renderer = new();
+    private readonly FakeReadingPreferenceService _readingPreferences = new();
     private readonly AnnotationService _annotationService;
     private readonly BookmarkService _bookmarkService;
     private readonly SheetViewerViewModel _sut;
@@ -24,7 +25,7 @@ public class SheetViewerViewModelTests : IDisposable
         _libraryService = new LibraryService(_database, _storage);
         _annotationService = new AnnotationService(_database);
         _bookmarkService = new BookmarkService(_database);
-        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService());
+        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences);
     }
 
     public void Dispose() => _storage.Dispose();
@@ -90,7 +91,79 @@ public class SheetViewerViewModelTests : IDisposable
         await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
 
         Assert.Equal(new byte[] { 0 }, _sut.CurrentPageImageBytes);
-        Assert.Equal(new List<int> { 0 }, _renderer.RenderedPageIndexes);
+        Assert.Equal(0, _renderer.RenderedPageIndexes[0]);
+    }
+
+    [Fact]
+    public async Task LoadAsync_PrefetchesNeighbouringPages()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 6, lastViewedPageIndex: 2);
+
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.Equal(new List<int> { 2, 3, 1, 4, 0 }, _renderer.RenderedPageIndexes);
+    }
+
+    [Fact]
+    public async Task NextPageAsync_PrefetchedPage_IsNotRenderedAgain()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 5);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        await _sut.NextPageCommand.ExecuteAsync(null);
+
+        Assert.Equal(new byte[] { 1 }, _sut.CurrentPageImageBytes);
+        Assert.Single(_renderer.RenderedPageIndexes, 1);
+    }
+
+    [Fact]
+    public async Task NextPageCommand_WhileRenderInFlight_CanStillExecute()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 10);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        _renderer.RenderGate = new TaskCompletionSource();
+
+        var turns = new List<Task>();
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.True(_sut.NextPageCommand.CanExecute(null));
+            turns.Add(_sut.NextPageCommand.ExecuteAsync(null));
+        }
+
+        Assert.Equal(5, _sut.CurrentPageIndex);
+        Assert.True(_sut.IsLoading);
+
+        _renderer.RenderGate.SetResult();
+        await Task.WhenAll(turns);
+
+        Assert.Equal(5, _sut.CurrentPageIndex);
+        Assert.Equal(new byte[] { 5 }, _sut.CurrentPageImageBytes);
+        Assert.False(_sut.IsLoading);
+    }
+
+    [Fact]
+    public void ReadingDirection_DefaultsToSavedPreference()
+    {
+        _readingPreferences.Direction = ReadingDirection.Vertical;
+
+        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences);
+
+        Assert.Equal(ReadingDirection.Vertical, sut.ReadingDirection);
+        Assert.True(sut.IsVerticalReading);
+    }
+
+    [Fact]
+    public void ToggleReadingDirectionCommand_SwitchesAndPersists()
+    {
+        _sut.ToggleReadingDirectionCommand.Execute(null);
+
+        Assert.Equal(ReadingDirection.Vertical, _sut.ReadingDirection);
+        Assert.Equal(ReadingDirection.Vertical, _readingPreferences.Direction);
+
+        _sut.ToggleReadingDirectionCommand.Execute(null);
+
+        Assert.Equal(ReadingDirection.Horizontal, _sut.ReadingDirection);
+        Assert.Equal(ReadingDirection.Horizontal, _readingPreferences.Direction);
     }
 
     [Fact]

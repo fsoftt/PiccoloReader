@@ -40,7 +40,13 @@ public class LibraryService
 
     public async Task<Folder> CreateFolderAsync(string name)
     {
-        var folder = new Folder { Name = name, DateAdded = DateTime.UtcNow };
+        var trimmedName = FolderNameNormalizer.Normalize(name);
+        if (trimmedName is null)
+        {
+            throw new ArgumentException("Folder name cannot be empty or whitespace.", nameof(name));
+        }
+
+        var folder = new Folder { Name = trimmedName, DateAdded = DateTime.UtcNow };
         await _database.Connection.InsertAsync(folder);
         return folder;
     }

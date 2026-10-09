@@ -24,6 +24,15 @@
             </Grid>
         </Border>
 
+        <Border Style="{StaticResource ListItemCard}">
+            <Button
+                Text="{x:Static strings:AppStrings.ShowTutorial}"
+                Clicked="OnShowTutorialClicked"
+                Padding="8,4"
+                CornerRadius="8"
+                BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource Primary}}" />
+        </Border>
+
         <Label Text="{x:Static strings:AppStrings.LegalSectionHeader}" FontAttributes="Bold" FontSize="16" Margin="0,8,0,0" />
 
         <Border Style="{StaticResource ListItemCard}">
