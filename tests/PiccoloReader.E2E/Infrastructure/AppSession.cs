@@ -104,8 +104,7 @@ public static class AppSession
 
         Launch();
         WaitForLibrary(skipTutorial: true);
-        TestContext.Progress.WriteLine("prefs after launch: " + (ReadPreferencesXml() ?? "<none>").Replace("
-", " "));
+        TestContext.Progress.WriteLine("prefs after launch: " + (ReadPreferencesXml() ?? "<none>").Replace('\n', ' '));
     }
 
     /// <summary>First launch of a wiped app: skip the tutorial through the UI, keep the resulting empty DB.</summary>
