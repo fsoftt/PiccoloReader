@@ -11,40 +11,9 @@
     xmlns:local="clr-namespace:PiccoloReader"
     x:Name="ThisPage"
     Shell.TabBarIsVisible="False"
+    Shell.NavBarIsVisible="False"
     Title="{Binding Title}">
 
-    <ContentPage.ToolbarItems>
-        <ToolbarItem x:Name="UndoItem" Clicked="OnUndoClicked" IsEnabled="{Binding CanUndo}">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE166;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
-        <ToolbarItem x:Name="RedoItem" Clicked="OnRedoClicked" IsEnabled="{Binding CanRedo}">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE15A;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
-        <ToolbarItem x:Name="ToolConfigItem" Clicked="OnToolConfigClicked">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE429;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
-        <ToolbarItem x:Name="DeactivateToolItem" Clicked="OnDeactivateToolClicked">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE5CD;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
-        <ToolbarItem x:Name="ReadingModeItem" Clicked="OnReadingModeClicked">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource x:Name="ReadingModeIcon" Glyph="&#xE8D4;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
-        <ToolbarItem x:Name="BookmarksItem" Clicked="OnBookmarksClicked">
-            <ToolbarItem.IconImageSource>
-                <FontImageSource Glyph="&#xE98B;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-            </ToolbarItem.IconImageSource>
-        </ToolbarItem>
-    </ContentPage.ToolbarItems>
 
     <ContentPage.Resources>
         <converters:ByteArrayToImageSourceConverter x:Key="ByteArrayToImageSource" />
@@ -177,19 +146,30 @@
             </Image>
         </Border>
 
-        <Label
-            x:Name="PageIndicatorLabel"
-            Text="{Binding PageIndicatorText}"
+        <Border
+            x:Name="PageIndicator"
+            AutomationId="ViewerPageIndicator"
             VerticalOptions="End"
             HorizontalOptions="Center"
-            Margin="0,0,0,16"
-            Padding="12,6"
-            BackgroundColor="{StaticResource Primary}"
-            TextColor="{StaticResource White}">
-            <Label.GestureRecognizers>
+            Margin="0,0,0,36"
+            HeightRequest="36"
+            Padding="16,0"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 18"
+            Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
+            <Border.GestureRecognizers>
                 <TapGestureRecognizer Tapped="OnPageIndicatorTapped" />
-            </Label.GestureRecognizers>
-        </Label>
+            </Border.GestureRecognizers>
+            <Label
+                Text="{Binding PageIndicatorText}"
+                FontSize="13"
+                FontFamily="OpenSansSemibold"
+                VerticalOptions="Center"
+                HorizontalTextAlignment="Center"
+                TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+        </Border>
+
 
         <ActivityIndicator
             IsRunning="{Binding IsLoading}"
@@ -224,6 +204,7 @@
             x:Name="ToolPanel"
             IsVisible="False"
             WidthRequest="260"
+            Margin="0,80,0,0"
             HorizontalOptions="End"
             VerticalOptions="Fill"
             BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
@@ -438,104 +419,187 @@
             </Grid>
         </Border>
 
-        <!-- Tool speed-dial FAB: main FAB toggles 3 mini FABs above it (Icons/Pencil/Eraser). -->
+        <!-- Tool speed-dial FAB: main FAB toggles 3 mini buttons above it (Icons/Pencil/Eraser). -->
         <Border
             x:Name="IconsFab"
+            AutomationId="ViewerToolIcons"
             IsVisible="False"
             HorizontalOptions="End"
             VerticalOptions="End"
-            Margin="0,0,24,200"
-            WidthRequest="40"
-            HeightRequest="40"
+            Margin="0,0,24,204"
+            WidthRequest="48"
+            HeightRequest="48"
             Padding="0"
-            StrokeThickness="0"
-            StrokeShape="RoundRectangle 20"
-            BackgroundColor="{StaticResource Primary}">
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 24"
+            Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceRaisedDark}}">
             <Border.Shadow>
-                <Shadow Brush="{StaticResource Black}" Opacity="0.3" Radius="6" Offset="0,3" />
+                <Shadow Brush="{StaticResource Black}" Opacity="0.2" Radius="6" Offset="0,3" />
             </Border.Shadow>
             <Border.GestureRecognizers>
                 <TapGestureRecognizer Tapped="OnFabIconsClicked" />
             </Border.GestureRecognizers>
             <Image HorizontalOptions="Center" VerticalOptions="Center">
                 <Image.Source>
-                    <FontImageSource Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="18" Color="{StaticResource White}" />
+                    <FontImageSource Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                 </Image.Source>
             </Image>
         </Border>
 
         <Border
             x:Name="PencilFab"
+            AutomationId="ViewerToolPencil"
             IsVisible="False"
             HorizontalOptions="End"
             VerticalOptions="End"
-            Margin="0,0,24,144"
-            WidthRequest="40"
-            HeightRequest="40"
+            Margin="0,0,24,148"
+            WidthRequest="48"
+            HeightRequest="48"
             Padding="0"
-            StrokeThickness="0"
-            StrokeShape="RoundRectangle 20"
-            BackgroundColor="{StaticResource Primary}">
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 24"
+            Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceRaisedDark}}">
             <Border.Shadow>
-                <Shadow Brush="{StaticResource Black}" Opacity="0.3" Radius="6" Offset="0,3" />
+                <Shadow Brush="{StaticResource Black}" Opacity="0.2" Radius="6" Offset="0,3" />
             </Border.Shadow>
             <Border.GestureRecognizers>
                 <TapGestureRecognizer Tapped="OnFabPencilClicked" />
             </Border.GestureRecognizers>
             <Image HorizontalOptions="Center" VerticalOptions="Center">
                 <Image.Source>
-                    <FontImageSource Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="18" Color="{StaticResource White}" />
+                    <FontImageSource Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                 </Image.Source>
             </Image>
         </Border>
 
         <Border
             x:Name="EraserFab"
+            AutomationId="ViewerToolEraser"
             IsVisible="False"
             HorizontalOptions="End"
             VerticalOptions="End"
-            Margin="0,0,24,88"
-            WidthRequest="40"
-            HeightRequest="40"
+            Margin="0,0,24,92"
+            WidthRequest="48"
+            HeightRequest="48"
             Padding="0"
-            StrokeThickness="0"
-            StrokeShape="RoundRectangle 20"
-            BackgroundColor="{StaticResource Primary}">
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 24"
+            Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceRaisedDark}}">
             <Border.Shadow>
-                <Shadow Brush="{StaticResource Black}" Opacity="0.3" Radius="6" Offset="0,3" />
+                <Shadow Brush="{StaticResource Black}" Opacity="0.2" Radius="6" Offset="0,3" />
             </Border.Shadow>
             <Border.GestureRecognizers>
                 <TapGestureRecognizer Tapped="OnFabEraserClicked" />
             </Border.GestureRecognizers>
             <Image HorizontalOptions="Center" VerticalOptions="Center">
                 <Image.Source>
-                    <FontImageSource Glyph="&#xE6D0;" FontFamily="MaterialOutlined" Size="18" Color="{StaticResource White}" />
+                    <FontImageSource Glyph="&#xE6D0;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                 </Image.Source>
             </Image>
         </Border>
 
         <Border
             x:Name="MainToolFab"
+            AutomationId="ViewerToolsFab"
+            SemanticProperties.Description="{x:Static strings:AppStrings.AnnotationToolsLabel}"
             HorizontalOptions="End"
             VerticalOptions="End"
-            Margin="0,0,16,16"
+            Margin="0,0,20,24"
             WidthRequest="56"
             HeightRequest="56"
             Padding="0"
             StrokeThickness="0"
-            StrokeShape="RoundRectangle 28"
-            BackgroundColor="{StaticResource Primary}">
+            StrokeShape="RoundRectangle 18"
+            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}">
             <Border.Shadow>
-                <Shadow Brush="{StaticResource Black}" Opacity="0.3" Radius="8" Offset="0,4" />
+                <Shadow Brush="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" Opacity="0.3" Radius="10" Offset="0,4" />
             </Border.Shadow>
             <Border.GestureRecognizers>
                 <TapGestureRecognizer Tapped="OnMainToolFabClicked" />
             </Border.GestureRecognizers>
             <Image x:Name="MainToolFabIcon" HorizontalOptions="Center" VerticalOptions="Center">
                 <Image.Source>
-                    <FontImageSource Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="24" Color="{StaticResource White}" />
+                    <FontImageSource x:Name="MainToolFabGlyph" Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource OnPrimaryLight}, Dark={StaticResource OnPrimaryDark}}" />
                 </Image.Source>
             </Image>
+        </Border>
+
+        <!-- Floating top bar (replaces the Shell nav bar). Only the pill itself
+             is hit-testable, so touches around it reach the page. -->
+        <Border
+            x:Name="FloatingBar"
+            VerticalOptions="Start"
+            Margin="12"
+            HeightRequest="56"
+            Padding="6,0"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 28"
+            Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="2">
+                <ImageButton
+                    x:Name="BackButton"
+                    Grid.Column="0"
+                    Style="{StaticResource IconButton}"
+                    AutomationId="ViewerBackButton"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.BackLabel}"
+                    Clicked="OnBackClicked">
+                    <ImageButton.Source>
+                        <FontImageSource Glyph="&#xE5C4;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    </ImageButton.Source>
+                </ImageButton>
+
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Margin="4,0">
+                    <Label
+                        AutomationId="ViewerTitleLabel"
+                        Text="{Binding Title}"
+                        Style="{StaticResource RowTitle}"
+                        MaxLines="1"
+                        LineBreakMode="TailTruncation"
+                        TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    <Label
+                        x:Name="ReadingModeNameLabel"
+                        Style="{StaticResource Caption}"
+                        FontSize="12"
+                        MaxLines="1"
+                        LineBreakMode="TailTruncation" />
+                </VerticalStackLayout>
+
+                <ImageButton
+                    x:Name="ReadingModeButton"
+                    Grid.Column="2"
+                    Style="{StaticResource IconButton}"
+                    AutomationId="ViewerModeButton"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.ReadingModeLabel}"
+                    Clicked="OnReadingModeClicked">
+                    <ImageButton.Source>
+                        <FontImageSource x:Name="ReadingModeIcon" Glyph="&#xE8D4;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    </ImageButton.Source>
+                </ImageButton>
+
+                <ImageButton
+                    x:Name="BookmarkButton"
+                    Grid.Column="3"
+                    Style="{StaticResource IconButton}"
+                    AutomationId="ViewerBookmarkButton"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.BookmarksTitle}"
+                    Clicked="OnBookmarksClicked" />
+
+                <ImageButton
+                    x:Name="MoreButton"
+                    Grid.Column="4"
+                    Style="{StaticResource IconButton}"
+                    AutomationId="ViewerMoreButton"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.MoreOptions}"
+                    Clicked="OnMoreClicked">
+                    <ImageButton.Source>
+                        <FontImageSource Glyph="&#xE5D4;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    </ImageButton.Source>
+                </ImageButton>
+            </Grid>
         </Border>
 
         <Grid x:Name="AddBookmarkOverlay" IsVisible="False">
