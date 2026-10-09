@@ -5,8 +5,35 @@
 
     <!-- Note: For Android please see also Platforms\Android\Resources\values\colors.xml -->
 
-    <Color x:Key="Primary">#512BD4</Color>
-    <Color x:Key="PrimaryDark">#ac99ea</Color>
+    <Color x:Key="Primary">#5B3FD9</Color>
+    <Color x:Key="PrimaryDark">#8B6CFF</Color>
+    <!-- Semantic design tokens (Light / Dark pairs). Use via AppThemeBinding. -->
+    <Color x:Key="BackgroundLight">#F6F6FA</Color>
+    <Color x:Key="BackgroundDark">#0E0E16</Color>
+    <Color x:Key="SurfaceLight">#FFFFFF</Color>
+    <Color x:Key="SurfaceDark">#181824</Color>
+    <Color x:Key="SurfaceRaisedLight">#FFFFFF</Color>
+    <Color x:Key="SurfaceRaisedDark">#22222F</Color>
+    <Color x:Key="OutlineLight">#E3E3EC</Color>
+    <Color x:Key="OutlineDark">#2E2E3E</Color>
+    <Color x:Key="PrimaryLight">#5B3FD9</Color>
+    <Color x:Key="OnPrimaryLight">#FFFFFF</Color>
+    <Color x:Key="OnPrimaryDark">#0E0E16</Color>
+    <Color x:Key="PrimaryContainerLight">#ECE7FF</Color>
+    <Color x:Key="PrimaryContainerDark">#2A2340</Color>
+    <Color x:Key="OnPrimaryContainerLight">#432BB0</Color>
+    <Color x:Key="OnPrimaryContainerDark">#D3C8FF</Color>
+    <Color x:Key="TextPrimaryLight">#15151F</Color>
+    <Color x:Key="TextPrimaryDark">#F3F3F8</Color>
+    <Color x:Key="TextSecondaryLight">#5C5C70</Color>
+    <Color x:Key="TextSecondaryDark">#A3A3B5</Color>
+    <Color x:Key="TextMutedLight">#6B6B7E</Color>
+    <Color x:Key="TextMutedDark">#7A7A8C</Color>
+    <Color x:Key="BookmarkLight">#C98A12</Color>
+    <Color x:Key="BookmarkDark">#F5B544</Color>
+    <Color x:Key="TabBarLight">#FFFFFF</Color>
+    <Color x:Key="TabBarDark">#14141E</Color>
+
     <Color x:Key="PrimaryDarkText">#242424</Color>
     <Color x:Key="Secondary">#DFD8F7</Color>
     <Color x:Key="SecondaryDarkText">#9880e5</Color>
