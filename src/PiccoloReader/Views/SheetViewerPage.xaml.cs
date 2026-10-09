@@ -13,6 +13,10 @@ namespace PiccoloReader.Views;
 public partial class SheetViewerPage : ContentPage
 {
     private const double ZoomedInThreshold = 1.05;
+
+    // Extra slack (fraction of the page) around a stroke that still counts
+    // as a tap on it in the continuous list.
+    private const double StrokeTapTolerance = 0.02;
     private const double PageTurnDragThreshold = 60;
     private const double SelectionHandlePadding = 20;
     private const double TrashHitTestRadius = 60;
@@ -33,6 +37,17 @@ public partial class SheetViewerPage : ContentPage
 
     private bool _isToolbarVisible = true;
     private bool _isToolFabExpanded;
+
+    private const double MaxContinuousZoom = 5;
+    private double _continuousZoom = 1;
+    private double _lastPageWidth;
+    private double _lastPageHeight;
+    private double _continuousScrollOffsetFallback;
+#if ANDROID
+    private AndroidX.RecyclerView.Widget.RecyclerView? _continuousRecyclerView;
+    private PiccoloReader.Platforms.Android.ContinuousZoomTouchListener? _continuousZoomTouchListener;
+    private double _continuousScrollRemainderPx;
+#endif
 
     private readonly AnnotationPainter _annotationPainter = new();
 
@@ -61,10 +76,32 @@ public partial class SheetViewerPage : ContentPage
             {
                 UpdateReadingModeUi();
             }
+
+            if (e.PropertyName is nameof(SheetViewerViewModel.ReadingMode)
+                or nameof(SheetViewerViewModel.IsContinuousEditing)
+                or nameof(SheetViewerViewModel.ActiveTool)
+                or nameof(SheetViewerViewModel.SelectedAnnotation))
+            {
+                UpdateOrientationLock();
+            }
+        };
+        ToolPanel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(VisualElement.IsVisible))
+            {
+                UpdateOrientationLock();
+            }
         };
         UpdateReadingModeIcon();
 
-        ContinuousPagesView.ItemTemplate = new DataTemplate(() => new ContinuousPageView(_annotationPainter, OnContinuousPageTapped));
+        ContinuousPagesView.ItemTemplate = new DataTemplate(() =>
+        {
+            var view = new ContinuousPageView(_annotationPainter, EditorContainerSize, OnContinuousPageTapped, () => _continuousZoom);
+            _continuousViews.Add(new WeakReference<ContinuousPageView>(view));
+            return view;
+        });
+        PageContainer.SizeChanged += OnPageContainerSizeChanged;
+        ContinuousPagesView.SizeChanged += (_, _) => RelayoutContinuousPages();
 
         // ToolbarItem has no bindable IsVisible in this MAUI version (it
         // derives from Element, not VisualElement), so visibility is
@@ -75,6 +112,7 @@ public partial class SheetViewerPage : ContentPage
 
 #if ANDROID
         AttachAndroidPageContainerTouchListener();
+        AttachAndroidContinuousZoomListener();
         AttachAndroidSelectionDragListeners();
 #endif
     }
@@ -83,9 +121,69 @@ public partial class SheetViewerPage : ContentPage
 
     public IReadOnlyList<MusicIconCategory> IconCategories => MusicIconCatalog.Categories;
 
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+
+        if (Window is { } window)
+        {
+            window.Stopped -= OnWindowStopped;
+            window.Resumed -= OnWindowResumed;
+            window.Destroying -= OnWindowStopped;
+        }
+
+        SetOrientationLocked(false);
+    }
+
+    private void OnWindowStopped(object? sender, EventArgs e) => SetOrientationLocked(false);
+
+    private void OnWindowResumed(object? sender, EventArgs e) => UpdateOrientationLock();
+
+    // Annotations are stored normalized to PageContainer (the whole reading
+    // area), so rotating while editing distorts them. Until page-normalized
+    // storage exists, the screen is kept in portrait for as long as the
+    // editor is open: continuous single-page editor, or (paged modes) an
+    // active Pencil/Eraser tool, the icon panel or a selected annotation.
+    private bool IsEditorOpen =>
+        _viewModel.IsContinuousEditing
+        || (!_viewModel.IsContinuousReading
+            && (_viewModel.ActiveTool != AnnotationTool.MusicIcons
+                || ToolPanel.IsVisible
+                || _viewModel.SelectedAnnotation is not null));
+
+    private bool _orientationLocked;
+
+    private void UpdateOrientationLock() => SetOrientationLocked(IsEditorOpen);
+
+    private void SetOrientationLocked(bool locked)
+    {
+        if (_orientationLocked == locked)
+        {
+            return;
+        }
+
+        _orientationLocked = locked;
+#if ANDROID
+        var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+        if (activity is not null)
+        {
+            activity.RequestedOrientation = locked
+                ? Android.Content.PM.ScreenOrientation.Portrait
+                : Android.Content.PM.ScreenOrientation.Unspecified;
+        }
+#endif
+    }
+
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+
+        if (Window is { } window)
+        {
+            window.Stopped += OnWindowStopped;
+            window.Resumed += OnWindowResumed;
+            window.Destroying += OnWindowStopped;
+        }
 
         SetToolbarVisible(false);
 
@@ -105,6 +203,93 @@ public partial class SheetViewerPage : ContentPage
         ResetZoom();
         AnnotationCanvas.InvalidateSurface();
         UpdateReadingModeUi();
+    }
+
+    // The editor's zoom/translation (set by ApplyEditorZoomFromContinuous)
+    // is in the old orientation's coordinates, so after a rotation it leaves
+    // the page shifted and clipped. Resetting re-centers the page. Only an
+    // orientation flip counts: the toolbar showing/hiding also resizes the page.
+    private readonly List<WeakReference<ContinuousPageView>> _continuousViews = new();
+    private bool _orientationFlipped;
+    private double _lastListWidth;
+
+    protected override void OnSizeAllocated(double width, double height)
+    {
+        var changed = width > 0 && height > 0 && (width > height) != (_lastPageWidth > _lastPageHeight);
+        var hadSize = _lastPageWidth > 0;
+        _lastPageWidth = width;
+        _lastPageHeight = height;
+
+        base.OnSizeAllocated(width, height);
+
+        // Entering the editor from landscape rotates to portrait (see
+        // UpdateOrientationLock), which lands here: re-center the page and
+        // re-place the selection overlay for the new size.
+        if (changed && hadSize)
+        {
+            _orientationFlipped = true;
+        }
+    }
+
+    // PageContainer's final size after a rotation arrives here once its
+    // layout has settled (OnSizeAllocated runs before the children are
+    // arranged), so zoom, selection overlay and the list's annotation
+    // frames are re-derived now rather than after a fixed delay.
+    private void OnPageContainerSizeChanged(object? sender, EventArgs e)
+    {
+        if (PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return;
+        }
+
+        if (_orientationFlipped && _viewModel.IsContinuousEditing)
+        {
+            ResetZoom();
+        }
+        else
+        {
+            UpdateSelectionOverlay();
+        }
+
+        _orientationFlipped = false;
+        InvalidateContinuousAnnotations();
+    }
+
+    private void RelayoutContinuousPages()
+    {
+        var width = ContinuousPagesView.Width;
+        if (width <= 0 || Math.Abs(width - _lastListWidth) < 0.5)
+        {
+            return;
+        }
+
+        _lastListWidth = width;
+
+        _continuousViews.RemoveAll(r => !r.TryGetTarget(out _));
+        foreach (var reference in _continuousViews)
+        {
+            if (reference.TryGetTarget(out var view))
+            {
+                view.Relayout(width);
+            }
+        }
+
+#if ANDROID
+        // RecyclerView keeps the rows measured at the old width.
+        _continuousRecyclerView?.GetAdapter()?.NotifyDataSetChanged();
+#endif
+    }
+
+    private void InvalidateContinuousAnnotations()
+    {
+        _continuousViews.RemoveAll(r => !r.TryGetTarget(out _));
+        foreach (var reference in _continuousViews)
+        {
+            if (reference.TryGetTarget(out var view))
+            {
+                view.InvalidateAnnotations();
+            }
+        }
     }
 
     private void ResetZoom()
@@ -240,7 +425,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         // Annotation tools aren't available in continuous mode (read-only).
-        MainToolFab.IsVisible = visible && !_viewModel.IsContinuousReading;
+        MainToolFab.IsVisible = visible;
 
         if (visible)
         {
@@ -831,6 +1016,26 @@ public partial class SheetViewerPage : ContentPage
     // sequences to pan/tap and 2-finger sequences to pinch deterministically.
     private PiccoloReader.Platforms.Android.PageContainerTouchListener? _pageContainerTouchListener;
 
+    // See ContinuousZoomTouchListener. The CollectionView's platform view is
+    // its RecyclerView.
+    private void AttachAndroidContinuousZoomListener()
+    {
+        ContinuousPagesView.HandlerChanged += (_, _) =>
+        {
+            if (ContinuousPagesView.Handler?.PlatformView is AndroidX.RecyclerView.Widget.RecyclerView recyclerView)
+            {
+                _continuousRecyclerView = recyclerView;
+                _continuousZoomTouchListener = new PiccoloReader.Platforms.Android.ContinuousZoomTouchListener(
+                    recyclerView.Context!,
+                    onPinchStart: ContinuousPinchStarted,
+                    onPinchUpdate: ContinuousPinchRunning,
+                    onPinchEnd: ContinuousPinchEnded,
+                    onHorizontalPan: ContinuousPanHorizontally);
+                recyclerView.AddOnItemTouchListener(_continuousZoomTouchListener);
+            }
+        };
+    }
+
     private void AttachAndroidPageContainerTouchListener()
     {
         PageContainer.GestureRecognizers.Clear();
@@ -1024,19 +1229,15 @@ public partial class SheetViewerPage : ContentPage
         };
     }
 
-    // Swaps between the single-page viewer (PageContainer) and the
-    // continuous list. Continuous mode is read-only, so any active tool,
-    // open panel or selection is closed when entering it.
+    // Runs when the reading mode changes. Any open panel, tool or selection
+    // is closed, and the continuous list starts unzoomed at the current
+    // page.
     private void UpdateReadingModeUi()
     {
         UpdateReadingModeIcon();
+        ResetContinuousZoom();
 
-        var continuous = _viewModel.IsContinuousReading;
-        PageContainer.IsVisible = !continuous;
-        ContinuousPagesView.IsVisible = continuous;
-        MainToolFab.IsVisible = _isToolbarVisible && !continuous;
-
-        if (continuous)
+        if (_viewModel.IsContinuousReading)
         {
             ToolPanel.IsVisible = false;
             SetToolFabExpanded(false);
@@ -1051,6 +1252,21 @@ public partial class SheetViewerPage : ContentPage
         {
             AnnotationCanvas.InvalidateSurface();
         }
+
+        UpdateContinuousLayers();
+    }
+
+    // In continuous mode the list is shown, except while one of its pages
+    // is open in the single-page editor (PageContainer), which then gets a
+    // "done" button to return to the list.
+    private void UpdateContinuousLayers()
+    {
+        var continuous = _viewModel.IsContinuousReading;
+        var editing = continuous && _viewModel.IsContinuousEditing;
+
+        PageContainer.IsVisible = !continuous || editing;
+        ContinuousHost.IsVisible = continuous && !editing;
+        ContinuousEditDoneButton.IsVisible = editing;
     }
 
     // Dispatched so it runs after the list has become visible and laid
@@ -1069,18 +1285,292 @@ public partial class SheetViewerPage : ContentPage
 
     private async void OnContinuousPagesScrolled(object? sender, ItemsViewScrolledEventArgs e)
     {
-        if (!_viewModel.IsContinuousReading)
+        _continuousScrollOffsetFallback = e.VerticalOffset;
+        await UpdateContinuousViewportAsync();
+    }
+
+    // Works out the visible pages from the scroll offset and page sizes
+    // rather than the list's own First/Center/LastVisibleItemIndex: while
+    // zoomed, only the top 1/zoom of the list's viewport is on screen, which
+    // the list itself doesn't know about.
+    private Task UpdateContinuousViewportAsync()
+    {
+        var width = ContinuousPagesView.Width;
+        var height = ContinuousPagesView.Height;
+        if (!_viewModel.IsContinuousReading || _viewModel.IsContinuousEditing || width <= 0 || height <= 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        var pages = _viewModel.ContinuousPages;
+        var top = ContinuousScrollOffset();
+        var visibleHeight = height / _continuousZoom;
+
+        return _viewModel.UpdateContinuousViewportAsync(
+            ContinuousLayout.PageAt(pages, top, width, ContinuousPageView.Spacing),
+            ContinuousLayout.PageAt(pages, top + visibleHeight, width, ContinuousPageView.Spacing),
+            ContinuousLayout.PageAt(pages, top + visibleHeight / 2, width, ContinuousPageView.Spacing));
+    }
+
+    // Content offset (dp) at the top of the list's viewport. On Android this
+    // is derived from the first visible item's actual position, because the
+    // Scrolled event's VerticalOffset is a running sum of scroll deltas that
+    // goes stale after a non-animated ScrollTo (page jumps, bookmarks).
+    private double ContinuousScrollOffset()
+    {
+#if ANDROID
+        if (_continuousRecyclerView?.GetLayoutManager() is AndroidX.RecyclerView.Widget.LinearLayoutManager layoutManager)
+        {
+            var position = layoutManager.FindFirstVisibleItemPosition();
+            var child = position >= 0 ? layoutManager.FindViewByPosition(position) : null;
+            if (child is not null && position < _viewModel.ContinuousPages.Count)
+            {
+                var density = DeviceDisplay.Current.MainDisplayInfo.Density;
+                return ContinuousLayout.PageTop(_viewModel.ContinuousPages, position, ContinuousPagesView.Width, ContinuousPageView.Spacing)
+                    - child.Top / density;
+            }
+        }
+#endif
+        return _continuousScrollOffsetFallback;
+    }
+
+    // Size that annotation coordinates are normalized against: PageContainer
+    // fills the same area as the list, but has no size while hidden.
+    private (double Width, double Height) EditorContainerSize() =>
+        PageContainer.Width > 0 && PageContainer.Height > 0
+            ? (PageContainer.Width, PageContainer.Height)
+            : (ContinuousPagesView.Width, ContinuousPagesView.Height);
+
+    // A tap on an annotation opens that page in the editor with the
+    // annotation selected (to move, resize or delete it); anywhere else
+    // toggles the toolbar, like a center tap in the paged modes.
+    private async void OnContinuousPageTapped(ContinuousPage page, double normalizedX, double normalizedY)
+    {
+        if (ToolPanel.IsVisible)
+        {
+            ToolPanel.IsVisible = false;
+            return;
+        }
+
+        if (_isToolFabExpanded)
+        {
+            SetToolFabExpanded(false);
+            return;
+        }
+
+        // Strokes are stored without bounds (X/Y/Width/Height stay 0), so
+        // they're hit by distance to their points. They have no selection
+        // box, so the editor just opens (to erase or redraw).
+        var hit = page.Annotations.FirstOrDefault(a => !a.IsStroke &&
+            normalizedX >= a.X && normalizedX <= a.X + a.Width &&
+            normalizedY >= a.Y && normalizedY <= a.Y + a.Height);
+
+        if (hit is not null)
+        {
+            await EnterContinuousEditAsync(page.PageIndex, hit.Id);
+            return;
+        }
+
+        var strokeHit = page.Annotations.Any(a => a.IsStroke &&
+            StrokeHitTester.DistanceToPolyline(normalizedX, normalizedY, AnnotationService.DeserializePoints(a.Points))
+                <= StrokeTapTolerance + a.StrokeWidth / 2);
+
+        if (strokeHit)
+        {
+            await EnterContinuousEditAsync(page.PageIndex);
+            return;
+        }
+
+        SetToolbarVisible(!_isToolbarVisible);
+    }
+
+    // Opens a page of the continuous list in the single-page editor, keeping
+    // the list's zoom and position so the page doesn't jump on screen.
+    private async Task EnterContinuousEditAsync(int pageIndex, int? selectAnnotationId = null)
+    {
+        var listWidth = ContinuousPagesView.Width;
+        var listZoom = _continuousZoom;
+        var listTranslationX = ContinuousPagesView.TranslationX;
+        var pageScreenTop = (ContinuousLayout.PageTop(_viewModel.ContinuousPages, pageIndex, listWidth, ContinuousPageView.Spacing)
+            - ContinuousScrollOffset()) * listZoom;
+        var fromLandscape = ContinuousPagesView.Width > ContinuousPagesView.Height;
+
+        await _viewModel.BeginContinuousEditAsync(pageIndex);
+        UpdateContinuousLayers();
+
+        if (selectAnnotationId is { } id)
+        {
+            _viewModel.SelectedAnnotation = _viewModel.CurrentPageAnnotations.FirstOrDefault(a => a.Id == id);
+        }
+
+        AnnotationCanvas.InvalidateSurface();
+        ResetZoom();
+
+        // PageContainer was hidden until now - give it a layout pass before
+        // reading its size/position.
+        // From landscape the editor locks portrait and rotates, so the list's
+        // geometry does not apply: the rotation's size change resets the zoom.
+        if (fromLandscape)
         {
             return;
         }
 
-        await _viewModel.UpdateContinuousViewportAsync(e.FirstVisibleItemIndex, e.LastVisibleItemIndex, e.CenterItemIndex);
+        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(50), () =>
+            ApplyEditorZoomFromContinuous(pageIndex, listWidth, listZoom, listTranslationX, pageScreenTop));
     }
 
-    // Same as a center tap in the paged modes: show/hide the toolbar.
-    private void OnContinuousPageTapped()
+    // Both views share the same origin (the reading area's top-left). In the
+    // list the page is listWidth wide at listZoom with its left edge at
+    // listTranslationX and its top at pageScreenTop; this sets
+    // PageContainer's zoom/translation to put it at the same place. The
+    // page sits letterboxed inside PageContainer, so its top is offset
+    // from the container's by pageTopInContainer (unscaled).
+    private void ApplyEditorZoomFromContinuous(int pageIndex, double listWidth, double listZoom, double listTranslationX, double pageScreenTop)
     {
-        SetToolbarVisible(!_isToolbarVisible);
+        if (!_viewModel.IsContinuousEditing || PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return;
+        }
+
+        var pageTopInContainer = pageIndex < _viewModel.ContinuousPages.Count
+            ? PageFrame.Fit(PageContainer.Width, PageContainer.Height, _viewModel.ContinuousPages[pageIndex].AspectRatio).Y * PageContainer.Height
+            : 0;
+
+        var scale = listZoom * listWidth / PageContainer.Width;
+        if (scale <= ZoomedInThreshold)
+        {
+            // Not zoomed in: only shift vertically (unclamped, there is no
+            // zoom range to pan within) so the page stays where it was in
+            // the list instead of jumping to the centered position.
+            PageContainer.TranslationY = pageScreenTop - PageContainer.Y - pageTopInContainer;
+            UpdateSelectionOverlay();
+            return;
+        }
+
+        _currentScale = scale;
+        PageContainer.AnchorX = 0;
+        PageContainer.AnchorY = 0;
+        PageContainer.Scale = scale;
+        PageContainer.TranslationX = Math.Clamp(listTranslationX - PageContainer.X, -PageContainer.Width * (scale - 1), 0);
+        PageContainer.TranslationY = Math.Clamp(pageScreenTop - PageContainer.Y - pageTopInContainer * scale, -PageContainer.Height * (scale - 1), 0);
+        _xOffset = PageContainer.TranslationX;
+        _yOffset = PageContainer.TranslationY;
+        UpdateResizeHandleScale();
+        UpdateSelectionOverlay();
+    }
+
+    private async void OnContinuousEditDoneTapped(object? sender, TappedEventArgs e)
+    {
+        await ExitContinuousEditAsync();
+    }
+
+    private async Task ExitContinuousEditAsync()
+    {
+        ToolPanel.IsVisible = false;
+        SetToolFabExpanded(false);
+
+        await _viewModel.EndContinuousEditAsync();
+
+        UpdateToolSections();
+        UpdateSelectionOverlay();
+        ResetZoom();
+        UpdateContinuousLayers();
+        InvalidateContinuousAnnotations();
+    }
+
+    // Annotation tools picked from the FAB while scrolling the continuous
+    // list edit the page currently in the middle of the screen.
+    private async Task EnsureEditablePageAsync()
+    {
+        if (_viewModel.IsContinuousReading && !_viewModel.IsContinuousEditing)
+        {
+            await EnterContinuousEditAsync(_viewModel.CurrentPageIndex);
+        }
+    }
+
+    private void ResetContinuousZoom()
+    {
+        _continuousZoom = 1;
+        ContinuousPagesView.Scale = 1;
+        ContinuousPagesView.TranslationX = 0;
+        ContinuousZoomFooter.HeightRequest = 0;
+    }
+
+    private void ContinuousPinchStarted()
+    {
+        ContinuousPagesView.AnchorX = 0;
+        ContinuousPagesView.AnchorY = 0;
+    }
+
+    // Horizontal: same anchored-translation math as ApplyPinchTranslation.
+    // Vertical: no translation (it would uncover empty space above the
+    // list) - the list is scrolled instead, by the amount that keeps the
+    // row under the fingers in place: a row at viewport position y is on
+    // screen at y*zoom, so going from zoom k to k' needs a scroll of
+    // y*(1 - k/k').
+    private void ContinuousPinchRunning(double rawScaleFactor, double focusXFraction, double focusYFraction)
+    {
+        var width = ContinuousPagesView.Width;
+        var height = ContinuousPagesView.Height;
+        var previousZoom = _continuousZoom;
+        _continuousZoom = Math.Clamp(previousZoom * rawScaleFactor, 1, MaxContinuousZoom);
+        if (_continuousZoom == previousZoom || width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        var targetX = ContinuousPagesView.TranslationX - focusXFraction * width * (_continuousZoom - previousZoom);
+        ContinuousPagesView.TranslationX = Math.Clamp(targetX, -width * (_continuousZoom - 1), 0);
+        ContinuousPagesView.Scale = _continuousZoom;
+
+        // Room below the last page so it can still be scrolled fully into
+        // the on-screen part of the (scaled) viewport.
+        ContinuousZoomFooter.HeightRequest = height * (1 - 1 / _continuousZoom);
+
+        ScrollContinuousBy(focusYFraction * height * (1 - previousZoom / _continuousZoom));
+    }
+
+    private async void ContinuousPinchEnded()
+    {
+        if (_continuousZoom <= ZoomedInThreshold)
+        {
+            ResetContinuousZoom();
+        }
+
+        await UpdateContinuousViewportAsync();
+    }
+
+    private void ContinuousPanHorizontally(double deltaDp)
+    {
+        if (_continuousZoom <= ZoomedInThreshold)
+        {
+            return;
+        }
+
+        ContinuousPagesView.TranslationX = Math.Clamp(
+            ContinuousPagesView.TranslationX + deltaDp,
+            -ContinuousPagesView.Width * (_continuousZoom - 1),
+            0);
+    }
+
+    private void ScrollContinuousBy(double deltaDp)
+    {
+#if ANDROID
+        if (_continuousRecyclerView is null)
+        {
+            return;
+        }
+
+        // RecyclerView scrolls in whole pixels - carry the fraction over so
+        // many small per-frame scrolls don't drift.
+        var deltaPx = deltaDp * DeviceDisplay.Current.MainDisplayInfo.Density + _continuousScrollRemainderPx;
+        var wholePx = (int)Math.Truncate(deltaPx);
+        _continuousScrollRemainderPx = deltaPx - wholePx;
+        if (wholePx != 0)
+        {
+            _continuousRecyclerView.ScrollBy(0, wholePx);
+        }
+#endif
     }
 
     private async void OnReadingModeClicked(object? sender, EventArgs e)
@@ -1096,11 +1586,18 @@ public partial class SheetViewerPage : ContentPage
         await CommunityToolkit.Maui.Alerts.Toast.Make(message).Show();
     }
 
-    // After jumping to a page (page indicator / bookmark).
+    // After jumping to a page (page indicator / bookmark). A jump while
+    // editing a continuous-mode page has already closed the editor (see
+    // SheetViewerViewModel.GoToPageAsync).
     private void OnJumpedToPage()
     {
         if (_viewModel.IsContinuousReading)
         {
+            ToolPanel.IsVisible = false;
+            UpdateToolSections();
+            UpdateSelectionOverlay();
+            ResetZoom();
+            UpdateContinuousLayers();
             ScrollContinuousToCurrentPage();
         }
         else
@@ -1118,6 +1615,15 @@ public partial class SheetViewerPage : ContentPage
             cancel: AppStrings.Cancel,
             initialValue: _viewModel.CurrentPageDisplay.ToString(),
             keyboard: Keyboard.Numeric);
+
+#if ANDROID
+        // The dialog's keyboard leaves the window insets stale (indicator and
+        // FAB end up lower, under the gesture bar) until something re-applies
+        // them, same as when showing the toolbar. Redo it now and again once
+        // the keyboard's hide animation is over.
+        RequestAndroidWindowInsetsRefresh();
+        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(300), RequestAndroidWindowInsetsRefresh);
+#endif
 
         if (input is null)
         {
@@ -1254,6 +1760,8 @@ public partial class SheetViewerPage : ContentPage
 
     private async void OnFabIconsClicked(object? sender, TappedEventArgs e)
     {
+        await EnsureEditablePageAsync();
+
         _viewModel.ActiveTool = AnnotationTool.MusicIcons;
         UpdateToolSections();
         SetToolFabExpanded(false);
@@ -1262,15 +1770,19 @@ public partial class SheetViewerPage : ContentPage
         ToolPanel.IsVisible = true;
     }
 
-    private void OnFabPencilClicked(object? sender, TappedEventArgs e)
+    private async void OnFabPencilClicked(object? sender, TappedEventArgs e)
     {
+        await EnsureEditablePageAsync();
+
         _viewModel.ActiveTool = AnnotationTool.Pencil;
         UpdateToolSections();
         SetToolFabExpanded(false);
     }
 
-    private void OnFabEraserClicked(object? sender, TappedEventArgs e)
+    private async void OnFabEraserClicked(object? sender, TappedEventArgs e)
     {
+        await EnsureEditablePageAsync();
+
         _viewModel.ActiveTool = AnnotationTool.Eraser;
         UpdateToolSections();
         SetToolFabExpanded(false);
