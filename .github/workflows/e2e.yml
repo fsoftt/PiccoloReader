@@ -40,7 +40,7 @@ jobs:
     timeout-minutes: 50
     env:
       E2E_ARTIFACTS: ${{ github.workspace }}/e2e-artifacts
-      E2E_FILTER: ${{ github.event.inputs.filter || 'FullyQualifiedName~ViewerTests|FullyQualifiedName~LibraryTests' }}
+      E2E_FILTER: ${{ github.event.inputs.filter }}
     steps:
       - uses: actions/checkout@v4
 
