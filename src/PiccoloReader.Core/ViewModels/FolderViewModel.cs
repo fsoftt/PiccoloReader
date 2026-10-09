@@ -46,9 +46,19 @@ public partial class FolderViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value) => RefreshSheets();
 
-    public async Task LoadAsync()
+    // Returns false when the folder no longer exists (it was deleted); the
+    // list is then emptied and the view should leave the folder.
+    public async Task<bool> LoadAsync()
     {
         ShowAdsBanner = _adsPreferenceService.GetSupportWithAdsEnabled();
+
+        if (!(await _libraryService.GetFoldersAsync()).Any(f => f.Id == FolderId))
+        {
+            _allSheets = new List<Sheet>();
+            HasMultipleSheets = false;
+            RefreshSheets();
+            return false;
+        }
 
         _allSheets = (await _libraryService.GetSheetsAsync(FolderId)).ToList();
         HasMultipleSheets = _allSheets.Count > 1;
@@ -60,6 +70,7 @@ public partial class FolderViewModel : ObservableObject
         }
 
         RefreshSheets();
+        return true;
     }
 
     [RelayCommand]

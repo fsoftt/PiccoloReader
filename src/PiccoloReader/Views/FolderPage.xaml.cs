@@ -55,8 +55,14 @@ public partial class FolderPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadAsync();
+        var folderExists = await _viewModel.LoadAsync();
         UpdateToolbarItems();
+
+        if (!folderExists)
+        {
+            // The folder was deleted: back to the library.
+            await Shell.Current.GoToAsync("..");
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
