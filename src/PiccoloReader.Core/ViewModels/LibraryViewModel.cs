@@ -114,7 +114,7 @@ public partial class LibraryViewModel : ObservableObject
         RefreshSheets();
 
         var totalSheets = _allRootSheets.Count + counts.Values.Sum();
-        SummaryText = string.Format(AppStrings.LibrarySummaryFormat, totalSheets, _allFolders.Count);
+        SummaryText = AppStrings.LibrarySummary(totalSheets, _allFolders.Count);
         IsEmpty = _allFolders.Count == 0 && _allRootSheets.Count == 0;
     }
 

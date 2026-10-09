@@ -16,7 +16,7 @@ public class SheetMetaConverter : IValueConverter
 
         var date = sheet.DateAdded.ToLocalTime().ToString("d", culture);
         return sheet.PageCount > 0
-            ? $"{string.Format(AppStrings.PagesFormat, sheet.PageCount)} · {date}"
+            ? $"{AppStrings.Pages(sheet.PageCount)} · {date}"
             : date;
     }
 
@@ -28,7 +28,7 @@ public class SheetMetaConverter : IValueConverter
 public class SheetCountConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        string.Format(AppStrings.SheetCountFormat, value is int count ? count : 0);
+        AppStrings.SheetCount(value is int count ? count : 0);
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();

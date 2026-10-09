@@ -334,7 +334,7 @@ public class LibraryViewModelTests : IDisposable
             await _sut.MoveSheetCommand.ExecuteAsync((sheet, (int?)_sut.Folders[0].Id));
 
             Assert.False(_sut.IsEmpty);
-            Assert.Equal("2 sheets · 1 folders", _sut.SummaryText);
+            Assert.Equal("2 sheets · 1 folder", _sut.SummaryText);
             Assert.Equal(1, _sut.Folders[0].SheetCount);
         }
         finally

@@ -66,7 +66,7 @@ public partial class FolderViewModel : ObservableObject
 
         _allSheets = (await _libraryService.GetSheetsAsync(FolderId)).ToList();
         HasMultipleSheets = _allSheets.Count > 1;
-        SummaryText = string.Format(AppStrings.SheetCountFormat, _allSheets.Count);
+        SummaryText = AppStrings.SheetCount(_allSheets.Count);
 
         if (!HasMultipleSheets)
         {
