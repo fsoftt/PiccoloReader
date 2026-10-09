@@ -131,11 +131,7 @@ public partial class FolderViewModel : ObservableObject
                 : filtered.OrderByDescending(s => s.Title)
         };
 
-        Sheets.Clear();
-        foreach (var sheet in sorted)
-        {
-            Sheets.Add(sheet);
-        }
+        Sheets.SyncWith(sorted.ToList());
 
         HasResults = Sheets.Count > 0;
         IsFolderEmpty = _allSheets.Count == 0;
