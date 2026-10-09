@@ -157,8 +157,30 @@ public partial class LibraryPage : ContentPage
         }
     }
 
+    private bool _suppressNextTap;
+
+    private void OnItemTouchStatusChanged(object? sender, CommunityToolkit.Maui.Core.TouchInteractionStatusChangedEventArgs e)
+    {
+        if (e.TouchInteractionStatus == CommunityToolkit.Maui.Core.TouchInteractionStatus.Started)
+        {
+            _suppressNextTap = false;
+        }
+    }
+
+    private bool ConsumeSuppressedTap()
+    {
+        var suppressed = _suppressNextTap;
+        _suppressNextTap = false;
+        return suppressed;
+    }
+
     private async void OnFolderTapped(object? sender, TappedEventArgs e)
     {
+        if (ConsumeSuppressedTap())
+        {
+            return;
+        }
+
         if (e.Parameter is Folder folder)
         {
             await Shell.Current.GoToAsync($"folder?folderId={folder.Id}&folderName={folder.Name}");
@@ -167,6 +189,11 @@ public partial class LibraryPage : ContentPage
 
     private async void OnSheetTapped(object? sender, TappedEventArgs e)
     {
+        if (ConsumeSuppressedTap())
+        {
+            return;
+        }
+
         if (e.Parameter is Sheet sheet)
         {
             await Shell.Current.GoToAsync($"sheetviewer?sheetId={sheet.Id}");
@@ -175,6 +202,8 @@ public partial class LibraryPage : ContentPage
 
     private async Task OnFolderLongPressedAsync(Folder folder)
     {
+        _suppressNextTap = true;
+
         var choice = await DisplayActionSheetAsync($"\"{folder.Name}\"", AppStrings.Cancel, null, AppStrings.DeleteSheetsOption, AppStrings.KeepSheetsOption);
 
         if (choice == AppStrings.DeleteSheetsOption)
@@ -189,6 +218,8 @@ public partial class LibraryPage : ContentPage
 
     private async Task OnSheetLongPressedAsync(Sheet sheet)
     {
+        _suppressNextTap = true;
+
         var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, AppStrings.Move, AppStrings.Delete);
 
         if (choice == AppStrings.Delete)

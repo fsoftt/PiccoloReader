@@ -421,7 +421,6 @@ public partial class SheetViewerPage : ContentPage
             SetToolFabExpanded(false);
         }
 
-        // Annotation tools aren't available in continuous mode (read-only).
         MainToolFab.IsVisible = visible;
 
 #if ANDROID

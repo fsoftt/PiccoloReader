@@ -39,8 +39,23 @@ public partial class SheetViewerViewModel : ObservableObject
     private int _keepFirst;
     private int _keepLast;
 
-    private readonly Stack<IUndoableAction> _undoStack = new();
-    private readonly Stack<IUndoableAction> _redoStack = new();
+    // Undo/redo history of the page being edited. Each page keeps its own
+    // history for as long as the document stays open, so leaving a page
+    // (or the continuous-mode editor) and coming back can still undo.
+    // Annotations are re-read from the database on every page load, so the
+    // instances the stored actions reference are remembered per page and
+    // reused when the page is loaded again.
+    private sealed class PageHistory
+    {
+        public Stack<IUndoableAction> Undo = new();
+        public Stack<IUndoableAction> Redo = new();
+        public Dictionary<int, Annotation> Instances = new();
+    }
+
+    private readonly Dictionary<int, PageHistory> _histories = new();
+    private Stack<IUndoableAction> _undoStack = new();
+    private Stack<IUndoableAction> _redoStack = new();
+    private int _historyPageIndex = -1;
     private List<IUndoableAction>? _eraseBatch;
 
     private Sheet? _sheet;
@@ -161,6 +176,7 @@ public partial class SheetViewerViewModel : ObservableObject
         ShowAdsBanner = _adsPreferenceService.GetSupportWithAdsEnabled();
         ReadingMode = _readingPreferenceService.GetReadingMode();
         _pageRenders.Clear();
+        ClearUndoHistory();
 
         IsLoading = true;
         try
@@ -372,9 +388,6 @@ public partial class SheetViewerViewModel : ObservableObject
         IsContinuousEditing = false;
         SelectedAnnotation = null;
         ActiveTool = AnnotationTool.MusicIcons;
-        _undoStack.Clear();
-        _redoStack.Clear();
-        RefreshUndoRedoState();
 
         if (_sheet is not null && CurrentPageIndex < ContinuousPages.Count)
         {
@@ -408,9 +421,6 @@ public partial class SheetViewerViewModel : ObservableObject
             // since the pages were last shown.
             SelectedAnnotation = null;
             ActiveTool = AnnotationTool.MusicIcons;
-            _undoStack.Clear();
-            _redoStack.Clear();
-            RefreshUndoRedoState();
             foreach (var page in ContinuousPages)
             {
                 page.IsLoadRequested = false;
@@ -510,6 +520,61 @@ public partial class SheetViewerViewModel : ObservableObject
         _undoStack.Push(action);
         ClearSelectionIfNoLongerPresent();
         RefreshUndoRedoState();
+    }
+
+    // Drops every page's history; called when a document is (re)opened.
+    public void ClearUndoHistory()
+    {
+        _histories.Clear();
+        _undoStack = new Stack<IUndoableAction>();
+        _redoStack = new Stack<IUndoableAction>();
+        _historyPageIndex = -1;
+        RefreshUndoRedoState();
+    }
+
+    // Parks the current page's history (with the annotation instances it
+    // refers to) and activates the one of the page being loaded.
+    private void SwitchHistoryTo(int pageIndex)
+    {
+        // Also runs when reloading the same page: the reload creates new
+        // annotation instances, so the old ones are still parked for reuse.
+        if (_historyPageIndex >= 0)
+        {
+            if (_undoStack.Count > 0 || _redoStack.Count > 0)
+            {
+                // Merge: an overlapping reload may find the collection empty.
+                var instances = _histories.TryGetValue(_historyPageIndex, out var parked)
+                    ? parked.Instances
+                    : new Dictionary<int, Annotation>();
+                foreach (var annotation in CurrentPageAnnotations)
+                {
+                    instances[annotation.Id] = annotation;
+                }
+
+                _histories[_historyPageIndex] = new PageHistory
+                {
+                    Undo = _undoStack,
+                    Redo = _redoStack,
+                    Instances = instances
+                };
+            }
+            else
+            {
+                _histories.Remove(_historyPageIndex);
+            }
+        }
+
+        _historyPageIndex = pageIndex;
+        if (_histories.TryGetValue(pageIndex, out var restored))
+        {
+            _undoStack = restored.Undo;
+            _redoStack = restored.Redo;
+        }
+        else
+        {
+            _undoStack = new Stack<IUndoableAction>();
+            _redoStack = new Stack<IUndoableAction>();
+        }
     }
 
     private void RecordAction(IUndoableAction action)
@@ -641,9 +706,8 @@ public partial class SheetViewerViewModel : ObservableObject
         _keepLast = pageIndex + PrefetchRadius;
 
         SelectedAnnotation = null;
+        SwitchHistoryTo(pageIndex);
         CurrentPageAnnotations.Clear();
-        _undoStack.Clear();
-        _redoStack.Clear();
         RefreshUndoRedoState();
 
         var renderTask = GetPageImageAsync(pageIndex);
@@ -686,9 +750,12 @@ public partial class SheetViewerViewModel : ObservableObject
                 return;
             }
 
+            var known = _histories.TryGetValue(pageIndex, out var history) ? history.Instances : null;
             foreach (var annotation in annotations)
             {
-                CurrentPageAnnotations.Add(annotation);
+                // Reuse the instance the page's undo history refers to.
+                CurrentPageAnnotations.Add(
+                    known is not null && known.TryGetValue(annotation.Id, out var existing) ? existing : annotation);
             }
         }
 

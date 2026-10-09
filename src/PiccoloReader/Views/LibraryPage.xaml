@@ -113,6 +113,7 @@
                         </Border.GestureRecognizers>
                         <Border.Behaviors>
                             <toolkit:TouchBehavior
+                                InteractionStatusChanged="OnItemTouchStatusChanged"
                                 LongPressCommand="{Binding Source={x:Reference ThisPage}, Path=FolderLongPressCommand}"
                                 LongPressCommandParameter="{Binding Source={x:Reference FolderItemRoot}, Path=BindingContext}" />
                         </Border.Behaviors>
@@ -218,6 +219,7 @@
                         </Border.GestureRecognizers>
                         <Border.Behaviors>
                             <toolkit:TouchBehavior
+                                InteractionStatusChanged="OnItemTouchStatusChanged"
                                 LongPressCommand="{Binding Source={x:Reference ThisPage}, Path=SheetLongPressCommand}"
                                 LongPressCommandParameter="{Binding Source={x:Reference SheetItemRoot}, Path=BindingContext}" />
                         </Border.Behaviors>
