@@ -184,4 +184,7 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="EditorDone" xml:space="preserve"><value>Listo</value></data>
   <data name="Symbols" xml:space="preserve"><value>Símbolos</value></data>
   <data name="EditorDoneLabel" xml:space="preserve"><value>Terminar edición</value></data>
+  <data name="SettingsGeneralSection" xml:space="preserve"><value>General</value></data>
+  <data name="SettingsHelpSection" xml:space="preserve"><value>Ayuda</value></data>
+  <data name="AppVersionFormat" xml:space="preserve"><value>PiccoloReader · versión {0}</value></data>
 </root>
