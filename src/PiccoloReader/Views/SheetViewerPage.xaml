@@ -87,18 +87,21 @@
                     </Border.GestureRecognizers>
                 </Border>
 
-                <BoxView
+                <Border
                     x:Name="ResizeHandle"
                     WidthRequest="24"
                     HeightRequest="24"
-                    CornerRadius="12"
-                    Color="{StaticResource Primary}"
+                    BackgroundColor="{StaticResource Primary}"
+                    StrokeThickness="0"
                     HorizontalOptions="Start"
                     VerticalOptions="Start">
-                    <BoxView.GestureRecognizers>
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="12" />
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
                         <PanGestureRecognizer PanUpdated="OnSelectionResizePanUpdated" />
-                    </BoxView.GestureRecognizers>
-                </BoxView>
+                    </Border.GestureRecognizers>
+                </Border>
             </Grid>
 
             <ctViews:DrawingView
