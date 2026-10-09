@@ -15,6 +15,10 @@ public partial class TutorialViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ShowSkip))]
     private int _currentIndex;
 
+    /// <summary>Hidden in landscape so the slide text gets the available height.</summary>
+    [ObservableProperty]
+    private bool _showSlideIcon = true;
+
     public TutorialViewModel(ITutorialPreferenceService preferenceService)
     {
         _preferenceService = preferenceService;
