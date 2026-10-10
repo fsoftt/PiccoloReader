@@ -51,7 +51,7 @@
                             <Label Grid.Column="1" Style="{StaticResource RowTitle}" VerticalOptions="Center"
                                    Text="{x:Static strings:AppStrings.LanguageSectionHeader}"
                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-                            <Label Grid.Column="2" x:Name="LanguageValueLabel" Style="{StaticResource Caption}" FontSize="14" VerticalOptions="Center" />
+                            <Label Grid.Column="2" x:Name="LanguageValueLabel" AutomationId="SettingsLanguageValue" Style="{StaticResource Caption}" FontSize="14" VerticalOptions="Center" />
                             <Image Grid.Column="3" VerticalOptions="Center">
                                 <Image.Source>
                                     <FontImageSource Glyph="&#xE5CC;" FontFamily="MaterialOutlined" Size="20"
