@@ -18,7 +18,7 @@ public class FakeExternalLibraryStore : IExternalLibraryStore
 
     public Task<bool> EnsureAccessAsync(bool requestIfNeeded) => Task.FromResult(AccessGranted);
 
-    public Task<string> WriteAsync(string relativePath, Stream content, string mimeType, CancellationToken cancellationToken = default)
+    public virtual Task<string> WriteAsync(string relativePath, Stream content, string mimeType, CancellationToken cancellationToken = default)
     {
         using var buffer = new MemoryStream();
         content.CopyTo(buffer);
@@ -57,6 +57,8 @@ public class FakeExternalLibraryStore : IExternalLibraryStore
 public class FakeExternalLibraryState : IExternalLibraryState
 {
     public DateTime? LastSyncUtc { get; set; }
+
+    public string? SnapshotPath { get; set; }
 
     public bool RecoveryHintDismissed { get; set; }
 }

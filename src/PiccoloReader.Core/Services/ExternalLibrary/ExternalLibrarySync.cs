@@ -269,9 +269,17 @@ public class ExternalLibrarySync : ILibraryChangeNotifier
         try
         {
             var snapshot = await BuildSnapshotAsync();
+            if (snapshot.Folders.Count == 0 && snapshot.Sheets.Count == 0)
+            {
+                // Nothing worth saving yet; writing an empty snapshot could
+                // also shadow the one of a previous install awaiting recovery.
+                return true;
+            }
+
             var bytes = System.Text.Encoding.UTF8.GetBytes(snapshot.ToJson());
             using var stream = new MemoryStream(bytes);
-            await _store.WriteAsync(ExternalPaths.SnapshotFileName, stream, ExternalPaths.SnapshotMimeType);
+            _state.SnapshotPath = await _store.WriteAsync(
+                _state.SnapshotPath ?? ExternalPaths.SnapshotFileName, stream, ExternalPaths.SnapshotMimeType);
             _state.LastSyncUtc = DateTime.UtcNow;
             return true;
         }

@@ -17,6 +17,12 @@ public class MauiExternalLibraryState : IExternalLibraryState
         set => Preferences.Default.Set(LastSyncKey, value?.Ticks ?? 0L);
     }
 
+    public string? SnapshotPath
+    {
+        get => Preferences.Default.Get<string?>("ExtLibSnapshotPath", null);
+        set => Preferences.Default.Set("ExtLibSnapshotPath", value);
+    }
+
     public bool RecoveryHintDismissed
     {
         get => Preferences.Default.Get(HintDismissedKey, false);
