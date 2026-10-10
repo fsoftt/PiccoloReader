@@ -1,4 +1,5 @@
 using PiccoloReader.Core.Services;
+using SkiaSharp.Extended.UI.Controls;
 
 namespace PiccoloReader.Views;
 
@@ -9,6 +10,10 @@ public partial class SplashPage : ContentPage
     public SplashPage()
     {
         InitializeComponent();
+
+        // The animation is clipped to a circle on a transparent background, so it
+        // has a light and a dark variant (lighter blue for contrast on dark).
+        LottieView.Source = new SKFileLottieImageSource { File = GetLottieFile() };
 
         LottieView.AnimationFailed += (_, _) => NavigateToApp();
 
@@ -22,6 +27,9 @@ public partial class SplashPage : ContentPage
             return false;
         });
     }
+
+    private static string GetLottieFile() =>
+        Application.Current?.RequestedTheme == AppTheme.Dark ? "musical-notes-dark.json" : "musical-notes-light.json";
 
     private void OnAnimationCompleted(object? sender, EventArgs e) => NavigateToApp();
 
