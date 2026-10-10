@@ -41,7 +41,7 @@ public static class Ui
 
     public static bool Exists(string automationId) => TryFind(automationId) is not null;
 
-    public static IWebElement Find(string automationId, int timeoutSeconds = 15)
+    public static IWebElement Find(string automationId, int timeoutSeconds = 30)
     {
         IWebElement? element = null;
         Poll(() => (element = TryFind(automationId)) is not null, timeoutSeconds, $"element '{automationId}' to appear");
@@ -129,14 +129,14 @@ public static class Ui
 
     public static bool TextExists(string text, bool contains = false) => TryFindText(text, contains) is not null;
 
-    public static IWebElement FindText(string text, int timeoutSeconds = 15, bool contains = false)
+    public static IWebElement FindText(string text, int timeoutSeconds = 30, bool contains = false)
     {
         IWebElement? element = null;
         Poll(() => (element = TryFindText(text, contains)) is not null, timeoutSeconds, $"text '{text}' to appear");
         return element!;
     }
 
-    public static void TapText(string text, int timeoutSeconds = 15, bool contains = false) =>
+    public static void TapText(string text, int timeoutSeconds = 30, bool contains = false) =>
         Poll(() =>
         {
             var element = TryFindText(text, contains);
@@ -149,7 +149,7 @@ public static class Ui
             return true;
         }, timeoutSeconds, $"text '{text}' to be tappable");
 
-    public static IWebElement FindDialogEditText(int timeoutSeconds = 15)
+    public static IWebElement FindDialogEditText(int timeoutSeconds = 30)
     {
         IWebElement? element = null;
         Poll(

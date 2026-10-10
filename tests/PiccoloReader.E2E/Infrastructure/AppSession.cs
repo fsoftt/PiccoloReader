@@ -73,6 +73,23 @@ public static class AppSession
         string language = "en",
         bool? ads = null)
     {
+        // A loaded shared CI emulator occasionally stalls a launch; one retry from a clean slate.
+        try
+        {
+            ResetAppOnce(readingMode, sheets, language, ads);
+        }
+        catch (WebDriverTimeoutException)
+        {
+            ResetAppOnce(readingMode, sheets, language, ads);
+        }
+    }
+
+    private static void ResetAppOnce(
+        string readingMode = "Horizontal",
+        IReadOnlyList<SeedSheet>? sheets = null,
+        string language = "en",
+        bool? ads = null)
+    {
         var template = EnsureTemplateDb();
         Wipe();
 

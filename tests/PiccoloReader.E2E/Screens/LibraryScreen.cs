@@ -78,12 +78,12 @@ public static class LibraryScreen
         var field = Ui.FindDialogEditText();
         field.SendKeys(name);
         Ui.TapText(AppStrings.OK);
-        Ui.Poll(() => FolderNames().Contains(name), 15, $"folder '{name}' to appear");
+        Ui.Poll(() => FolderNames().Contains(name), 30, $"folder '{name}' to appear");
     }
 
     public static void OpenFolder(string name)
     {
-        Ui.Poll(() => FolderNames().Contains(name), 15, $"folder '{name}'");
+        Ui.Poll(() => FolderNames().Contains(name), 30, $"folder '{name}'");
         Ui.FindAll(FolderNameId).First(e => e.Text == name).Click();
         Ui.Find("FolderBackButton");
     }
