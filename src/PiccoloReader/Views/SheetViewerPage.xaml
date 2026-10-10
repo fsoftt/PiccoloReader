@@ -25,7 +25,7 @@
     <Grid Grid.Row="0" BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
 
         <Grid
-            x:Name="PageContainer"
+            x:Name="PageContainer" AutomationId="ViewerPageContainer"
             HorizontalOptions="Center"
             VerticalOptions="Center">
             <Grid.GestureRecognizers>
@@ -39,7 +39,7 @@
                 Source="{Binding CurrentPageImageBytes, Converter={StaticResource ByteArrayToImageSource}}"
                 Aspect="AspectFit" />
 
-            <skia:SKCanvasView x:Name="AnnotationCanvas" PaintSurface="OnAnnotationCanvasPaintSurface" />
+            <skia:SKCanvasView x:Name="AnnotationCanvas" AutomationId="AnnotationCanvas" PaintSurface="OnAnnotationCanvasPaintSurface" />
 
             <Grid
                 x:Name="SelectionOverlay"
@@ -48,7 +48,7 @@
                 VerticalOptions="Start"
                 InputTransparent="False">
                 <Border
-                    x:Name="SelectionBorder"
+                    x:Name="SelectionBorder" AutomationId="SelectionBorder"
                     Margin="20"
                     Stroke="{StaticResource Primary}"
                     StrokeThickness="2"
@@ -59,7 +59,7 @@
                 </Border>
 
                 <Border
-                    x:Name="ResizeHandle"
+                    x:Name="ResizeHandle" AutomationId="ResizeHandle"
                     WidthRequest="24"
                     HeightRequest="24"
                     BackgroundColor="{StaticResource Primary}"
@@ -108,7 +108,7 @@
         <!-- Continuous (vertical scroll) reading mode. Items are built in
              code (ContinuousPageView) - see the page constructor. Zoom is a
              Scale/TranslationX on the list itself, clipped by this host. -->
-        <Grid x:Name="ContinuousHost" IsVisible="False" IsClippedToBounds="True">
+        <Grid x:Name="ContinuousHost" AutomationId="ViewerContinuousHost" IsVisible="False" IsClippedToBounds="True">
             <CollectionView
                 x:Name="ContinuousPagesView"
                 ItemsSource="{Binding ContinuousPages}"
@@ -155,7 +155,7 @@
             VerticalOptions="Center" />
 
         <Border
-            x:Name="TrashTarget"
+            x:Name="TrashTarget" AutomationId="TrashTarget"
             IsVisible="False"
             WidthRequest="56"
             HeightRequest="56"
@@ -392,6 +392,7 @@
                                                 HeightRequest="40"
                                                 HorizontalOptions="Center"
                                                 VerticalOptions="Center"
+                                                BindingContextChanged="OnIconGlyphBindingContextChanged"
                                                 PaintSurface="OnIconGlyphPaintSurface" />
                                         </Border>
                                     </DataTemplate>
@@ -702,7 +703,7 @@
 
                     <HorizontalStackLayout Spacing="16" HorizontalOptions="End" Margin="0,8,0,0">
                         <Button Text="{x:Static strings:AppStrings.Cancel}" Clicked="OnAddBookmarkCancelClicked" BackgroundColor="Transparent" TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-                        <Button Text="{x:Static strings:AppStrings.Add}" Clicked="OnAddBookmarkConfirmClicked" />
+                        <Button AutomationId="AddBookmarkConfirmButton" Text="{x:Static strings:AppStrings.Add}" Clicked="OnAddBookmarkConfirmClicked" />
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Border>

@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- End-to-end UI tests (Appium + UiAutomator2) driving the installed
+       PiccoloReader APK on an Android emulator/device. Deliberately NOT
+       referenced by PiccoloReader.Core.Tests and NOT built by ci.yml; the
+       .github/workflows/e2e.yml workflow runs it. See README.md. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>PiccoloReader.E2E</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Appium.WebDriver" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="9.0.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="NUnit" Version="4.3.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
+  <!-- Only for AppStrings: native dialogs (action sheets, prompts) have no
+       AutomationId, so their buttons are found by the app's own localized
+       strings instead of hardcoded text. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PiccoloReader.Core\PiccoloReader.Core.csproj" />
+  </ItemGroup>
+
+</Project>

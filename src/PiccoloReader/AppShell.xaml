@@ -18,7 +18,7 @@
         Shell.TabBarIsVisible="False" on the page.
     -->
     <TabBar>
-        <Tab Title="{x:Static strings:AppStrings.Library}" Route="library">
+        <Tab AutomationId="TabLibrary" Title="{x:Static strings:AppStrings.Library}" Route="library">
             <Tab.Icon>
                 <FontImageSource Glyph="&#xE2C7;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
             </Tab.Icon>
@@ -35,7 +35,7 @@
             <ShellContent ContentTemplate="{DataTemplate views:DonatePage}" />
         </Tab>
 
-        <Tab Title="{x:Static strings:AppStrings.Settings}" Route="settings">
+        <Tab AutomationId="TabSettings" Title="{x:Static strings:AppStrings.Settings}" Route="settings">
             <Tab.Icon>
                 <FontImageSource Glyph="&#xE429;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
             </Tab.Icon>
