@@ -1,16 +1,19 @@
 using System.Text.Json;
 using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Data.Models;
+using PiccoloReader.Core.Services.ExternalLibrary;
 
 namespace PiccoloReader.Core.Services;
 
 public class AnnotationService
 {
     private readonly AppDatabase _database;
+    private readonly ILibraryChangeNotifier? _notifier;
 
-    public AnnotationService(AppDatabase database)
+    public AnnotationService(AppDatabase database, ILibraryChangeNotifier? notifier = null)
     {
         _database = database;
+        _notifier = notifier;
     }
 
     public Task<List<Annotation>> GetAnnotationsAsync(int sheetId, int pageIndex) =>
@@ -56,6 +59,7 @@ public class AnnotationService
         };
 
         await _database.Connection.InsertAsync(annotation);
+        _notifier?.NotifyChanged();
         return annotation;
     }
 
@@ -74,17 +78,27 @@ public class AnnotationService
         };
 
         await _database.Connection.InsertAsync(annotation);
+        _notifier?.NotifyChanged();
         return annotation;
     }
 
-    public Task InsertAnnotationAsync(Annotation annotation) =>
-        _database.Connection.InsertAsync(annotation);
+    public async Task InsertAnnotationAsync(Annotation annotation)
+    {
+        await _database.Connection.InsertAsync(annotation);
+        _notifier?.NotifyChanged();
+    }
 
-    public Task UpdateAnnotationAsync(Annotation annotation) =>
-        _database.Connection.UpdateAsync(annotation);
+    public async Task UpdateAnnotationAsync(Annotation annotation)
+    {
+        await _database.Connection.UpdateAsync(annotation);
+        _notifier?.NotifyChanged();
+    }
 
-    public Task DeleteAnnotationAsync(Annotation annotation) =>
-        _database.Connection.DeleteAsync(annotation);
+    public async Task DeleteAnnotationAsync(Annotation annotation)
+    {
+        await _database.Connection.DeleteAsync(annotation);
+        _notifier?.NotifyChanged();
+    }
 
     public static string SerializePoints(IReadOnlyList<StrokePoint> points) =>
         JsonSerializer.Serialize(points);
