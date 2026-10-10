@@ -215,6 +215,41 @@ public class ExternalLibraryTests
     }
 
     [Fact]
+    public async Task EmptyLibrary_DoesNotWriteASnapshot()
+    {
+        using var app = new AppInstall(_store);
+
+        var result = await app.Sync.SyncAllAsync();
+
+        Assert.True(result.SnapshotWritten);
+        Assert.Empty(_store.Files);
+    }
+
+    [Fact]
+    public async Task Snapshot_KeepsWritingToThePathTheStoreAssigned()
+    {
+        var renaming = new RenamingStore();
+        using var app = new AppInstall(renaming);
+        var sheet = await app.ImportPdfAsync("Song", "s");
+        await app.Sync.WaitForPendingAsync();
+        await app.Annotations.AddIconAsync(sheet.Id, 0, "forte", 0, 0, 0.1, 0.1);
+        await app.Sync.WaitForPendingAsync();
+
+        Assert.Equal("piccolo-library (1).json", app.State.SnapshotPath);
+        Assert.DoesNotContain(renaming.Files.Keys, k => k.Contains("(2)"));
+    }
+
+    private sealed class RenamingStore : FakeExternalLibraryStore
+    {
+        public override Task<string> WriteAsync(string relativePath, Stream content, string mimeType, CancellationToken cancellationToken = default)
+        {
+            // A file the app cannot see already owns the canonical name.
+            var actual = relativePath == ExternalPaths.SnapshotFileName ? "piccolo-library (1).json" : relativePath;
+            return base.WriteAsync(actual, content, mimeType, cancellationToken);
+        }
+    }
+
+    [Fact]
     public async Task Snapshot_RoundTripsThroughJson()
     {
         using var app = new AppInstall(_store);

@@ -44,6 +44,10 @@ public interface IExternalLibraryState
 {
     DateTime? LastSyncUtc { get; set; }
 
+    // Where the snapshot actually lives (the platform may have renamed it on a
+    // conflict with a file left by a previous install); null = default name.
+    string? SnapshotPath { get; set; }
+
     // The user closed the "recover your library" hint on the empty library.
     bool RecoveryHintDismissed { get; set; }
 }

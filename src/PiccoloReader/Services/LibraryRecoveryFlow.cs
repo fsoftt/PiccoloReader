@@ -60,6 +60,7 @@ public class LibraryRecoveryFlow
             }
 
             _state.RecoveryHintDismissed = true;
+            _state.SnapshotPath = null; // the recovered folder holds the canonical file
 
             // Writes whatever the restored library still lacks (and the snapshot).
             await Task.Run(() => _sync.SyncAllAsync(requestAccess: true));
