@@ -19,9 +19,22 @@ public class AnnotationPainter
 
     public SKTypeface? Typeface { get; set; }
 
-    public void DrawAnnotations(SKCanvas canvas, SKImageInfo info, IEnumerable<Annotation> annotations, PageFrame? pageFrame = null)
+    // A crop clips the drawing to the visible part of the page: with it the
+    // frame is the FULL page's, which extends past what is shown.
+    public void DrawAnnotations(SKCanvas canvas, SKImageInfo info, IEnumerable<Annotation> annotations, PageFrame? pageFrame = null, PageCrop? crop = null)
     {
         var frame = pageFrame ?? PageFrame.Full;
+        var restoreCount = canvas.Save();
+        if (crop is { IsFull: false } visibleCrop)
+        {
+            var visible = frame.VisibleRegion(visibleCrop);
+            canvas.ClipRect(new SKRect(
+                (float)(visible.X * info.Width),
+                (float)(visible.Y * info.Height),
+                (float)((visible.X + visible.Width) * info.Width),
+                (float)((visible.Y + visible.Height) * info.Height)));
+        }
+
         foreach (var annotation in annotations)
         {
             if (annotation.IsStroke)
@@ -44,6 +57,8 @@ public class AnnotationPainter
 
             DrawGlyphFitted(canvas, icon.Codepoint, targetRect, icon.VisualScale);
         }
+
+        canvas.RestoreToCount(restoreCount);
     }
 
     private static void DrawStroke(SKCanvas canvas, Annotation annotation, SKImageInfo info, PageFrame frame)

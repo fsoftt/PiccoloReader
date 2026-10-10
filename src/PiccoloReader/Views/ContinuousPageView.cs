@@ -9,7 +9,9 @@ namespace PiccoloReader.Views;
 // with its annotations drawn on top (read-only). Its height always follows
 // the page's own aspect ratio, so the image and the annotation overlay
 // cover exactly the same area, which is also what annotations are normalized
-// to, so they are drawn and hit-tested without any mapping.
+// to, so they are drawn and hit-tested without any mapping. A cropped page is
+// shown as its cropped part only: the row follows the crop's aspect ratio and
+// annotations (still full-page normalized) are mapped through the crop.
 public class ContinuousPageView : ContentView
 {
     // Gap below each page. Part of the item itself (not the list's
@@ -62,7 +64,7 @@ public class ContinuousPageView : ContentView
             }
 
             var zoom = Math.Max(listZoom(), 1);
-            var frame = PageFrame.Fit(_pageArea.Width, _pageArea.Height, _page.AspectRatio);
+            var frame = PageFrame.Fit(_pageArea.Width, _pageArea.Height, _page.FullAspectRatio, _page.Crop);
             onTapped(
                 _page,
                 frame.ToPageX(position.Value.X / zoom / _pageArea.Width),
@@ -104,6 +106,7 @@ public class ContinuousPageView : ContentView
             case nameof(ContinuousPage.AspectRatio):
                 UpdateHeight();
                 break;
+            case nameof(ContinuousPage.Crop):
             case nameof(ContinuousPage.Annotations):
                 _canvas.InvalidateSurface();
                 break;
@@ -163,8 +166,8 @@ public class ContinuousPageView : ContentView
             // page aspect for a moment (row relayout after a rotation), so the
             // page rect is derived from the canvas as it is now rather than
             // assuming the canvas is exactly the page.
-            var frame = PageFrame.Fit(e.Info.Width, e.Info.Height, _page.AspectRatio);
-            _painter.DrawAnnotations(canvas, e.Info, _page.Annotations, frame);
+            var frame = PageFrame.Fit(e.Info.Width, e.Info.Height, _page.FullAspectRatio, _page.Crop);
+            _painter.DrawAnnotations(canvas, e.Info, _page.Annotations, frame, _page.Crop);
         }
     }
 }

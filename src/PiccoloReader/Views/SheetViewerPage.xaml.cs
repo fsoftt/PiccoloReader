@@ -64,6 +64,11 @@ public partial class SheetViewerPage : ContentPage
             {
                 UpdateReadingModeUi();
             }
+            else if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageCrop))
+            {
+                AnnotationCanvas.InvalidateSurface();
+                RepositionSelectionOverlay();
+            }
             else if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageImageBytes))
             {
                 // The pencil's on-screen width follows the page's size.
@@ -296,11 +301,23 @@ public partial class SheetViewerPage : ContentPage
     // container (the page is letterboxed inside it). Falls back to the whole
     // container while the page's aspect ratio is unknown.
     private PageFrame EditorPageFrame() =>
-        PageFrame.Fit(PageContainer.Width, PageContainer.Height, _viewModel.CurrentPageAspectRatio);
+        PageFrame.Fit(PageContainer.Width, PageContainer.Height, _viewModel.CurrentPageAspectRatio, _viewModel.CurrentPageCrop);
 
     private Rect EditorPageRect()
     {
         var frame = EditorPageFrame();
+        return new Rect(
+            frame.X * PageContainer.Width,
+            frame.Y * PageContainer.Height,
+            frame.Width * PageContainer.Width,
+            frame.Height * PageContainer.Height);
+    }
+
+    // The part of the page actually on screen (the crop) in PageContainer-
+    // local units. Equals EditorPageRect() when the page is not cropped.
+    private Rect EditorVisibleRect()
+    {
+        var frame = EditorPageFrame().VisibleRegion(_viewModel.CurrentPageCrop);
         return new Rect(
             frame.X * PageContainer.Width,
             frame.Y * PageContainer.Height,
@@ -374,9 +391,12 @@ public partial class SheetViewerPage : ContentPage
         var pageRect = EditorPageRect();
         var pageX = (normalizedX * PageContainer.Width - pageRect.Left) / pageRect.Width;
         var pageY = (normalizedY * PageContainer.Height - pageRect.Top) / pageRect.Height;
-        var hit = _viewModel.CurrentPageAnnotations.FirstOrDefault(a =>
-            pageX >= a.X && pageX <= a.X + a.Width &&
-            pageY >= a.Y && pageY <= a.Y + a.Height);
+        // Annotations outside the crop are not on screen, so not tappable.
+        var hit = !_viewModel.CurrentPageCrop.Contains(pageX, pageY)
+            ? null
+            : _viewModel.CurrentPageAnnotations.FirstOrDefault(a =>
+                pageX >= a.X && pageX <= a.X + a.Width &&
+                pageY >= a.Y && pageY <= a.Y + a.Height);
 
         if (hit is not null)
         {
@@ -1306,6 +1326,11 @@ public partial class SheetViewerPage : ContentPage
         var normalizedX = (localX - pageRect.Left) / pageRect.Width;
         var normalizedY = (localY - pageRect.Top) / pageRect.Height;
         var radius = _viewModel.EraserRadius;
+        if (!_viewModel.CurrentPageCrop.Contains(normalizedX, normalizedY))
+        {
+            return;
+        }
+
         var hit = _viewModel.CurrentPageAnnotations.FirstOrDefault(a =>
         {
             if (a.IsStroke)
@@ -1405,7 +1430,8 @@ public partial class SheetViewerPage : ContentPage
         var undo = AppStrings.UndoAction;
         var redo = AppStrings.RedoAction;
 
-        var options = new List<string> { undo, redo };
+        var crop = AppStrings.CropPage;
+        var options = new List<string> { undo, redo, crop };
         var choice = await DisplayActionSheetAsync(AppStrings.MoreOptions, AppStrings.Cancel, null, options.ToArray());
         if (choice == undo)
         {
@@ -1421,6 +1447,43 @@ public partial class SheetViewerPage : ContentPage
                 OnRedoClicked(sender, e);
             }
         }
+        else if (choice == crop)
+        {
+            await BeginCropAsync();
+        }
+    }
+
+    // Crop mode for the page being read (the current page in every reading
+    // mode). The page is rendered whole for the user to crop from; the result
+    // is saved by the view model, which re-renders the page cropped.
+    private int _cropPageIndex;
+
+    private async Task BeginCropAsync()
+    {
+        if (_viewModel.IsContinuousEditing || IsEditing || _viewModel.PageCount <= 0)
+        {
+            return;
+        }
+
+        _cropPageIndex = _viewModel.CurrentPageIndex;
+        var bytes = await _viewModel.RenderUncroppedPageAsync(_cropPageIndex);
+        if (bytes is null || !PngDimensions.TryRead(bytes, out var width, out var height))
+        {
+            return;
+        }
+
+        CropOverlay.Show(bytes, (double)height / width, _viewModel.GetPageCrop(_cropPageIndex));
+    }
+
+    private async void OnCropApplied(object? sender, PageCrop crop)
+    {
+        await _viewModel.SetPageCropAsync(_cropPageIndex, crop);
+        ResetZoom();
+        InvalidateContinuousAnnotations();
+    }
+
+    private void OnCropCancelled(object? sender, EventArgs e)
+    {
     }
 
     private void UpdateReadingModeName()
@@ -1617,7 +1680,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         var strokeHit = page.Annotations.Any(a => a.IsStroke &&
-            StrokeHitTester.DistanceToPolyline(normalizedX, normalizedY, AnnotationService.DeserializePoints(a.Points), page.AspectRatio)
+            StrokeHitTester.DistanceToPolyline(normalizedX, normalizedY, AnnotationService.DeserializePoints(a.Points), page.FullAspectRatio)
                 <= StrokeTapTolerance + a.StrokeWidth / 2);
 
         if (strokeHit)
@@ -1672,7 +1735,9 @@ public partial class SheetViewerPage : ContentPage
         // The page is letterboxed inside PageContainer (in landscape it is
         // narrower than the container), so the zoom is derived from the
         // page's own rectangle rather than the container's.
-        var pageRect = EditorPageRect();
+        // The list's row is the cropped part of the page, so it is that
+        // part's rectangle which has to land on the row.
+        var pageRect = EditorVisibleRect();
         var pageTopInContainer = pageRect.Top;
 
         var scale = listZoom * listWidth / pageRect.Width;
@@ -2464,6 +2529,6 @@ public partial class SheetViewerPage : ContentPage
     {
         var canvas = e.Surface.Canvas;
         canvas.Clear(SKColors.Transparent);
-        _annotationPainter.DrawAnnotations(canvas, e.Info, _viewModel.CurrentPageAnnotations, EditorPageFrame());
+        _annotationPainter.DrawAnnotations(canvas, e.Info, _viewModel.CurrentPageAnnotations, EditorPageFrame(), _viewModel.CurrentPageCrop);
     }
 }
