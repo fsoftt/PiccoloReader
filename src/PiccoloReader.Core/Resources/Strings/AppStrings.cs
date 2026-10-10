@@ -186,6 +186,29 @@ public static class AppStrings
 
     public static string SettingsGeneralSection => Get(nameof(SettingsGeneralSection));
     public static string SettingsHelpSection => Get(nameof(SettingsHelpSection));
+    public static string CategoryNotes => Get(nameof(CategoryNotes));
+    public static string CategoryRests => Get(nameof(CategoryRests));
+    public static string IconNoteWhole => Get(nameof(IconNoteWhole));
+    public static string IconNoteHalfUp => Get(nameof(IconNoteHalfUp));
+    public static string IconNoteHalfDown => Get(nameof(IconNoteHalfDown));
+    public static string IconNoteQuarterUp => Get(nameof(IconNoteQuarterUp));
+    public static string IconNoteQuarterDown => Get(nameof(IconNoteQuarterDown));
+    public static string IconNote8thUp => Get(nameof(IconNote8thUp));
+    public static string IconNote8thDown => Get(nameof(IconNote8thDown));
+    public static string IconNote16thUp => Get(nameof(IconNote16thUp));
+    public static string IconNote16thDown => Get(nameof(IconNote16thDown));
+    public static string IconNote32ndUp => Get(nameof(IconNote32ndUp));
+    public static string IconNote32ndDown => Get(nameof(IconNote32ndDown));
+    public static string IconAugmentationDot => Get(nameof(IconAugmentationDot));
+    public static string IconAcciaccaturaDown => Get(nameof(IconAcciaccaturaDown));
+    public static string IconAppoggiaturaUp => Get(nameof(IconAppoggiaturaUp));
+    public static string IconAppoggiaturaDown => Get(nameof(IconAppoggiaturaDown));
+    public static string IconRestWhole => Get(nameof(IconRestWhole));
+    public static string IconRestHalf => Get(nameof(IconRestHalf));
+    public static string IconRestQuarter => Get(nameof(IconRestQuarter));
+    public static string IconRest8th => Get(nameof(IconRest8th));
+    public static string IconRest16th => Get(nameof(IconRest16th));
+    public static string IconRest32nd => Get(nameof(IconRest32nd));
     public static string AppVersionFormat => Get(nameof(AppVersionFormat));
 
     private static string Get(string key) =>

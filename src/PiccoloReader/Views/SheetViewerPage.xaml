@@ -391,6 +391,7 @@
                                                 HeightRequest="40"
                                                 HorizontalOptions="Center"
                                                 VerticalOptions="Center"
+                                                BindingContextChanged="OnIconGlyphBindingContextChanged"
                                                 PaintSurface="OnIconGlyphPaintSurface" />
                                         </Border>
                                     </DataTemplate>
