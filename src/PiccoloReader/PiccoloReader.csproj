@@ -36,10 +36,10 @@
 		<ApplicationVersion>2</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
-		<!-- 23 (Android 6.0), not 21 - the Google Mobile Ads SDK's's transitive
-		     androidx.lifecycle dependency (pulled in via Plugin.AdMob) requires
-		     minSdk 23. Android 21-22 devices are vanishingly rare at this point. -->
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
+		<!-- 24 (Android 7.0): Play's automatic app protection rejects bundles
+		     with minSdk below 24 (the AdMob SDK's androidx.lifecycle dependency
+		     alone would need 23). Android 6.0 devices are vanishingly rare. -->
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
 
 		<!-- Pin a persistent, repo-committed debug keystore instead of each
 		     machine/CI runner auto-generating its own random one. Without
