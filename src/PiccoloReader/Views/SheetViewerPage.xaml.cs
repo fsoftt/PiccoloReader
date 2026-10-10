@@ -88,6 +88,10 @@ public partial class SheetViewerPage : ContentPage
             if (e.PropertyName == nameof(VisualElement.IsVisible))
             {
                 UpdateEditingUi();
+                // Defensive: repaint the annotation layer whenever a tool sheet
+                // opens or closes (Bug 16: a glyph stayed unpainted until the next
+                // insert forced a repaint).
+                AnnotationCanvas.InvalidateSurface();
             }
         };
         BuildSymbolCategoryTabs();
@@ -507,6 +511,7 @@ public partial class SheetViewerPage : ContentPage
     // bounds, not the visual union of where its children overflow to.
     private void UpdateSelectionOverlay()
     {
+        AnnotationCanvas.InvalidateSurface();
         RepositionSelectionOverlay();
 
         // A fresh selection (new tap, newly placed icon) always starts
@@ -518,6 +523,42 @@ public partial class SheetViewerPage : ContentPage
         // RepositionSelectionOverlay() directly instead of this method.
         SetDragControlsVisible(_viewModel.SelectedAnnotation is not null);
         UpdateEditingUi();
+        CollapseSheetIfSelectionHidden();
+    }
+
+    private bool _collapsingToolSheet;
+
+    // Landscape leaves little height: a selection hidden under the open tool
+    // sheet is collapsed so the annotation stays visible. Only done when the
+    // selection itself changes (never from the layout/visibility callbacks
+    // that run when the user explicitly opens the sheet), and guarded against
+    // re-entrancy: collapse -> UpdateEditingUi -> reposition used to loop.
+    private void CollapseSheetIfSelectionHidden()
+    {
+        if (_collapsingToolSheet || !ToolSheet.IsVisible || Width <= Height
+            || _viewModel.SelectedAnnotation is not { } annotation
+            || PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return;
+        }
+
+        var pageRect = EditorPageRect();
+        var bottom = PageContainer.Y + PageContainer.TranslationY
+            + (pageRect.Top + (annotation.Y + annotation.Height) * pageRect.Height) * _currentScale;
+        if (bottom <= Height - ToolSheet.HeightRequest)
+        {
+            return;
+        }
+
+        _collapsingToolSheet = true;
+        try
+        {
+            ToolSheet.IsVisible = false;
+        }
+        finally
+        {
+            _collapsingToolSheet = false;
+        }
     }
 
     private void RepositionSelectionOverlay()
@@ -585,6 +626,12 @@ public partial class SheetViewerPage : ContentPage
     // With the tool sheet open the trash sits just above it instead.
     private double TrashBottomMargin => ToolSheet.IsVisible ? ToolSheet.HeightRequest + 16 : TrashMargin;
 
+    // Picks the first trash position that touches neither the selection box
+    // (plus the resize handle's reach) nor the tool sheet: bottom-center
+    // (above the sheet when it is open), top-center, then the corners. The
+    // sheet is accounted for by TrashBottomMargin; the top positions are
+    // always clear of it. Not re-evaluated mid-drag (handle hidden) so the
+    // drop target doesn't jump under the finger.
     private void UpdateTrashPlacement(Annotation annotation)
     {
         if (TrashTarget.Parent is not VisualElement host || host.Width <= 0 || host.Height <= 0)
@@ -593,32 +640,50 @@ public partial class SheetViewerPage : ContentPage
         }
 
         var pageRect = EditorPageRect();
-        var handleX = PageContainer.X + PageContainer.TranslationX + (pageRect.Left + (annotation.X + annotation.Width) * pageRect.Width) * _currentScale;
-        var handleY = PageContainer.Y + PageContainer.TranslationY + (pageRect.Top + (annotation.Y + annotation.Height) * pageRect.Height) * _currentScale;
+        double ToHostX(double pageX) => PageContainer.X + PageContainer.TranslationX + (pageRect.Left + pageX * pageRect.Width) * _currentScale;
+        double ToHostY(double pageY) => PageContainer.Y + PageContainer.TranslationY + (pageRect.Top + pageY * pageRect.Height) * _currentScale;
 
         var reach = ResizeHandle.WidthRequest / 2 + 12;
-        var half = TrashTarget.WidthRequest / 2;
-        var bottomTop = host.Height - TrashBottomMargin - TrashTarget.HeightRequest;
-        var overlapsBottom =
-            Math.Abs(handleX - host.Width / 2) < half + reach
-            && handleY > bottomTop - reach
-            && handleY < bottomTop + TrashTarget.HeightRequest + reach;
+        var box = new Rect(
+            ToHostX(annotation.X) - reach,
+            ToHostY(annotation.Y) - reach,
+            annotation.Width * pageRect.Width * _currentScale + reach * 2,
+            annotation.Height * pageRect.Height * _currentScale + reach * 2);
 
-        var atTop = TrashTarget.VerticalOptions.Alignment == LayoutAlignment.Start;
-        if (overlapsBottom && !atTop)
+        var size = TrashTarget.WidthRequest;
+        var bottomY = host.Height - TrashBottomMargin - TrashTarget.HeightRequest;
+        var topY = TrashTopMargin;
+        const double sideMargin = 24;
+        var centerX = (host.Width - size) / 2;
+
+        // (vertical alignment, horizontal alignment, x, y)
+        var candidates = new (LayoutAlignment V, LayoutAlignment H, double X, double Y)[]
         {
-            TrashTarget.VerticalOptions = LayoutOptions.Start;
-            TrashTarget.Margin = new Thickness(0, TrashTopMargin, 0, 0);
-        }
-        else if (!overlapsBottom && atTop)
+            (LayoutAlignment.End, LayoutAlignment.Center, centerX, bottomY),
+            (LayoutAlignment.Start, LayoutAlignment.Center, centerX, topY),
+            (LayoutAlignment.End, LayoutAlignment.Start, sideMargin, bottomY),
+            (LayoutAlignment.End, LayoutAlignment.End, host.Width - size - sideMargin, bottomY),
+            (LayoutAlignment.Start, LayoutAlignment.Start, sideMargin, topY),
+            (LayoutAlignment.Start, LayoutAlignment.End, host.Width - size - sideMargin, topY),
+        };
+
+        var chosen = candidates[0];
+        foreach (var c in candidates)
         {
-            TrashTarget.VerticalOptions = LayoutOptions.End;
-            TrashTarget.Margin = new Thickness(0, 0, 0, TrashBottomMargin);
+            if (!box.IntersectsWith(new Rect(c.X, c.Y, size, TrashTarget.HeightRequest)))
+            {
+                chosen = c;
+                break;
+            }
         }
-        else if (!atTop)
-        {
-            TrashTarget.Margin = new Thickness(0, 0, 0, TrashBottomMargin);
-        }
+
+        TrashTarget.VerticalOptions = new LayoutOptions(chosen.V, false);
+        TrashTarget.HorizontalOptions = new LayoutOptions(chosen.H, false);
+        TrashTarget.Margin = new Thickness(
+            chosen.H == LayoutAlignment.Start ? sideMargin : 0,
+            chosen.V == LayoutAlignment.Start ? TrashTopMargin : 0,
+            chosen.H == LayoutAlignment.End ? sideMargin : 0,
+            chosen.V == LayoutAlignment.End ? TrashBottomMargin : 0);
     }
 
     // Hides the resize handle while a move/resize drag is in progress,
@@ -1518,6 +1583,14 @@ public partial class SheetViewerPage : ContentPage
     // toggles the toolbar, like a center tap in the paged modes.
     private async void OnContinuousPageTapped(ContinuousPage page, double normalizedX, double normalizedY)
     {
+#if ANDROID
+        // A pan/scroll that ends over the page is not a tap (see IsTap).
+        if (_continuousZoomTouchListener is { IsTap: false })
+        {
+            return;
+        }
+#endif
+
         if (ToolSheet.IsVisible)
         {
             ToolSheet.IsVisible = false;
@@ -2017,15 +2090,93 @@ public partial class SheetViewerPage : ContentPage
         glyph.SetAppThemeColor(FontImageSource.ColorProperty, light, dark);
     }
 
-    // ~290dp for pencil/eraser, taller (up to ~55% of the screen) for the
-    // symbol picker, which scrolls.
+    // Sizes the sheet to its content. Portrait: pencil/eraser compact, the
+    // symbol picker takes the rows its category needs (cap ~45%). Landscape
+    // (little height, lots of width): a compact sheet (cap ~45%) with the
+    // pencil colors and width side by side and the symbols in one
+    // horizontally scrolling row, so the document stays usable above it.
     private void ApplyToolSheetHeight()
     {
         var pageHeight = Height > 0 ? Height : 800;
-        var compact = Math.Min(290, pageHeight * (Width > Height ? 0.55 : 0.75));
-        ToolSheet.HeightRequest = _viewModel.ActiveTool == AnnotationTool.MusicIcons
-            ? Math.Max(compact, pageHeight * 0.55)
-            : compact;
+        var pageWidth = Width > 0 ? Width : 400;
+        var landscape = pageWidth > pageHeight;
+        ApplyToolSheetLayout(landscape);
+        var cap = pageHeight * 0.45;
+
+        // handle + segmented control + paddings/spacing (landscape drops
+        // the handle and tightens the spacing)
+        var header = landscape ? 70d : 94d;
+        double height;
+        switch (_viewModel.ActiveTool)
+        {
+            case AnnotationTool.MusicIcons:
+                const double tile = 64; // 56 tile + 8 margin
+                if (landscape)
+                {
+                    // chips (36) + spacing (8) + one scrolling row (tile + padding 8 + 4)
+                    height = header + 36 + 8 + tile + 12;
+                    break;
+                }
+
+                var cols = Math.Max(1, (int)Math.Floor((pageWidth - 48) / tile));
+                var count = MusicIconCatalog.Categories[_symbolCategoryIndex].Icons.Count;
+                var rows = Math.Max(1, (int)Math.Ceiling(count / (double)cols));
+                // category chips row (44) + spacing (10) + grid padding (8 + 24)
+                height = Math.Min(cap, header + 44 + 10 + 40 + rows * tile);
+                break;
+            case AnnotationTool.Eraser:
+                height = header + (landscape ? 82 : 100);
+                break;
+            default:
+                // landscape: label + swatches / slider side by side + bottom padding
+                height = landscape ? header + 82 : Math.Min(header + 196, Math.Max(cap, 290));
+                break;
+        }
+
+        if (landscape)
+        {
+            height = Math.Min(height, Math.Max(cap, header + 82));
+        }
+
+        ToolSheet.HeightRequest = Math.Round(height);
+        if (_viewModel.SelectedAnnotation is { } selected)
+        {
+            UpdateTrashPlacement(selected);
+        }
+    }
+
+    private bool? _toolSheetLandscape;
+
+    private void ApplyToolSheetLayout(bool landscape)
+    {
+        if (_toolSheetLandscape == landscape)
+        {
+            return;
+        }
+
+        _toolSheetLandscape = landscape;
+        ToolSheetHandle.IsVisible = !landscape;
+        ToolSheetGrid.RowSpacing = landscape ? 8 : 14;
+        ToolSheet.Padding = landscape ? new Thickness(20, 8, 20, 0) : new Thickness(20, 10, 20, 0);
+        ToolOptionsPad.Padding = new Thickness(0, 0, 0, landscape ? 8 : 24);
+
+        // Pencil: color block and width block share one row in landscape.
+        Grid.SetRow(PencilWidthBlock, landscape ? 0 : 1);
+        Grid.SetColumn(PencilWidthBlock, landscape ? 1 : 0);
+        PencilSection.ColumnDefinitions = landscape
+            ? new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) }
+            : new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Star) };
+
+        // Symbols: a single horizontally scrolling row in landscape.
+        SymbolGridScroll.Orientation = landscape ? ScrollOrientation.Horizontal : ScrollOrientation.Vertical;
+        SymbolGridScroll.HorizontalScrollBarVisibility = ScrollBarVisibility.Never;
+        SymbolGridScroll.VerticalScrollBarVisibility = ScrollBarVisibility.Never;
+        SymbolGrid.Wrap = landscape ? Microsoft.Maui.Layouts.FlexWrap.NoWrap : Microsoft.Maui.Layouts.FlexWrap.Wrap;
+        SymbolGridPad.Padding = landscape ? new Thickness(8, 4, 8, 4) : new Thickness(8, 8, 0, 24);
+        foreach (var (tab, _) in _symbolTabs)
+        {
+            tab.HeightRequest = landscape ? 36 : 44;
+        }
     }
 
     private async void OnToolSegmentPencilTapped(object? sender, TappedEventArgs e) =>
@@ -2049,6 +2200,7 @@ public partial class SheetViewerPage : ContentPage
     }
 
     private readonly List<(Border Tab, Label Label)> _symbolTabs = new();
+    private int _symbolCategoryIndex;
 
     // One chip per catalog category; the selected one decides which icons
     // the grid shows. Keys are the category's catalog position.
@@ -2068,7 +2220,7 @@ public partial class SheetViewerPage : ContentPage
             var tab = new Border
             {
                 AutomationId = $"SymbolCategoryTab_{index}",
-                HeightRequest = 44,
+                HeightRequest = _toolSheetLandscape == true ? 36 : 44,
                 Padding = new Thickness(16, 0),
                 StrokeThickness = 1,
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(22) },
@@ -2084,6 +2236,7 @@ public partial class SheetViewerPage : ContentPage
 
     private void SelectSymbolCategory(int index)
     {
+        _symbolCategoryIndex = index;
         var res = Application.Current!.Resources;
         for (var i = 0; i < _symbolTabs.Count; i++)
         {
@@ -2101,6 +2254,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         BindableLayout.SetItemsSource(SymbolGrid, MusicIconCatalog.Categories[index].Icons);
+        ApplyToolSheetHeight();
     }
 
     // True while any annotation editing is going on: a tool sheet is open,
@@ -2135,7 +2289,9 @@ public partial class SheetViewerPage : ContentPage
         // The sheet covers the bottom of the screen: the page pill and the
         // tool FAB would sit on top of it.
         var showBottomChrome = _isToolbarVisible && !ToolSheet.IsVisible;
-        PageIndicator.IsVisible = showBottomChrome;
+        // The pill is also hidden while an annotation is selected: it would
+        // cover the resize handle of a selection near the bottom edge.
+        PageIndicator.IsVisible = showBottomChrome && _viewModel.SelectedAnnotation is null;
         MainToolFab.IsVisible = showBottomChrome;
         if (ToolSheet.IsVisible)
         {
