@@ -69,6 +69,25 @@ internal sealed class LegacyFileLibraryStore : IExternalLibraryStore
         return Task.FromResult(true);
     }
 
+    public Task<bool> DeleteEmptyDirectoryAsync(string relativeDirectory) => Task.Run(() =>
+    {
+        var path = Full(relativeDirectory);
+        if (relativeDirectory.Length == 0 || !Directory.Exists(path) || Directory.EnumerateFileSystemEntries(path).Any())
+        {
+            return false;
+        }
+
+        try
+        {
+            Directory.Delete(path, false);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    });
+
     public Task<string> MoveAsync(string fromPath, string toPath)
     {
         var target = Full(toPath);

@@ -23,11 +23,13 @@ public class LibraryRecovery
 {
     private readonly AppDatabase _database;
     private readonly IAppStorageProvider _storage;
+    private readonly IPdfPageRenderer? _pageRenderer;
 
-    public LibraryRecovery(AppDatabase database, IAppStorageProvider storage)
+    public LibraryRecovery(AppDatabase database, IAppStorageProvider storage, IPdfPageRenderer? pageRenderer = null)
     {
         _database = database;
         _storage = storage;
+        _pageRenderer = pageRenderer;
     }
 
     public async Task<RecoveryResult> RecoverAsync(
@@ -142,7 +144,9 @@ public class LibraryRecovery
                 FolderId = folderId,
                 Title = entry.Title,
                 FileName = entry.SheetKey,
-                PageCount = entry.PageCount,
+                PageCount = entry.PageCount > 0
+                    ? entry.PageCount
+                    : await ExternalLibrarySync.CountPagesAsync(_pageRenderer, localPath),
                 LastViewedPageIndex = entry.LastViewedPageIndex,
                 DateAdded = entry.DateAdded,
                 ContentHash = hash,
@@ -182,6 +186,7 @@ public class LibraryRecovery
                 FolderId = folderId,
                 Title = Path.GetFileNameWithoutExtension(ExternalPaths.FileNameOf(path)),
                 FileName = fileName,
+                PageCount = await ExternalLibrarySync.CountPagesAsync(_pageRenderer, localPath),
                 DateAdded = DateTime.UtcNow,
                 ContentHash = hash,
                 ExternalPath = path

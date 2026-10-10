@@ -17,6 +17,8 @@ public class UnsupportedExternalLibraryStore : IExternalLibraryStore, IExternalL
 
     public Task<bool> DeleteAsync(string relativePath) => Task.FromResult(false);
 
+    public Task<bool> DeleteEmptyDirectoryAsync(string relativeDirectory) => Task.FromResult(false);
+
     public Task<string> MoveAsync(string fromPath, string toPath) => throw new NotSupportedException();
 
     public Task<IReadOnlyList<string>> ListAsync() => Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());

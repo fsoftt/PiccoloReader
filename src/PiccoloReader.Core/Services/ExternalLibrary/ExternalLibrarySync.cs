@@ -18,6 +18,7 @@ public class ExternalLibrarySync : ILibraryChangeNotifier
     private readonly IAppStorageProvider _storage;
     private readonly IExternalLibraryStore _store;
     private readonly IExternalLibraryState _state;
+    private readonly IPdfPageRenderer? _pageRenderer;
     private readonly TimeSpan _debounce;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly object _timerLock = new();
@@ -30,13 +31,15 @@ public class ExternalLibrarySync : ILibraryChangeNotifier
         IAppStorageProvider storage,
         IExternalLibraryStore store,
         IExternalLibraryState state,
-        TimeSpan? debounce = null)
+        TimeSpan? debounce = null,
+        IPdfPageRenderer? pageRenderer = null)
     {
         _database = database;
         _storage = storage;
         _store = store;
         _state = state;
         _debounce = debounce ?? TimeSpan.FromSeconds(2);
+        _pageRenderer = pageRenderer;
     }
 
     public string AppVersion { get; set; } = string.Empty;
@@ -46,6 +49,33 @@ public class ExternalLibrarySync : ILibraryChangeNotifier
     // Sheets whose PDF has not reached the external folder yet.
     public async Task<int> CountPendingAsync() =>
         await _database.Connection.Table<Sheet>().Where(s => s.ExternalPath == null).CountAsync();
+
+    // Sheets whose page count is still unknown (migrated or imported sheets
+    // that were never opened).
+    public async Task<int> CountUnknownPageCountAsync() =>
+        await _database.Connection.Table<Sheet>().Where(s => s.PageCount <= 0).CountAsync();
+
+    // Removes the folder's directory from the external store when nothing is
+    // left in it (best effort).
+    public async Task RemoveFolderDirectoryAsync(string folderName)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            if (await _store.EnsureAccessAsync(false))
+            {
+                await PruneDirectoryAsync(ExternalPaths.SanitizeSegment(folderName, "Folder"));
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"External directory delete failed: {ex.Message}");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
 
     // Copies the sheet's PDF to its external location, or moves it when the
     // sheet changed folder. False when it could not be done (it stays pending).
@@ -76,6 +106,7 @@ public class ExternalLibrarySync : ILibraryChangeNotifier
             if (await _store.EnsureAccessAsync(false))
             {
                 await _store.DeleteAsync(sheet.ExternalPath);
+                await PruneDirectoryAsync(ExternalPaths.DirectoryOf(sheet.ExternalPath));
             }
         }
         catch (Exception ex)
@@ -330,6 +361,7 @@ public class ExternalLibrarySync : ILibraryChangeNotifier
                 && await _store.ExistsAsync(current))
             {
                 sheet.ExternalPath = await MoveOrCopyAsync(current, desired, localPath);
+                await PruneDirectoryAsync(ExternalPaths.DirectoryOf(current));
                 changed = true;
             }
             else if (current is null || !await _store.ExistsAsync(current))
@@ -345,6 +377,16 @@ public class ExternalLibrarySync : ILibraryChangeNotifier
                 changed = true;
             }
 
+            if (sheet.PageCount <= 0)
+            {
+                var pages = await CountPagesAsync(localPath);
+                if (pages > 0)
+                {
+                    sheet.PageCount = pages;
+                    changed = true;
+                }
+            }
+
             if (changed)
             {
                 await _database.Connection.UpdateAsync(sheet);
@@ -352,12 +394,61 @@ public class ExternalLibrarySync : ILibraryChangeNotifier
 
             passed.ExternalPath = sheet.ExternalPath;
             passed.ContentHash = sheet.ContentHash;
+            passed.PageCount = sheet.PageCount;
             return true;
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"External sync of '{passed.Title}' failed: {ex.Message}");
             return false;
+        }
+    }
+
+    // 0 when unknown (no renderer, or the PDF cannot be read).
+    internal async Task<int> CountPagesAsync(string localPath) =>
+        await CountPagesAsync(_pageRenderer, localPath);
+
+    internal static async Task<int> CountPagesAsync(IPdfPageRenderer? renderer, string localPath)
+    {
+        if (renderer is null)
+        {
+            return 0;
+        }
+
+        try
+        {
+            return Math.Max(0, await renderer.GetPageCountAsync(localPath));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Page count of '{localPath}' failed: {ex.Message}");
+            return 0;
+        }
+    }
+
+    // Deletes an emptied directory of the store; never the root, never one
+    // that still holds something (the store checks for files it cannot see).
+    private async Task PruneDirectoryAsync(string? directory)
+    {
+        if (string.IsNullOrEmpty(directory))
+        {
+            return;
+        }
+
+        try
+        {
+            var prefix = directory + "/";
+            var files = await _store.ListAsync();
+            if (files.Any(f => f.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+
+            await _store.DeleteEmptyDirectoryAsync(directory);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"External directory delete failed: {ex.Message}");
         }
     }
 

@@ -12,6 +12,8 @@ public class FakeExternalLibraryStore : IExternalLibraryStore
 
     public bool MoveSupported { get; set; } = true;
 
+    public HashSet<string> Directories { get; } = new(StringComparer.Ordinal);
+
     public int WriteCount { get; private set; }
 
     public List<string> WrittenPaths { get; } = new();
@@ -23,6 +25,7 @@ public class FakeExternalLibraryStore : IExternalLibraryStore
         using var buffer = new MemoryStream();
         content.CopyTo(buffer);
         Files[relativePath] = buffer.ToArray();
+        TrackDirectory(relativePath);
         WriteCount++;
         WrittenPaths.Add(relativePath);
         return Task.FromResult(relativePath);
@@ -35,6 +38,25 @@ public class FakeExternalLibraryStore : IExternalLibraryStore
 
     public Task<bool> DeleteAsync(string relativePath) => Task.FromResult(Files.Remove(relativePath));
 
+    public Task<bool> DeleteEmptyDirectoryAsync(string relativeDirectory)
+    {
+        if (Files.Keys.Any(k => k.StartsWith(relativeDirectory + "/", StringComparison.Ordinal)))
+        {
+            return Task.FromResult(false);
+        }
+
+        return Task.FromResult(Directories.Remove(relativeDirectory));
+    }
+
+    private void TrackDirectory(string path)
+    {
+        var directory = ExternalPaths.DirectoryOf(path);
+        if (directory is not null)
+        {
+            Directories.Add(directory);
+        }
+    }
+
     public Task<string> MoveAsync(string fromPath, string toPath)
     {
         if (!MoveSupported)
@@ -43,6 +65,7 @@ public class FakeExternalLibraryStore : IExternalLibraryStore
         }
 
         Files[toPath] = Files[fromPath];
+        TrackDirectory(toPath);
         Files.Remove(fromPath);
         return Task.FromResult(toPath);
     }
@@ -61,4 +84,17 @@ public class FakeExternalLibraryState : IExternalLibraryState
     public string? SnapshotPath { get; set; }
 
     public bool RecoveryHintDismissed { get; set; }
+}
+
+public class FakePdfPageRenderer : PiccoloReader.Core.Services.IPdfPageRenderer
+{
+    public int Pages { get; set; } = 3;
+
+    public bool Throws { get; set; }
+
+    public Task<int> GetPageCountAsync(string filePath) =>
+        Throws ? throw new InvalidOperationException("corrupt pdf") : Task.FromResult(Pages);
+
+    public Task<byte[]> RenderPageAsync(string filePath, int pageIndex, int targetWidthPx, int targetHeightPx, PiccoloReader.Core.ViewModels.PageCrop? crop = null) =>
+        Task.FromResult(Array.Empty<byte>());
 }

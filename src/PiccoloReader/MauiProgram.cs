@@ -122,7 +122,8 @@ public static class MauiProgram
 			sp.GetRequiredService<AppDatabase>(),
 			sp.GetRequiredService<IAppStorageProvider>(),
 			sp.GetRequiredService<IExternalLibraryStore>(),
-			sp.GetRequiredService<IExternalLibraryState>())
+			sp.GetRequiredService<IExternalLibraryState>(),
+			pageRenderer: sp.GetService<IPdfPageRenderer>())
 		{
 			AppVersion = AppInfo.VersionString
 		});

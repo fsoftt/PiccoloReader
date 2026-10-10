@@ -63,6 +63,36 @@ internal sealed class MediaStoreLibraryStore : IExternalLibraryStore
         return uri is not null && Resolver.Delete(uri, null, null) > 0;
     });
 
+
+    // MediaStore has no directory rows: once the last file is gone the folder
+    // can linger on disk. Remove it through the file system, only when empty.
+    public Task<bool> DeleteEmptyDirectoryAsync(string relativeDirectory) => Task.Run(() =>
+    {
+        try
+        {
+            if (relativeDirectory.Length == 0)
+            {
+                return false;
+            }
+
+            var path = Path.Combine(
+                global::Android.OS.Environment.GetExternalStoragePublicDirectory(global::Android.OS.Environment.DirectoryDocuments)!.AbsolutePath,
+                "PiccoloReader",
+                relativeDirectory.Replace('/', Path.DirectorySeparatorChar));
+            if (!Directory.Exists(path) || Directory.EnumerateFileSystemEntries(path).Any())
+            {
+                return false;
+            }
+
+            Directory.Delete(path, false);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Cannot remove empty directory {relativeDirectory}: {ex.Message}");
+            return false;
+        }
+    });
     public Task<string> MoveAsync(string fromPath, string toPath) => Task.Run(() =>
     {
         var (fromDirectory, fromName) = Split(fromPath);

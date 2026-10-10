@@ -23,6 +23,11 @@ public interface IExternalLibraryStore
     // True when something was deleted.
     Task<bool> DeleteAsync(string relativePath);
 
+    // Removes a directory (relative path, e.g. "Etudes") only when it holds
+    // nothing at all, including files the app did not create. Best effort:
+    // returns false when it is missing, not empty or cannot be removed.
+    Task<bool> DeleteEmptyDirectoryAsync(string relativeDirectory);
+
     // Moves a file and returns its new path. May throw NotSupportedException
     // (or any IO failure); callers fall back to write + delete.
     Task<string> MoveAsync(string fromPath, string toPath);
