@@ -8,6 +8,7 @@ using SkiaSharp.Views.Maui.Controls.Hosting;
 using UraniumUI;
 using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Services;
+using PiccoloReader.Core.Services.ExternalLibrary;
 using PiccoloReader.Core.ViewModels;
 using PiccoloReader.Services;
 using PiccoloReader.Views;
@@ -107,6 +108,28 @@ public static class MauiProgram
 
 			return database;
 		});
+#if ANDROID
+		builder.Services.AddSingleton<PiccoloReader.Platforms.Android.ExternalLibrary.AndroidExternalLibraryStore>();
+		builder.Services.AddSingleton<IExternalLibraryStore>(sp => sp.GetRequiredService<PiccoloReader.Platforms.Android.ExternalLibrary.AndroidExternalLibraryStore>());
+		builder.Services.AddSingleton<IExternalLibraryPicker>(sp => sp.GetRequiredService<PiccoloReader.Platforms.Android.ExternalLibrary.AndroidExternalLibraryStore>());
+#else
+		builder.Services.AddSingleton<UnsupportedExternalLibraryStore>();
+		builder.Services.AddSingleton<IExternalLibraryStore>(sp => sp.GetRequiredService<UnsupportedExternalLibraryStore>());
+		builder.Services.AddSingleton<IExternalLibraryPicker>(sp => sp.GetRequiredService<UnsupportedExternalLibraryStore>());
+#endif
+		builder.Services.AddSingleton<IExternalLibraryState, MauiExternalLibraryState>();
+		builder.Services.AddSingleton(sp => new ExternalLibrarySync(
+			sp.GetRequiredService<AppDatabase>(),
+			sp.GetRequiredService<IAppStorageProvider>(),
+			sp.GetRequiredService<IExternalLibraryStore>(),
+			sp.GetRequiredService<IExternalLibraryState>(),
+			pageRenderer: sp.GetService<IPdfPageRenderer>())
+		{
+			AppVersion = AppInfo.VersionString
+		});
+		builder.Services.AddSingleton<ILibraryChangeNotifier>(sp => sp.GetRequiredService<ExternalLibrarySync>());
+		builder.Services.AddSingleton<LibraryRecovery>();
+		builder.Services.AddSingleton<LibraryRecoveryFlow>();
 		builder.Services.AddSingleton<LibraryService>();
 		builder.Services.AddSingleton<PdfImportService>();
 		builder.Services.AddSingleton<AnnotationService>();

@@ -3,6 +3,7 @@ using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.ViewModels;
+using PiccoloReader.Services;
 
 namespace PiccoloReader.Views;
 
@@ -10,12 +11,14 @@ public partial class LibraryPage : ContentPage
 {
     private readonly LibraryViewModel _viewModel;
     private readonly LibraryService _libraryService;
+    private readonly LibraryRecoveryFlow _recoveryFlow;
 
-    public LibraryPage(LibraryViewModel viewModel, LibraryService libraryService)
+    public LibraryPage(LibraryViewModel viewModel, LibraryService libraryService, LibraryRecoveryFlow recoveryFlow)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _libraryService = libraryService;
+        _recoveryFlow = recoveryFlow;
         BindingContext = _viewModel;
         _viewModel.Folders.CollectionChanged += (_, _) => RebuildFolderGrid();
 
@@ -50,6 +53,27 @@ public partial class LibraryPage : ContentPage
     {
         base.OnAppearing();
         await _viewModel.LoadAsync();
+
+        // Copies sheets the external folder lacks (first run after updating
+        // from 1.1.0, or after an earlier failure) without blocking the UI.
+        if (await _recoveryFlow.SyncPendingAsync(ShowSyncStatus))
+        {
+            await _viewModel.LoadAsync();
+        }
+    }
+
+    private void ShowSyncStatus(string? text) => Dispatcher.Dispatch(() =>
+    {
+        SyncBannerLabel.Text = text ?? string.Empty;
+        SyncBanner.IsVisible = !string.IsNullOrEmpty(text);
+    });
+
+    private async void OnRecoverLibraryClicked(object? sender, EventArgs e)
+    {
+        if (await _recoveryFlow.RunRecoveryAsync(this))
+        {
+            await _viewModel.LoadAsync();
+        }
     }
 
     private async void OnImportPdfClicked(object? sender, EventArgs e)

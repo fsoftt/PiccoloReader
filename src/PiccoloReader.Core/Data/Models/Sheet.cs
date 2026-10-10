@@ -18,4 +18,11 @@ public class Sheet
     public int LastViewedPageIndex { get; set; }
 
     public DateTime DateAdded { get; set; }
+
+    // SHA-256 (hex) of the PDF, used to re-link the file after a reinstall.
+    public string? ContentHash { get; set; }
+
+    // Path of the PDF inside the external library folder (Documents/PiccoloReader),
+    // relative to it, with "/" separators. Null until copied there.
+    public string? ExternalPath { get; set; }
 }

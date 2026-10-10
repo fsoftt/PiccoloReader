@@ -329,7 +329,30 @@
                 HorizontalOptions="Center"
                 Text="{x:Static strings:AppStrings.ImportPdf}"
                 Clicked="OnImportPdfClicked" />
+            <Button
+                AutomationId="LibraryEmptyRecoverButton"
+                x:Name="RecoverButton"
+                HorizontalOptions="Center"
+                Text="{x:Static strings:AppStrings.RecoverLibraryButton}"
+                Clicked="OnRecoverLibraryClicked" />
         </VerticalStackLayout>
+
+        <!-- Progress of the background copy to Documents/PiccoloReader -->
+        <Border
+            x:Name="SyncBanner"
+            Grid.Row="0"
+            IsVisible="False"
+            VerticalOptions="End"
+            HorizontalOptions="Center"
+            Margin="16,0,16,16"
+            Padding="16,10"
+            StrokeShape="RoundRectangle 20"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+            Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}">
+            <Label x:Name="SyncBannerLabel" AutomationId="LibrarySyncBanner" FontSize="13"
+                   HorizontalTextAlignment="Center"
+                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+        </Border>
 
         <Grid Grid.Row="1" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
             <admob:BannerAd IsVisible="{Binding ShowAdsBanner}" />

@@ -19,5 +19,9 @@ public class AppDatabase
         await Connection.CreateTableAsync<Annotation>();
         await Connection.CreateTableAsync<Bookmark>();
         await Connection.CreateTableAsync<SheetPageCrop>();
+
+        // Backfill stable ids for rows that predate the SyncId column.
+        await Connection.ExecuteAsync("UPDATE Annotation SET SyncId = lower(hex(randomblob(16))) WHERE SyncId IS NULL OR SyncId = ''");
+        await Connection.ExecuteAsync("UPDATE Bookmark SET SyncId = lower(hex(randomblob(16))) WHERE SyncId IS NULL OR SyncId = ''");
     }
 }
