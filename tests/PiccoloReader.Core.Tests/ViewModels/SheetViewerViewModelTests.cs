@@ -25,7 +25,7 @@ public class SheetViewerViewModelTests : IDisposable
         _libraryService = new LibraryService(_database, _storage);
         _annotationService = new AnnotationService(_database);
         _bookmarkService = new BookmarkService(_database);
-        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences);
+        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database));
     }
 
     public void Dispose() => _storage.Dispose();
@@ -146,7 +146,7 @@ public class SheetViewerViewModelTests : IDisposable
     {
         _readingPreferences.Mode = ReadingMode.VerticalPaged;
 
-        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences);
+        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database));
 
         Assert.Equal(ReadingMode.VerticalPaged, sut.ReadingMode);
         Assert.True(sut.IsVerticalPaged);

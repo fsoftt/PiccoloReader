@@ -18,5 +18,6 @@ public class AppDatabase
         await Connection.CreateTableAsync<Sheet>();
         await Connection.CreateTableAsync<Annotation>();
         await Connection.CreateTableAsync<Bookmark>();
+        await Connection.CreateTableAsync<SheetPageCrop>();
     }
 }

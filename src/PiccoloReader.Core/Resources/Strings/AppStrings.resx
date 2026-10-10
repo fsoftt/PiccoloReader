@@ -191,6 +191,10 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="NoResultsMessage" xml:space="preserve"><value>Try a different search.</value></data>
   <data name="EmptyFolderTitle" xml:space="preserve"><value>This folder is empty</value></data>
   <data name="EmptyFolderMessage" xml:space="preserve"><value>Import a PDF to add sheet music here.</value></data>
+  <data name="CropPage" xml:space="preserve"><value>Crop page</value></data>
+  <data name="CropApply" xml:space="preserve"><value>Apply</value></data>
+  <data name="CropReset" xml:space="preserve"><value>Reset</value></data>
+  <data name="CropHint" xml:space="preserve"><value>Drag the handles to choose the visible area</value></data>
   <data name="CategoryNotes" xml:space="preserve"><value>Notes</value></data>
   <data name="CategoryRests" xml:space="preserve"><value>Rests</value></data>
   <data name="IconNoteWhole" xml:space="preserve"><value>Whole note</value></data>

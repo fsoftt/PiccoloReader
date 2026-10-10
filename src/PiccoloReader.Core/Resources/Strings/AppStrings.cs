@@ -145,6 +145,10 @@ public static class AppStrings
     public static string ImportPdf => Get(nameof(ImportPdf));
     public static string NewFolder => Get(nameof(NewFolder));
     public static string MoreOptions => Get(nameof(MoreOptions));
+    public static string CropPage => Get(nameof(CropPage));
+    public static string CropApply => Get(nameof(CropApply));
+    public static string CropReset => Get(nameof(CropReset));
+    public static string CropHint => Get(nameof(CropHint));
     public static string SortLabel => Get(nameof(SortLabel));
     public static string BackLabel => Get(nameof(BackLabel));
     public static string LibrarySummaryFormat => Get(nameof(LibrarySummaryFormat));

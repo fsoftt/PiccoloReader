@@ -9,6 +9,7 @@
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
     xmlns:admob="clr-namespace:Plugin.AdMob;assembly=Plugin.AdMob"
     xmlns:local="clr-namespace:PiccoloReader"
+    xmlns:views="clr-namespace:PiccoloReader.Views"
     x:Name="ThisPage"
     Shell.TabBarIsVisible="False"
     Shell.NavBarIsVisible="False"
@@ -708,6 +709,7 @@
             </Border>
         </Grid>
 
+        <views:CropOverlayView x:Name="CropOverlay" Applied="OnCropApplied" Cancelled="OnCropCancelled" />
     </Grid>
 
     <Grid Grid.Row="1" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
