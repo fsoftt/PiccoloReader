@@ -231,7 +231,14 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="RecoverLibraryIntroMessage" xml:space="preserve"><value>Elige la carpeta PiccoloReader dentro de Documentos. Se restaurarán tus partituras, carpetas, anotaciones, marcadores y recortes.</value></data>
   <data name="RecoverChooseFolder" xml:space="preserve"><value>Elegir carpeta</value></data>
   <data name="RecoverNothingFound" xml:space="preserve"><value>No se encontró ninguna biblioteca en esa carpeta.</value></data>
-  <data name="RecoverResultFormat" xml:space="preserve"><value>Se restauraron {0} partituras, {1} anotaciones y {2} marcadores.</value></data>
+  <data name="RecoverResultFormat" xml:space="preserve"><value>Se restauró: {0}.</value></data>
+  <data name="AnnotationCountFormat" xml:space="preserve"><value>{0} anotaciones</value></data>
+  <data name="AnnotationCountSingularFormat" xml:space="preserve"><value>{0} anotación</value></data>
+  <data name="BookmarkCountFormat" xml:space="preserve"><value>{0} marcadores</value></data>
+  <data name="BookmarkCountSingularFormat" xml:space="preserve"><value>{0} marcador</value></data>
+  <data name="CropCountFormat" xml:space="preserve"><value>{0} recortes</value></data>
+  <data name="CropCountSingularFormat" xml:space="preserve"><value>{0} recorte</value></data>
+  <data name="ListAndFormat" xml:space="preserve"><value>{0} y {1}</value></data>
   <data name="RecoverMissingFormat" xml:space="preserve"><value>Faltaban {0} archivos PDF y se omitieron.</value></data>
   <data name="RecoverFailedMessage" xml:space="preserve"><value>No se pudo recuperar la biblioteca. Inténtalo de nuevo.</value></data>
   <data name="StorageSyncProgressFormat" xml:space="preserve"><value>Guardando tu biblioteca en Documentos/PiccoloReader… {0}/{1}</value></data>
