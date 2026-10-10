@@ -45,7 +45,7 @@
   <data name="Move" xml:space="preserve"><value>Mover</value></data>
   <data name="Delete" xml:space="preserve"><value>Eliminar</value></data>
   <data name="DeleteSheetTitle" xml:space="preserve"><value>Eliminar partitura</value></data>
-  <data name="DeleteSheetMessageFormat" xml:space="preserve"><value>¿Eliminar "{0}"? Esta acción no se puede deshacer.</value></data>
+  <data name="DeleteSheetMessageFormat" xml:space="preserve"><value>¿Eliminar "{0}"? El PDF también se borrará de Documentos/PiccoloReader. Esta acción no se puede deshacer.</value></data>
   <data name="RootOption" xml:space="preserve"><value>Raíz</value></data>
   <data name="MoveToTitle" xml:space="preserve"><value>Mover a…</value></data>
   <data name="NoFoldersToMoveMessage" xml:space="preserve"><value>Primero crea una carpeta para poder mover partituras a ella.</value></data>
@@ -218,4 +218,23 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="IconRest8th" xml:space="preserve"><value>Silencio de corchea</value></data>
   <data name="IconRest16th" xml:space="preserve"><value>Silencio de semicorchea</value></data>
   <data name="IconRest32nd" xml:space="preserve"><value>Silencio de fusa</value></data>
+  <data name="SettingsStorageSection" xml:space="preserve"><value>Almacenamiento</value></data>
+  <data name="StorageLocationLabel" xml:space="preserve"><value>Ubicación de la biblioteca</value></data>
+  <data name="StorageLocationValue" xml:space="preserve"><value>Documentos/PiccoloReader</value></data>
+  <data name="StorageLastSyncFormat" xml:space="preserve"><value>Último guardado: {0}</value></data>
+  <data name="StorageNeverSynced" xml:space="preserve"><value>Aún no guardada</value></data>
+  <data name="StoragePendingFormat" xml:space="preserve"><value>Pendientes de guardar: {0}</value></data>
+  <data name="RecoverLibraryLabel" xml:space="preserve"><value>Recuperar biblioteca desde carpeta</value></data>
+  <data name="RecoverLibraryDescription" xml:space="preserve"><value>Restaura partituras, carpetas y anotaciones tras reinstalar</value></data>
+  <data name="RecoverLibraryButton" xml:space="preserve"><value>Recuperar biblioteca</value></data>
+  <data name="RecoverLibraryIntroTitle" xml:space="preserve"><value>Recuperar biblioteca</value></data>
+  <data name="RecoverLibraryIntroMessage" xml:space="preserve"><value>Elige la carpeta PiccoloReader dentro de Documentos. Se restaurarán tus partituras, carpetas, anotaciones, marcadores y recortes.</value></data>
+  <data name="RecoverChooseFolder" xml:space="preserve"><value>Elegir carpeta</value></data>
+  <data name="RecoverNothingFound" xml:space="preserve"><value>No se encontró ninguna biblioteca en esa carpeta.</value></data>
+  <data name="RecoverResultFormat" xml:space="preserve"><value>Se restauraron {0} partituras, {1} anotaciones y {2} marcadores.</value></data>
+  <data name="RecoverMissingFormat" xml:space="preserve"><value>Faltaban {0} archivos PDF y se omitieron.</value></data>
+  <data name="RecoverFailedMessage" xml:space="preserve"><value>No se pudo recuperar la biblioteca. Inténtalo de nuevo.</value></data>
+  <data name="StorageSyncProgressFormat" xml:space="preserve"><value>Guardando tu biblioteca en Documentos/PiccoloReader… {0}/{1}</value></data>
+  <data name="StorageSyncDone" xml:space="preserve"><value>Biblioteca guardada en Documentos/PiccoloReader</value></data>
+  <data name="StorageSyncPending" xml:space="preserve"><value>Algunas partituras aún no se pudieron guardar. Se reintentará más tarde.</value></data>
 </root>

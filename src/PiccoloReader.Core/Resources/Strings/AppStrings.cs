@@ -190,6 +190,25 @@ public static class AppStrings
 
     public static string SettingsGeneralSection => Get(nameof(SettingsGeneralSection));
     public static string SettingsHelpSection => Get(nameof(SettingsHelpSection));
+    public static string SettingsStorageSection => Get(nameof(SettingsStorageSection));
+    public static string StorageLocationLabel => Get(nameof(StorageLocationLabel));
+    public static string StorageLocationValue => Get(nameof(StorageLocationValue));
+    public static string StorageLastSyncFormat => Get(nameof(StorageLastSyncFormat));
+    public static string StorageNeverSynced => Get(nameof(StorageNeverSynced));
+    public static string StoragePendingFormat => Get(nameof(StoragePendingFormat));
+    public static string RecoverLibraryLabel => Get(nameof(RecoverLibraryLabel));
+    public static string RecoverLibraryDescription => Get(nameof(RecoverLibraryDescription));
+    public static string RecoverLibraryButton => Get(nameof(RecoverLibraryButton));
+    public static string RecoverLibraryIntroTitle => Get(nameof(RecoverLibraryIntroTitle));
+    public static string RecoverLibraryIntroMessage => Get(nameof(RecoverLibraryIntroMessage));
+    public static string RecoverChooseFolder => Get(nameof(RecoverChooseFolder));
+    public static string RecoverNothingFound => Get(nameof(RecoverNothingFound));
+    public static string RecoverResultFormat => Get(nameof(RecoverResultFormat));
+    public static string RecoverMissingFormat => Get(nameof(RecoverMissingFormat));
+    public static string RecoverFailedMessage => Get(nameof(RecoverFailedMessage));
+    public static string StorageSyncProgressFormat => Get(nameof(StorageSyncProgressFormat));
+    public static string StorageSyncDone => Get(nameof(StorageSyncDone));
+    public static string StorageSyncPending => Get(nameof(StorageSyncPending));
     public static string CategoryNotes => Get(nameof(CategoryNotes));
     public static string CategoryRests => Get(nameof(CategoryRests));
     public static string IconNoteWhole => Get(nameof(IconNoteWhole));
