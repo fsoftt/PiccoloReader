@@ -191,4 +191,27 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="NoResultsMessage" xml:space="preserve"><value>Prueba con otra búsqueda.</value></data>
   <data name="EmptyFolderTitle" xml:space="preserve"><value>Esta carpeta está vacía</value></data>
   <data name="EmptyFolderMessage" xml:space="preserve"><value>Importa un PDF para añadir partituras aquí.</value></data>
+  <data name="CategoryNotes" xml:space="preserve"><value>Notas</value></data>
+  <data name="CategoryRests" xml:space="preserve"><value>Silencios</value></data>
+  <data name="IconNoteWhole" xml:space="preserve"><value>Redonda</value></data>
+  <data name="IconNoteHalfUp" xml:space="preserve"><value>Blanca (plica arriba)</value></data>
+  <data name="IconNoteHalfDown" xml:space="preserve"><value>Blanca (plica abajo)</value></data>
+  <data name="IconNoteQuarterUp" xml:space="preserve"><value>Negra (plica arriba)</value></data>
+  <data name="IconNoteQuarterDown" xml:space="preserve"><value>Negra (plica abajo)</value></data>
+  <data name="IconNote8thUp" xml:space="preserve"><value>Corchea (plica arriba)</value></data>
+  <data name="IconNote8thDown" xml:space="preserve"><value>Corchea (plica abajo)</value></data>
+  <data name="IconNote16thUp" xml:space="preserve"><value>Semicorchea (plica arriba)</value></data>
+  <data name="IconNote16thDown" xml:space="preserve"><value>Semicorchea (plica abajo)</value></data>
+  <data name="IconNote32ndUp" xml:space="preserve"><value>Fusa (plica arriba)</value></data>
+  <data name="IconNote32ndDown" xml:space="preserve"><value>Fusa (plica abajo)</value></data>
+  <data name="IconAugmentationDot" xml:space="preserve"><value>Puntillo</value></data>
+  <data name="IconAcciaccaturaDown" xml:space="preserve"><value>Acciaccatura (plica abajo)</value></data>
+  <data name="IconAppoggiaturaUp" xml:space="preserve"><value>Apoyatura (plica arriba)</value></data>
+  <data name="IconAppoggiaturaDown" xml:space="preserve"><value>Apoyatura (plica abajo)</value></data>
+  <data name="IconRestWhole" xml:space="preserve"><value>Silencio de redonda</value></data>
+  <data name="IconRestHalf" xml:space="preserve"><value>Silencio de blanca</value></data>
+  <data name="IconRestQuarter" xml:space="preserve"><value>Silencio de negra</value></data>
+  <data name="IconRest8th" xml:space="preserve"><value>Silencio de corchea</value></data>
+  <data name="IconRest16th" xml:space="preserve"><value>Silencio de semicorchea</value></data>
+  <data name="IconRest32nd" xml:space="preserve"><value>Silencio de fusa</value></data>
 </root>
