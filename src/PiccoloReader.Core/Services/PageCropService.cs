@@ -1,5 +1,6 @@
 using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Data.Models;
+using PiccoloReader.Core.Services.ExternalLibrary;
 using PiccoloReader.Core.ViewModels;
 
 namespace PiccoloReader.Core.Services;
@@ -7,10 +8,12 @@ namespace PiccoloReader.Core.Services;
 public class PageCropService
 {
     private readonly AppDatabase _database;
+    private readonly ILibraryChangeNotifier? _notifier;
 
-    public PageCropService(AppDatabase database)
+    public PageCropService(AppDatabase database, ILibraryChangeNotifier? notifier = null)
     {
         _database = database;
+        _notifier = notifier;
     }
 
     // Valid crops of a sheet by page index; invalid or full rows are ignored.
@@ -47,6 +50,7 @@ public class PageCropService
                 await _database.Connection.DeleteAsync(row);
             }
 
+            _notifier?.NotifyChanged();
             return;
         }
 
@@ -64,5 +68,7 @@ public class PageCropService
         {
             await _database.Connection.UpdateAsync(target);
         }
+
+        _notifier?.NotifyChanged();
     }
 }
