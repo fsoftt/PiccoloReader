@@ -515,6 +515,33 @@ public partial class SheetViewerViewModel : ObservableObject
         return annotation;
     }
 
+    // Saves only the part of the stroke inside the page and the visible crop
+    // (pieces of fewer than 2 points are dropped); undo removes them together.
+    public async Task<IReadOnlyList<Annotation>> AddClippedStrokeAsync(int sheetId, string colorHex, double strokeWidth, IReadOnlyList<StrokePoint> points)
+    {
+        var pieces = StrokeClipper.Clip(points, CurrentPageCrop);
+        var added = new List<Annotation>();
+        var actions = new List<IUndoableAction>();
+        foreach (var piece in pieces)
+        {
+            var annotation = await _annotationService.AddStrokeAsync(sheetId, CurrentPageIndex, colorHex, strokeWidth, piece);
+            CurrentPageAnnotations.Add(annotation);
+            actions.Add(new AddAnnotationAction(_annotationService, CurrentPageAnnotations, annotation));
+            added.Add(annotation);
+        }
+
+        if (actions.Count == 1)
+        {
+            RecordAction(actions[0]);
+        }
+        else if (actions.Count > 1)
+        {
+            RecordAction(new CompositeUndoAction(actions));
+        }
+
+        return added;
+    }
+
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private async Task UndoAsync()
     {
