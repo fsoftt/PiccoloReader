@@ -21,6 +21,7 @@ public partial class SheetViewerViewModel : ObservableObject
     private readonly IPdfPageRenderer _pdfPageRenderer;
     private readonly AnnotationService _annotationService;
     private readonly BookmarkService _bookmarkService;
+    private readonly PageCropService _pageCropService;
     private readonly IAdsPreferenceService _adsPreferenceService;
     private readonly IReadingPreferenceService _readingPreferenceService;
 
@@ -76,6 +77,17 @@ public partial class SheetViewerViewModel : ObservableObject
     // unknown). Annotations are normalized to that page rectangle.
     public double CurrentPageAspectRatio { get; private set; }
 
+    // Crops of the open sheet's pages (pages not in here are shown whole).
+    private Dictionary<int, PageCrop> _crops = new();
+
+    // The visible part of the page shown in the single-page viewer. The
+    // aspect ratio above and every annotation stay relative to the FULL page.
+    [ObservableProperty]
+    private PageCrop _currentPageCrop = PageCrop.Full;
+
+    public PageCrop GetPageCrop(int pageIndex) =>
+        _crops.TryGetValue(pageIndex, out var crop) ? crop : PageCrop.Full;
+
     public SheetViewerViewModel(
         LibraryService libraryService,
         IAppStorageProvider storageProvider,
@@ -83,8 +95,10 @@ public partial class SheetViewerViewModel : ObservableObject
         AnnotationService annotationService,
         BookmarkService bookmarkService,
         IAdsPreferenceService adsPreferenceService,
-        IReadingPreferenceService readingPreferenceService)
+        IReadingPreferenceService readingPreferenceService,
+        PageCropService pageCropService)
     {
+        _pageCropService = pageCropService;
         _libraryService = libraryService;
         _storageProvider = storageProvider;
         _pdfPageRenderer = pdfPageRenderer;
@@ -201,6 +215,8 @@ public partial class SheetViewerViewModel : ObservableObject
                 ? Math.Clamp(sheet.LastViewedPageIndex, 0, pageCount - 1)
                 : 0;
 
+            _crops = await _pageCropService.GetCropsAsync(sheetId);
+
             Bookmarks.Clear();
             foreach (var bookmark in await _bookmarkService.GetBookmarksAsync(sheetId))
             {
@@ -213,7 +229,8 @@ public partial class SheetViewerViewModel : ObservableObject
                 : Math.Sqrt(2);
             for (var i = 0; i < pageCount; i++)
             {
-                ContinuousPages.Add(new ContinuousPage(i, estimatedAspectRatio));
+                var crop = GetPageCrop(i);
+                ContinuousPages.Add(new ContinuousPage(i, crop.CroppedAspectRatio(estimatedAspectRatio)) { Crop = crop });
             }
 
             if (IsContinuousReading)
@@ -319,6 +336,7 @@ public partial class SheetViewerViewModel : ObservableObject
     {
         page.IsLoadRequested = true;
 
+        page.Crop = GetPageCrop(page.PageIndex);
         var imageBytes = await GetPageImageAsync(page.PageIndex);
         if (!page.IsLoadRequested)
         {
@@ -340,7 +358,7 @@ public partial class SheetViewerViewModel : ObservableObject
 
         if (_sheet is not null)
         {
-            var annotations = await LoadPageAnnotationsAsync(page.PageIndex, page.AspectRatio);
+            var annotations = await LoadPageAnnotationsAsync(page.PageIndex, page.FullAspectRatio);
             if (page.IsLoadRequested)
             {
                 page.Annotations = annotations.ToList();
@@ -392,7 +410,7 @@ public partial class SheetViewerViewModel : ObservableObject
         if (_sheet is not null && CurrentPageIndex < ContinuousPages.Count)
         {
             var page = ContinuousPages[CurrentPageIndex];
-            var annotations = await LoadPageAnnotationsAsync(page.PageIndex, page.AspectRatio);
+            var annotations = await LoadPageAnnotationsAsync(page.PageIndex, page.FullAspectRatio);
             page.Annotations = annotations.ToList();
         }
     }
@@ -474,8 +492,13 @@ public partial class SheetViewerViewModel : ObservableObject
             height /= CurrentPageAspectRatio;
         }
 
-        var x = 0.5 - width / 2;
-        var y = 0.5 - height / 2;
+        // Placed at the middle of what is on screen (the cropped part),
+        // sized relative to it.
+        var crop = CurrentPageCrop;
+        width *= crop.Width;
+        height *= crop.Width;
+        var x = crop.ToPageX(0.5) - width / 2;
+        var y = crop.ToPageY(0.5) - height / 2;
 
         var annotation = await _annotationService.AddIconAsync(_sheet.Id, CurrentPageIndex, iconKey, x, y, width, height);
 
@@ -737,9 +760,13 @@ public partial class SheetViewerViewModel : ObservableObject
             return;
         }
 
+        // The image is the cropped part; the aspect ratio annotations are
+        // normalized against is the whole page's.
+        var pageCrop = GetPageCrop(pageIndex);
         CurrentPageAspectRatio = imageBytes is not null && PngDimensions.TryRead(imageBytes, out var imageWidth, out var imageHeight)
-            ? (double)imageHeight / imageWidth
+            ? pageCrop.FullAspectRatio((double)imageHeight / imageWidth)
             : 0;
+        CurrentPageCrop = pageCrop;
         CurrentPageImageBytes = imageBytes;
 
         if (_sheet is not null)
@@ -801,7 +828,9 @@ public partial class SheetViewerViewModel : ObservableObject
                 return null;
             }
 
-            return await _pdfPageRenderer.RenderPageAsync(_filePath, pageIndex, _targetWidthPx, _targetHeightPx);
+            var crop = GetPageCrop(pageIndex);
+            return await _pdfPageRenderer.RenderPageAsync(
+                _filePath, pageIndex, _targetWidthPx, _targetHeightPx, crop.IsFull ? null : crop);
         }
         finally
         {
@@ -837,6 +866,68 @@ public partial class SheetViewerViewModel : ObservableObject
         foreach (var key in distant)
         {
             _pageRenders.Remove(key);
+        }
+    }
+
+    // The page rendered whole (the crop screen shows it to crop from).
+    public async Task<byte[]?> RenderUncroppedPageAsync(int pageIndex)
+    {
+        if (_sheet is null || pageIndex < 0 || pageIndex >= PageCount)
+        {
+            return null;
+        }
+
+        await _renderGate.WaitAsync();
+        try
+        {
+            return await _pdfPageRenderer.RenderPageAsync(_filePath, pageIndex, _targetWidthPx, _targetHeightPx);
+        }
+        finally
+        {
+            _renderGate.Release();
+        }
+    }
+
+    // Saves (or, for a full-page crop, clears) a page's crop and re-renders
+    // the page with it. Cached renders of the page are dropped - they are
+    // keyed by page only, so they would still show the old crop.
+    public async Task SetPageCropAsync(int pageIndex, PageCrop crop)
+    {
+        if (_sheet is null || pageIndex < 0 || pageIndex >= PageCount)
+        {
+            return;
+        }
+
+        crop = crop.OrFull();
+        await _pageCropService.SetCropAsync(_sheet.Id, pageIndex, crop);
+
+        if (crop.IsFull)
+        {
+            _crops.Remove(pageIndex);
+        }
+        else
+        {
+            _crops[pageIndex] = crop;
+        }
+
+        _pageRenders.Remove(pageIndex);
+
+        if (IsContinuousReading && !IsContinuousEditing)
+        {
+            var page = ContinuousPages[pageIndex];
+            var fullAspect = page.FullAspectRatio;
+            page.IsLoadRequested = false;
+            page.ImageBytes = null;
+            page.Annotations = Array.Empty<Annotation>();
+            // Keep the row's height plausible until the new image arrives.
+            page.Crop = crop;
+            page.AspectRatio = crop.CroppedAspectRatio(fullAspect);
+            await UpdateContinuousViewportAsync(
+                Math.Min(_keepFirst + 1, CurrentPageIndex), Math.Max(_keepLast - 1, CurrentPageIndex), CurrentPageIndex);
+        }
+        else
+        {
+            await LoadCurrentPageAsync();
         }
     }
 

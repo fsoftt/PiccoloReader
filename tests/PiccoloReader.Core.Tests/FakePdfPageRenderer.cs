@@ -1,4 +1,5 @@
 using PiccoloReader.Core.Services;
+using PiccoloReader.Core.ViewModels;
 
 namespace PiccoloReader.Core.Tests;
 
@@ -10,6 +11,9 @@ public class FakePdfPageRenderer : IPdfPageRenderer
 
     public List<int> RenderedPageIndexes { get; } = new();
 
+    // Crop passed for each render, parallel to RenderedPageIndexes.
+    public List<PageCrop?> RenderedCrops { get; } = new();
+
     // When set, renders wait on this before completing - lets tests hold a
     // render "in flight" while navigating further.
     public TaskCompletionSource? RenderGate { get; set; }
@@ -20,9 +24,10 @@ public class FakePdfPageRenderer : IPdfPageRenderer
         return Task.FromResult(PageCountToReturn);
     }
 
-    public Task<byte[]> RenderPageAsync(string filePath, int pageIndex, int targetWidthPx, int targetHeightPx)
+    public Task<byte[]> RenderPageAsync(string filePath, int pageIndex, int targetWidthPx, int targetHeightPx, PageCrop? crop = null)
     {
         RenderedPageIndexes.Add(pageIndex);
+        RenderedCrops.Add(crop);
         return RenderGate is null
             ? Task.FromResult(new byte[] { (byte)pageIndex })
             : RenderAfterGateAsync(RenderGate, pageIndex);
