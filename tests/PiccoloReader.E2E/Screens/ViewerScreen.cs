@@ -84,7 +84,7 @@ public static class ViewerScreen
     public static void TapPreviousPageZone() => Gestures.TapIn(Ui.Find(PageContainer), 0.08, 0.5);
 
     /// <summary>In vertical paged reading the zones sit at the bottom/top edge.</summary>
-    public static void TapBottomZone() => Gestures.TapIn(Ui.Find(PageContainer), 0.5, 0.92);
+    public static void TapBottomZone() => Gestures.TapIn(Ui.Find(PageContainer), 0.12, 0.95); // clear of the page pill and the tools FAB
 
     public static void TapTopZone() => Gestures.TapIn(Ui.Find(PageContainer), 0.5, 0.08);
 

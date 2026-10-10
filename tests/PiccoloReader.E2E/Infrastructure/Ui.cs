@@ -137,7 +137,17 @@ public static class Ui
     }
 
     public static void TapText(string text, int timeoutSeconds = 15, bool contains = false) =>
-        FindText(text, timeoutSeconds, contains).Click();
+        Poll(() =>
+        {
+            var element = TryFindText(text, contains);
+            if (element is null)
+            {
+                return false;
+            }
+
+            element.Click();
+            return true;
+        }, timeoutSeconds, $"text '{text}' to be tappable");
 
     public static IWebElement FindDialogEditText(int timeoutSeconds = 15)
     {
