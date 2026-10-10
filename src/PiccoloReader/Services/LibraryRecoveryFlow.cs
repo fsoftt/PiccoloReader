@@ -65,12 +65,12 @@ public class LibraryRecoveryFlow
             // Writes whatever the restored library still lacks (and the snapshot).
             await Task.Run(() => _sync.SyncAllAsync(requestAccess: true));
 
-            var message = string.Format(
-                CultureInfo.CurrentUICulture,
-                AppStrings.RecoverResultFormat,
+            var message = AppStrings.RecoverResult(
                 result.SheetsRestored + result.OrphansImported,
+                result.FoldersAdded,
                 result.AnnotationsAdded,
-                result.BookmarksAdded);
+                result.BookmarksAdded,
+                result.CropsAdded);
             if (result.MissingSheets.Count > 0)
             {
                 message += "\n" + string.Format(CultureInfo.CurrentUICulture, AppStrings.RecoverMissingFormat, result.MissingSheets.Count);
@@ -101,7 +101,7 @@ public class LibraryRecoveryFlow
         try
         {
             var pending = await _sync.CountPendingAsync();
-            if (pending == 0 && _state.LastSyncUtc is not null)
+            if (pending == 0 && _state.LastSyncUtc is not null && await _sync.CountUnknownPageCountAsync() == 0)
             {
                 return false;
             }
