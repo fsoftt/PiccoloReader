@@ -98,6 +98,14 @@
 		<PackageReference Include="UraniumUI.Icons.MaterialSymbols" Version="3.0.0" />
 	</ItemGroup>
 
+	<!-- Google Drive backup on Android: sign-in (Identity AuthorizationClient) and the daily auto-backup job. -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<PackageReference Include="Xamarin.GooglePlayServices.Auth" Version="121.6.0.2" />
+		<PackageReference Include="Xamarin.AndroidX.Work.Runtime" Version="2.11.2.1" />
+		<!-- Auth pulls Fragment 1.9 (ktx merged in) but Fragment.Ktx 1.8: D8 fails on duplicate classes. -->
+		<PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="1.9.0" />
+	</ItemGroup>
+
 	<ItemGroup>
 	  <ProjectReference Include="..\PiccoloReader.Core\PiccoloReader.Core.csproj" />
 	</ItemGroup>

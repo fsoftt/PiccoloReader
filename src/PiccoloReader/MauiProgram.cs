@@ -8,6 +8,7 @@ using SkiaSharp.Views.Maui.Controls.Hosting;
 using UraniumUI;
 using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Services;
+using PiccoloReader.Core.Services.Backup;
 using PiccoloReader.Core.ViewModels;
 using PiccoloReader.Services;
 using PiccoloReader.Views;
@@ -107,6 +108,21 @@ public static class MauiProgram
 
 			return database;
 		});
+		builder.Services.AddSingleton<IBackupStateStore, MauiBackupStateStore>();
+		builder.Services.AddSingleton(_ => new BackupOptions(AppInfo.VersionString));
+#if ANDROID
+		builder.Services.AddSingleton<IGoogleAuthService, PiccoloReader.Platforms.Android.AndroidGoogleAuthService>();
+		builder.Services.AddSingleton<IAutoBackupScheduler, PiccoloReader.Platforms.Android.AndroidAutoBackupScheduler>();
+#else
+		builder.Services.AddSingleton<IGoogleAuthService, UnsupportedGoogleAuthService>();
+		builder.Services.AddSingleton<IAutoBackupScheduler, NoOpAutoBackupScheduler>();
+#endif
+		builder.Services.AddSingleton<DriveTokenProvider>();
+		builder.Services.AddSingleton<IDriveClient>(sp => new GoogleDriveClient(
+			new HttpClient { Timeout = TimeSpan.FromMinutes(15) },
+			sp.GetRequiredService<DriveTokenProvider>().GetTokenAsync));
+		builder.Services.AddSingleton<BackupService>();
+
 		builder.Services.AddSingleton<LibraryService>();
 		builder.Services.AddSingleton<PdfImportService>();
 		builder.Services.AddSingleton<AnnotationService>();
@@ -117,6 +133,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<FolderViewModel>();
 		builder.Services.AddTransient<SheetViewerViewModel>();
 		builder.Services.AddTransient<SettingsViewModel>();
+		builder.Services.AddTransient<BackupSettingsViewModel>();
 		builder.Services.AddTransient<DonateViewModel>();
 		builder.Services.AddTransient<TutorialViewModel>();
 

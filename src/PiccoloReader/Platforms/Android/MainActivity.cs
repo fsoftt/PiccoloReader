@@ -1,6 +1,10 @@
 ﻿using Android.App;
 using Android.Content.PM;
+using Android.Content;
 using Android.OS;
+using Microsoft.Extensions.DependencyInjection;
+using PiccoloReader.Core.Services.Backup;
+using PiccoloReader.Platforms.Android;
 
 namespace PiccoloReader;
 
@@ -23,6 +27,36 @@ public class MainActivity : MauiAppCompatActivity
 
         UpdateSystemBarAppearance();
         DisableFocusHighlight();
+        EnsureAutoBackupScheduled();
+    }
+
+    // Hands the Google authorization consent result back to the auth service.
+    protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
+    {
+        if (AndroidGoogleAuthService.HandleActivityResult(this, requestCode, resultCode, data))
+        {
+            return;
+        }
+
+        base.OnActivityResult(requestCode, resultCode, data);
+    }
+
+    // WorkManager keeps the periodic job across restarts; this only re-enqueues it
+    // (policy Keep) in case it was lost, e.g. after clearing app data on a restore.
+    private static void EnsureAutoBackupScheduled()
+    {
+        try
+        {
+            var services = IPlatformApplication.Current?.Services;
+            if (services?.GetService<IBackupStateStore>() is { AutoBackupEnabled: true, IsConnected: true })
+            {
+                services.GetService<IAutoBackupScheduler>()?.Schedule();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Could not schedule auto backup: {ex.Message}");
+        }
     }
 
     // After the soft keyboard closes with the Back key the window is in
