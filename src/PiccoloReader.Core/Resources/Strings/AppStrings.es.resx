@@ -191,6 +191,10 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="NoResultsMessage" xml:space="preserve"><value>Prueba con otra búsqueda.</value></data>
   <data name="EmptyFolderTitle" xml:space="preserve"><value>Esta carpeta está vacía</value></data>
   <data name="EmptyFolderMessage" xml:space="preserve"><value>Importa un PDF para añadir partituras aquí.</value></data>
+  <data name="CropPage" xml:space="preserve"><value>Recortar página</value></data>
+  <data name="CropApply" xml:space="preserve"><value>Aplicar</value></data>
+  <data name="CropReset" xml:space="preserve"><value>Restablecer</value></data>
+  <data name="CropHint" xml:space="preserve"><value>Arrastra los controles para elegir el área visible</value></data>
   <data name="CategoryNotes" xml:space="preserve"><value>Notas</value></data>
   <data name="CategoryRests" xml:space="preserve"><value>Silencios</value></data>
   <data name="IconNoteWhole" xml:space="preserve"><value>Redonda</value></data>
