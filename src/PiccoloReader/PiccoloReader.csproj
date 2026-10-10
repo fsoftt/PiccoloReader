@@ -60,6 +60,15 @@
 		<AndroidKeyStore Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">True</AndroidKeyStore>
 	</PropertyGroup>
 
+	<!-- QA flavor (dotnet build -p:PiccoloQa=true): installs side by side with
+	     the Play Store app under its own id and name, and shows AdMob test ads
+	     so testing never generates real impressions or clicks. -->
+	<PropertyGroup Condition="'$(PiccoloQa)' == 'true'">
+		<ApplicationId>com.fsoftt.piccoloreader.qa</ApplicationId>
+		<ApplicationTitle>Piccolo QA</ApplicationTitle>
+		<DefineConstants>$(DefineConstants);QA_BUILD</DefineConstants>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />

@@ -42,7 +42,11 @@ public static class MauiProgram
 
 		Batteries_V2.Init();
 
+#if QA_BUILD
+		AdConfig.UseTestAdUnitIds = true;
+#else
 		AdConfig.UseTestAdUnitIds = false;
+#endif
 
 		var savedLanguageCode = Preferences.Default.Get("AppLanguage", (string?)null);
 #if ANDROID
