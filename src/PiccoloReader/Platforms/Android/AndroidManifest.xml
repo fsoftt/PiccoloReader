@@ -6,4 +6,8 @@
 	<!-- Required by the Google Mobile Ads SDK to load ads (Donate page only). -->
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+	<!-- Android 6-9 only: writing the library to Documents/PiccoloReader. Android 10+
+	     uses MediaStore (no permission) and the folder picker for recovery. -->
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 </manifest>

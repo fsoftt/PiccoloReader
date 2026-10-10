@@ -2,25 +2,51 @@ using System.Globalization;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.ViewModels;
+using PiccoloReader.Services;
 
 namespace PiccoloReader.Views;
 
 public partial class SettingsPage : ContentPage
 {
     private readonly SettingsViewModel _viewModel;
+    private readonly LibraryRecoveryFlow _recoveryFlow;
 
-    public SettingsPage(SettingsViewModel viewModel)
+    public SettingsPage(SettingsViewModel viewModel, LibraryRecoveryFlow recoveryFlow)
     {
         InitializeComponent();
         _viewModel = viewModel;
+        _recoveryFlow = recoveryFlow;
         BindingContext = _viewModel;
     }
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
         RefreshLanguageValue();
+        await RefreshStorageStatusAsync();
         VersionLabel.Text = string.Format(CultureInfo.CurrentUICulture, AppStrings.AppVersionFormat, AppInfo.VersionString);
+    }
+
+    private async Task RefreshStorageStatusAsync()
+    {
+        var lastSync = _recoveryFlow.State.LastSyncUtc;
+        var text = lastSync is { } utc
+            ? string.Format(CultureInfo.CurrentUICulture, AppStrings.StorageLastSyncFormat, utc.ToLocalTime().ToString("g", CultureInfo.CurrentUICulture))
+            : AppStrings.StorageNeverSynced;
+
+        var pending = await _recoveryFlow.Sync.CountPendingAsync();
+        if (pending > 0)
+        {
+            text += " · " + string.Format(CultureInfo.CurrentUICulture, AppStrings.StoragePendingFormat, pending);
+        }
+
+        StorageSyncLabel.Text = text;
+    }
+
+    private async void OnRecoverLibraryTapped(object? sender, TappedEventArgs e)
+    {
+        await _recoveryFlow.RunRecoveryAsync(this);
+        await RefreshStorageStatusAsync();
     }
 
     private void RefreshLanguageValue()

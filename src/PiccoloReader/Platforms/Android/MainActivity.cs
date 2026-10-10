@@ -51,6 +51,13 @@ public class MainActivity : MauiAppCompatActivity
         }
     }
 
+    // Result of the library folder picker (reinstall recovery).
+    protected override void OnActivityResult(int requestCode, Result resultCode, Android.Content.Intent? data)
+    {
+        base.OnActivityResult(requestCode, resultCode, data);
+        PiccoloReader.Platforms.Android.ExternalLibrary.AndroidExternalLibraryStore.OnPickResult(requestCode, resultCode == Result.Ok, data);
+    }
+
     public override void OnConfigurationChanged(Android.Content.Res.Configuration newConfig)
     {
         base.OnConfigurationChanged(newConfig);

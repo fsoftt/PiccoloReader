@@ -190,6 +190,72 @@ public static class AppStrings
 
     public static string SettingsGeneralSection => Get(nameof(SettingsGeneralSection));
     public static string SettingsHelpSection => Get(nameof(SettingsHelpSection));
+    public static string SettingsStorageSection => Get(nameof(SettingsStorageSection));
+    public static string StorageLocationLabel => Get(nameof(StorageLocationLabel));
+    public static string StorageLocationValue => Get(nameof(StorageLocationValue));
+    public static string StorageLastSyncFormat => Get(nameof(StorageLastSyncFormat));
+    public static string StorageNeverSynced => Get(nameof(StorageNeverSynced));
+    public static string StoragePendingFormat => Get(nameof(StoragePendingFormat));
+    public static string RecoverLibraryLabel => Get(nameof(RecoverLibraryLabel));
+    public static string RecoverLibraryDescription => Get(nameof(RecoverLibraryDescription));
+    public static string RecoverLibraryButton => Get(nameof(RecoverLibraryButton));
+    public static string RecoverLibraryIntroTitle => Get(nameof(RecoverLibraryIntroTitle));
+    public static string RecoverLibraryIntroMessage => Get(nameof(RecoverLibraryIntroMessage));
+    public static string RecoverChooseFolder => Get(nameof(RecoverChooseFolder));
+    public static string RecoverNothingFound => Get(nameof(RecoverNothingFound));
+    public static string RecoverResultFormat => Get(nameof(RecoverResultFormat));
+    public static string AnnotationCountFormat => Get(nameof(AnnotationCountFormat));
+    public static string AnnotationCountSingularFormat => Get(nameof(AnnotationCountSingularFormat));
+    public static string BookmarkCountFormat => Get(nameof(BookmarkCountFormat));
+    public static string BookmarkCountSingularFormat => Get(nameof(BookmarkCountSingularFormat));
+    public static string CropCountFormat => Get(nameof(CropCountFormat));
+    public static string CropCountSingularFormat => Get(nameof(CropCountSingularFormat));
+    public static string ListAndFormat => Get(nameof(ListAndFormat));
+
+    public static string AnnotationCount(int count) =>
+        string.Format(count == 1 ? AnnotationCountSingularFormat : AnnotationCountFormat, count);
+
+    public static string BookmarkCount(int count) =>
+        string.Format(count == 1 ? BookmarkCountSingularFormat : BookmarkCountFormat, count);
+
+    public static string CropCount(int count) =>
+        string.Format(count == 1 ? CropCountSingularFormat : CropCountFormat, count);
+
+    // "Restored 2 sheets, 1 folder, 2 annotations and 1 bookmark." Sheets are
+    // always listed; the other kinds only when something was restored.
+    public static string RecoverResult(int sheets, int folders, int annotations, int bookmarks, int crops)
+    {
+        var parts = new List<string> { SheetCount(sheets) };
+        if (folders > 0)
+        {
+            parts.Add(FolderCount(folders));
+        }
+
+        if (annotations > 0)
+        {
+            parts.Add(AnnotationCount(annotations));
+        }
+
+        if (bookmarks > 0)
+        {
+            parts.Add(BookmarkCount(bookmarks));
+        }
+
+        if (crops > 0)
+        {
+            parts.Add(CropCount(crops));
+        }
+
+        var list = parts.Count == 1
+            ? parts[0]
+            : string.Format(ListAndFormat, string.Join(", ", parts.Take(parts.Count - 1)), parts[^1]);
+        return string.Format(RecoverResultFormat, list);
+    }
+    public static string RecoverMissingFormat => Get(nameof(RecoverMissingFormat));
+    public static string RecoverFailedMessage => Get(nameof(RecoverFailedMessage));
+    public static string StorageSyncProgressFormat => Get(nameof(StorageSyncProgressFormat));
+    public static string StorageSyncDone => Get(nameof(StorageSyncDone));
+    public static string StorageSyncPending => Get(nameof(StorageSyncPending));
     public static string CategoryNotes => Get(nameof(CategoryNotes));
     public static string CategoryRests => Get(nameof(CategoryRests));
     public static string IconNoteWhole => Get(nameof(IconNoteWhole));

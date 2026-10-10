@@ -2,7 +2,7 @@
 
 # Privacy Policy
 
-**Last Updated:** January 2026
+**Last Updated:** October 2026
 
 **Effective Date:** January 2026
 
@@ -22,6 +22,7 @@ Please read this Privacy Policy carefully. If you do not agree with our policies
 - Your PDF music sheets, folder structures, and annotations are stored **entirely on your device**
 - We do NOT collect, store, transmit, or have access to your PDF files or personal annotations
 - All data remains under your control in your device's local storage
+- Your sheets and a library file (`piccolo-library.json`: folders, annotations, bookmarks, page crops) are saved in the **Documents/PiccoloReader** folder of your device, so you can recover them after reinstalling the app. They never leave your device through the app
 
 **Account Information:**
 - Piccolo Music Reader does NOT require user accounts, registration, or login
@@ -105,10 +106,11 @@ We use collected information for:
 
 ### 3.1 Local Storage Security
 
-- Your PDF files are stored in your device's app sandbox (private directory)
-- Only Piccolo Music Reader can access this data; other apps cannot see your files
+- Your PDF files are stored in the **Documents/PiccoloReader** folder of your device's shared storage, and the app keeps a working copy in its private directory
+- Other apps that you allow to access your device's files (for example a file manager) can see the Documents/PiccoloReader folder
 - Your device's built-in security (lock screen, encryption) protects this data
-- If you uninstall the app, all local data is deleted
+- If you uninstall the app, the app's private copy is deleted, but the Documents/PiccoloReader folder stays on your device so you can recover your library with "Recover library from folder" in the app
+- On Android 6-9 the app asks for the storage permission to write to this folder; on Android 10 and later it needs no permission to write, and uses the system folder picker only when you recover your library
 
 ### 3.2 No Cloud Storage
 
@@ -164,8 +166,8 @@ Piccolo Music Reader uses open-source libraries (SkiaSharp, SQLite, etc.) that m
 
 - **Your Data:** All your sheets are stored locally on YOUR device
 - **Download:** PDFs you imported remain in your device storage
-- **Delete:** Uninstalling Piccolo Music Reader permanently deletes all local data
-- **Export:** You can manually copy your PDFs from the app to another location
+- **Delete:** Deleting a sheet in the app also deletes its PDF from Documents/PiccoloReader. Uninstalling the app deletes its private data but not the Documents/PiccoloReader folder, which you can delete yourself at any time
+- **Export:** Your PDFs are regular files in Documents/PiccoloReader; you can copy them anywhere
 
 ### 5.2 Advertising Preferences
 
@@ -216,7 +218,7 @@ If we learn we've collected data from a child under 13, we'll delete it immediat
 
 ## 7. Data Retention
 
-- **Local Data:** Stored indefinitely until you manually delete or uninstall
+- **Local Data:** Stored indefinitely until you manually delete it (including the Documents/PiccoloReader folder)
 - **Ad Serving Data:** Retained by Google per https://policies.google.com/privacy
 - **Crash Reports:** Retained for 30 days for debugging
 - **App Usage Logs:** Retained for 90 days then auto-deleted

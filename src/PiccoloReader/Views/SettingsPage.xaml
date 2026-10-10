@@ -79,6 +79,54 @@
                 </Border>
             </VerticalStackLayout>
 
+            <!-- ALMACENAMIENTO -->
+            <VerticalStackLayout Spacing="8" Margin="20,0">
+                <Label Style="{StaticResource SectionLabel}" Margin="4,0,0,0" Text="{x:Static strings:AppStrings.SettingsStorageSection}" />
+                <Border Style="{StaticResource Card}" Padding="0">
+                    <VerticalStackLayout>
+                        <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsStorageLocationRow" ColumnDefinitions="20,*"
+                              SemanticProperties.Description="{x:Static strings:AppStrings.StorageLocationLabel}">
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE2C7;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center" Padding="0,8">
+                                <Label Style="{StaticResource RowTitle}" Text="{x:Static strings:AppStrings.StorageLocationLabel}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                <Label AutomationId="SettingsStorageLocationValue" Style="{StaticResource Caption}" FontSize="12" Text="{x:Static strings:AppStrings.StorageLocationValue}" />
+                                <Label x:Name="StorageSyncLabel" AutomationId="SettingsStorageSyncValue" Style="{StaticResource Caption}" FontSize="12" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <BoxView Style="{StaticResource RowDivider}" />
+                        <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsRecoverLibraryRow" ColumnDefinitions="20,*,20"
+                              SemanticProperties.Description="{x:Static strings:AppStrings.RecoverLibraryLabel}">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnRecoverLibraryTapped" />
+                            </Grid.GestureRecognizers>
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE8B3;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center" Padding="0,8">
+                                <Label Style="{StaticResource RowTitle}" Text="{x:Static strings:AppStrings.RecoverLibraryLabel}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                <Label Style="{StaticResource Caption}" FontSize="12" Text="{x:Static strings:AppStrings.RecoverLibraryDescription}" />
+                            </VerticalStackLayout>
+                            <Image Grid.Column="2" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE5CC;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                                </Image.Source>
+                            </Image>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
             <!-- AYUDA -->
             <VerticalStackLayout Spacing="8" Margin="20,0">
                 <Label Style="{StaticResource SectionLabel}" Margin="4,0,0,0" Text="{x:Static strings:AppStrings.SettingsHelpSection}" />
