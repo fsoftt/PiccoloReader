@@ -14,6 +14,7 @@ public class CropOverlayView : Grid
     // Touch targets are at least 44dp, however small the visible handle is.
     private const double TouchSize = 44;
     private const double MaxEdgeTouchLength = 96;
+    private const double SideInset = 36;
 
     private readonly Grid _area;
     private readonly Image _image;
@@ -55,7 +56,8 @@ public class CropOverlayView : Grid
         _canvas = new SKCanvasView { InputTransparent = true };
         _canvas.PaintSurface += OnPaintSurface;
 
-        _area = new Grid { Margin = new Thickness(16, 8) };
+        // Wide side inset keeps the side handles out of the system back-gesture zone.
+        _area = new Grid { Margin = new Thickness(SideInset, 8) };
         _area.Children.Add(_image);
         _area.Children.Add(_canvas);
         _area.SizeChanged += (_, _) => Refresh();
@@ -84,9 +86,14 @@ public class CropOverlayView : Grid
     // The crop being edited (exposed for tests and automation).
     public PageCrop Crop => _crop;
 
-    public void Show(byte[] pageImage, double fullAspectRatio, PageCrop crop)
+    private AnnotationPainter? _painter;
+    private IReadOnlyList<PiccoloReader.Core.Data.Models.Annotation> _annotations = Array.Empty<PiccoloReader.Core.Data.Models.Annotation>();
+
+    public void Show(byte[] pageImage, double fullAspectRatio, PageCrop crop, AnnotationPainter? painter = null, IEnumerable<PiccoloReader.Core.Data.Models.Annotation>? annotations = null)
     {
         _aspectRatio = fullAspectRatio;
+        _painter = painter;
+        _annotations = annotations?.ToList() ?? new List<PiccoloReader.Core.Data.Models.Annotation>();
         _crop = crop.OrFull();
         _image.Source = ImageSource.FromStream(() => new MemoryStream(pageImage));
         IsVisible = true;
@@ -97,6 +104,8 @@ public class CropOverlayView : Grid
     {
         IsVisible = false;
         _image.Source = null;
+        ClearGestureExclusion();
+        _annotations = Array.Empty<PiccoloReader.Core.Data.Models.Annotation>();
     }
 
     private static void AddAt(Grid grid, View view, int column, int row)
@@ -234,7 +243,53 @@ public class CropOverlayView : Grid
         Place(CropHandle.BottomLeft, rect.Left, rect.Bottom, TouchSize, TouchSize);
         Place(CropHandle.BottomRight, rect.Right, rect.Bottom, TouchSize, TouchSize);
 
+        UpdateGestureExclusion();
         _canvas.InvalidateSurface();
+    }
+
+    // Android 10+: dragging a handle that sits near the screen edge would
+    // otherwise trigger the system back gesture. The exclusion covers only the
+    // handles (the system caps it at 200dp per edge) and is cleared on Hide.
+    private void UpdateGestureExclusion()
+    {
+#if ANDROID
+        if (!OperatingSystem.IsAndroidVersionAtLeast(29) || Handler?.PlatformView is not global::Android.Views.View view)
+        {
+            return;
+        }
+
+        var density = view.Resources?.DisplayMetrics?.Density ?? 1f;
+        var rects = new List<global::Android.Graphics.Rect>();
+        foreach (var border in _handles.Values)
+        {
+            var left = _area.X + border.TranslationX;
+            var top = _area.Y + border.TranslationY;
+            var width = border.WidthRequest;
+            var height = border.HeightRequest;
+            if (left > 56 && left + width < Width - 56)
+            {
+                continue;
+            }
+
+            rects.Add(new global::Android.Graphics.Rect(
+                (int)Math.Floor(left * density),
+                (int)Math.Floor(top * density),
+                (int)Math.Ceiling((left + width) * density),
+                (int)Math.Ceiling((top + height) * density)));
+        }
+
+        view.SystemGestureExclusionRects = rects;
+#endif
+    }
+
+    private void ClearGestureExclusion()
+    {
+#if ANDROID
+        if (OperatingSystem.IsAndroidVersionAtLeast(29) && Handler?.PlatformView is global::Android.Views.View view)
+        {
+            view.SystemGestureExclusionRects = new List<global::Android.Graphics.Rect>();
+        }
+#endif
     }
 
     private void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
@@ -253,6 +308,9 @@ public class CropOverlayView : Grid
             (float)rect.Top * density,
             (float)rect.Right * density,
             (float)rect.Bottom * density);
+
+        // Read-only annotations, under the dim.
+        _painter?.DrawAnnotations(canvas, e.Info, _annotations, PageArea());
 
         // Dim everything but the crop.
         canvas.Save();

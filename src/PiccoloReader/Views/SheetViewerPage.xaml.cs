@@ -1472,7 +1472,8 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        CropOverlay.Show(bytes, (double)height / width, _viewModel.GetPageCrop(_cropPageIndex));
+        await EnsureBravuraTypefaceLoadedAsync();
+        CropOverlay.Show(bytes, (double)height / width, _viewModel.GetPageCrop(_cropPageIndex), _annotationPainter, _viewModel.CurrentPageAnnotations);
     }
 
     private async void OnCropApplied(object? sender, PageCrop crop)
@@ -2483,7 +2484,7 @@ public partial class SheetViewerPage : ContentPage
             .Select(p => new StrokePoint((p.X - pageRect.Left) / pageRect.Width, (p.Y - pageRect.Top) / pageRect.Height))
             .ToList();
 
-        await _viewModel.AddStrokeAsync(sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, normalizedPoints);
+        await _viewModel.AddClippedStrokeAsync(sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, normalizedPoints);
         AnnotationCanvas.InvalidateSurface();
     }
 
