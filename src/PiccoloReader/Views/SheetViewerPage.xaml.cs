@@ -2515,6 +2515,10 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
+    // Tiles are recycled when the category changes: repaint with the new glyph.
+    private void OnIconGlyphBindingContextChanged(object? sender, EventArgs e) =>
+        (sender as SKCanvasView)?.InvalidateSurface();
+
     private void OnIconGlyphPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
     {
         var canvas = e.Surface.Canvas;

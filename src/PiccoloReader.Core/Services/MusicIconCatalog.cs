@@ -102,6 +102,42 @@ public static class MusicIconCatalog
             new("glissandoUp", AppStrings.IconGlissandoUp, 0xE585, 0.96),
             new("glissandoDown", AppStrings.IconGlissandoDown, 0xE586, 0.96),
         }),
+        // Notes and Rests are appended after the original categories so the
+        // existing SymbolCategoryTab_<index> automation ids (and any saved
+        // category position) stay valid. Aspect ratios are the glyphs' ink
+        // bounds measured from Bravura.otf at 100pt (width / height); stemmed
+        // notes are tall (~0.3-0.6) and DrawGlyphFitted fits that ink to the
+        // icon box, same as the sharp/flat/ornament glyphs. The acciaccatura
+        // stem-up grace note already lives in Ornaments (unique key), so only
+        // its stem-down variant and the appoggiaturas are listed here.
+        new(AppStrings.CategoryNotes, new List<MusicIcon>
+        {
+            new("noteWhole", AppStrings.IconNoteWhole, 0xE1D2, 1.64),
+            new("noteHalfUp", AppStrings.IconNoteHalfUp, 0xE1D3, 0.33),
+            new("noteHalfDown", AppStrings.IconNoteHalfDown, 0xE1D4, 0.33),
+            new("noteQuarterUp", AppStrings.IconNoteQuarterUp, 0xE1D5, 0.33),
+            new("noteQuarterDown", AppStrings.IconNoteQuarterDown, 0xE1D6, 0.33),
+            new("note8thUp", AppStrings.IconNote8thUp, 0xE1D7, 0.56),
+            new("note8thDown", AppStrings.IconNote8thDown, 0xE1D8, 0.32),
+            new("note16thUp", AppStrings.IconNote16thUp, 0xE1D9, 0.57),
+            new("note16thDown", AppStrings.IconNote16thDown, 0xE1DA, 0.32),
+            new("note32ndUp", AppStrings.IconNote32ndUp, 0xE1DB, 0.49),
+            new("note32ndDown", AppStrings.IconNote32ndDown, 0xE1DC, 0.29),
+            // Tiny dot with tight ink bounds: same VisualScale as staccato.
+            new("augmentationDot", AppStrings.IconAugmentationDot, 0xE1E7, 1.00, 0.4),
+            new("graceNoteAcciaccaturaStemDown", AppStrings.IconAcciaccaturaDown, 0xE561, 0.48),
+            new("graceNoteAppoggiaturaStemUp", AppStrings.IconAppoggiaturaUp, 0xE562, 0.54),
+            new("graceNoteAppoggiaturaStemDown", AppStrings.IconAppoggiaturaDown, 0xE563, 0.33),
+        }),
+        new(AppStrings.CategoryRests, new List<MusicIcon>
+        {
+            new("restWhole", AppStrings.IconRestWhole, 0xE4E3, 1.93),
+            new("restHalf", AppStrings.IconRestHalf, 0xE4E4, 1.93),
+            new("restQuarter", AppStrings.IconRestQuarter, 0xE4E5, 0.36),
+            new("rest8th", AppStrings.IconRest8th, 0xE4E6, 0.58),
+            new("rest16th", AppStrings.IconRest16th, 0xE4E7, 0.47),
+            new("rest32nd", AppStrings.IconRest32nd, 0xE4E8, 0.40),
+        }),
     };
 
     public static MusicIcon? FindByKey(string key) =>
