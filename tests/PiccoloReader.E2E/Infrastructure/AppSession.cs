@@ -167,11 +167,9 @@ public static class AppSession
     {
         var driver = Driver;
         driver.TerminateApp(E2EEnvironment.PackageName);
-        Adb.Shell($"pm clear {E2EEnvironment.PackageName}");
+        // Cheaper than `pm clear`: drop only the app data (DB, sheets, prefs, cache) via run-as.
+        Adb.RunAs("sh -c 'rm -rf databases files shared_prefs cache/* code_cache/*'", allowFailure: true);
 
-        // Stop the emulator from auto-rotating under us, and start every test in portrait.
-        Adb.Shell("settings put system accelerometer_rotation 0");
-        Adb.Shell("settings put system user_rotation 0");
         try { driver.Orientation = ScreenOrientation.Portrait; } catch { /* already portrait */ }
     }
 
