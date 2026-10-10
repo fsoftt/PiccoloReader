@@ -27,7 +27,7 @@
                 <VerticalStackLayout Spacing="0">
 
                     <!-- Compact header: back, folder name + count, import -->
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="4" Padding="8,12,12,12">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="4" Padding="8,12,20,12">
                         <ImageButton
                             Grid.Column="0"
                             AutomationId="FolderBackButton"
@@ -126,7 +126,53 @@
                     <Label
                         Style="{StaticResource SectionLabel}"
                         Padding="20,4,20,6"
-                        Text="{x:Static strings:AppStrings.Sheets}" />
+                        Text="{x:Static strings:AppStrings.Sheets}"
+                        IsVisible="{Binding HasResults}" />
+
+                    <!-- Compact empty state: search with no matches -->
+                    <VerticalStackLayout IsVisible="{Binding HasNoSearchResults}" Spacing="4" Margin="32,40,32,24" AutomationId="FolderNoResults">
+                        <Image HorizontalOptions="Center" Margin="0,0,0,6">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE8B6;" FontFamily="MaterialOutlined" Size="32"
+                                    Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                            </Image.Source>
+                        </Image>
+                        <Label Style="{StaticResource RowTitle}" HorizontalTextAlignment="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                               Text="{x:Static strings:AppStrings.NoResultsTitle}" />
+                        <Label Style="{StaticResource Caption}" HorizontalTextAlignment="Center"
+                               Text="{x:Static strings:AppStrings.NoResultsMessage}" />
+                    </VerticalStackLayout>
+
+                    <!-- Compact empty state: empty folder -->
+                    <VerticalStackLayout IsVisible="{Binding IsFolderEmpty}" Spacing="4" Margin="32,40,32,24" AutomationId="FolderEmpty">
+                        <Image HorizontalOptions="Center" Margin="0,0,0,6">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE2C7;" FontFamily="MaterialOutlined" Size="40"
+                                    Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                            </Image.Source>
+                        </Image>
+                        <Label Style="{StaticResource RowTitle}" HorizontalTextAlignment="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                               Text="{x:Static strings:AppStrings.EmptyFolderTitle}" />
+                        <Label Style="{StaticResource Caption}" HorizontalTextAlignment="Center"
+                               Text="{x:Static strings:AppStrings.EmptyFolderMessage}" />
+                        <Border
+                            AutomationId="FolderEmptyImportButton"
+                            Margin="0,12,0,0"
+                            HorizontalOptions="Center"
+                            Padding="20,0"
+                            HeightRequest="44"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 22"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnImportPdfClicked" />
+                            </Border.GestureRecognizers>
+                            <Label Text="{x:Static strings:AppStrings.ImportPdf}" VerticalOptions="Center" FontSize="14" FontFamily="OpenSansSemibold"
+                                   TextColor="{AppThemeBinding Light={StaticResource OnPrimaryLight}, Dark={StaticResource OnPrimaryDark}}" />
+                        </Border>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </CollectionView.Header>
 

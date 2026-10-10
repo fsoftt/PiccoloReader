@@ -73,7 +73,13 @@ public partial class LibraryViewModel : ObservableObject
     private string _summaryText = string.Empty;
 
     [ObservableProperty]
-    private bool _isEmpty = true;
+    private bool _isEmpty;
+
+    [ObservableProperty]
+    private bool _hasNoSheetResults;
+
+    [ObservableProperty]
+    private bool _hasSheetResults;
 
     partial void OnFolderSearchTextChanged(string value) => RefreshFolders();
 
@@ -213,11 +219,10 @@ public partial class LibraryViewModel : ObservableObject
                 : filtered.OrderByDescending(s => s.Title)
         };
 
-        RootSheets.Clear();
-        foreach (var sheet in sorted)
-        {
-            RootSheets.Add(sheet);
-        }
+        RootSheets.SyncWith(sorted.ToList());
+
+        HasSheetResults = RootSheets.Count > 0;
+        HasNoSheetResults = _allRootSheets.Count > 0 && RootSheets.Count == 0;
     }
 
     [RelayCommand]
