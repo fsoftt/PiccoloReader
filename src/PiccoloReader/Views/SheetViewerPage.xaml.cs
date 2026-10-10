@@ -1473,7 +1473,10 @@ public partial class SheetViewerPage : ContentPage
         }
 
         await EnsureBravuraTypefaceLoadedAsync();
-        CropOverlay.Show(bytes, (double)height / width, _viewModel.GetPageCrop(_cropPageIndex), _annotationPainter, _viewModel.CurrentPageAnnotations);
+        CropOverlay.Show(bytes, (double)height / width, _viewModel.GetPageCrop(_cropPageIndex), _annotationPainter,
+            _viewModel.IsContinuousReading && _cropPageIndex < _viewModel.ContinuousPages.Count
+                ? _viewModel.ContinuousPages[_cropPageIndex].Annotations
+                : _viewModel.CurrentPageAnnotations);
     }
 
     private async void OnCropApplied(object? sender, PageCrop crop)
