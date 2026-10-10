@@ -218,4 +218,49 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="IconRest8th" xml:space="preserve"><value>Eighth rest</value></data>
   <data name="IconRest16th" xml:space="preserve"><value>Sixteenth rest</value></data>
   <data name="IconRest32nd" xml:space="preserve"><value>32nd rest</value></data>
+  <data name="SettingsBackupSection" xml:space="preserve"><value>Backup</value></data>
+  <data name="BackupAccountTitle" xml:space="preserve"><value>Google account</value></data>
+  <data name="BackupNotConnected" xml:space="preserve"><value>Not connected</value></data>
+  <data name="BackupAccountDescription" xml:space="preserve"><value>Your backup is stored in your own Google Drive</value></data>
+  <data name="BackupConnect" xml:space="preserve"><value>Connect</value></data>
+  <data name="BackupDisconnect" xml:space="preserve"><value>Disconnect</value></data>
+  <data name="BackupDisconnectTitle" xml:space="preserve"><value>Disconnect Google account?</value></data>
+  <data name="BackupDisconnectMessage" xml:space="preserve"><value>Automatic backups will stop. The backup already in your Drive is kept.</value></data>
+  <data name="BackupNowTitle" xml:space="preserve"><value>Back up now</value></data>
+  <data name="BackupNowDescription" xml:space="preserve"><value>Upload your sheets, annotations and settings to Google Drive</value></data>
+  <data name="RestoreTitle" xml:space="preserve"><value>Restore from Google Drive</value></data>
+  <data name="RestoreDescription" xml:space="preserve"><value>Replace this library with your latest backup</value></data>
+  <data name="RestoreConfirmTitle" xml:space="preserve"><value>Restore from Google Drive?</value></data>
+  <data name="RestoreConfirmMessage" xml:space="preserve"><value>This replaces your current library (sheets, folders, annotations, bookmarks and crops) with the backup. A safety copy of the current library is kept on this device.</value></data>
+  <data name="RestoreConfirmAction" xml:space="preserve"><value>Restore</value></data>
+  <data name="AutoBackupTitle" xml:space="preserve"><value>Automatic backup</value></data>
+  <data name="AutoBackupDescription" xml:space="preserve"><value>Once a day, on Wi-Fi or an unmetered connection</value></data>
+  <data name="AutoBackupNeedsSignIn" xml:space="preserve"><value>Connect your account again to resume automatic backups</value></data>
+  <data name="LastBackupFormat" xml:space="preserve"><value>Last backup: {0}</value></data>
+  <data name="LastBackupNever" xml:space="preserve"><value>No backup yet</value></data>
+  <data name="LastBackupFailedFormat" xml:space="preserve"><value>Last attempt failed: {0}</value></data>
+  <data name="BackupProgressPreparing" xml:space="preserve"><value>Preparing…</value></data>
+  <data name="BackupProgressUploadingFormat" xml:space="preserve"><value>Uploading sheets {0} of {1}…</value></data>
+  <data name="BackupProgressUploadingLibrary" xml:space="preserve"><value>Saving library data…</value></data>
+  <data name="BackupProgressCleaning" xml:space="preserve"><value>Cleaning up old files…</value></data>
+  <data name="BackupProgressDownloadingLibrary" xml:space="preserve"><value>Reading backup…</value></data>
+  <data name="BackupProgressDownloadingFormat" xml:space="preserve"><value>Downloading sheets {0} of {1}…</value></data>
+  <data name="BackupProgressSafetyCopy" xml:space="preserve"><value>Saving a safety copy…</value></data>
+  <data name="BackupProgressApplying" xml:space="preserve"><value>Restoring…</value></data>
+  <data name="BackupCompleteTitle" xml:space="preserve"><value>Backup complete</value></data>
+  <data name="BackupCompleteFormat" xml:space="preserve"><value>{0} sheets uploaded, {1} already up to date.</value></data>
+  <data name="BackupCompleteMissingFormat" xml:space="preserve"><value>{0} sheets could not be backed up because their file is missing: {1}.</value></data>
+  <data name="RestoreCompleteTitle" xml:space="preserve"><value>Restore complete</value></data>
+  <data name="RestoreCompleteFormat" xml:space="preserve"><value>{0} sheets restored.</value></data>
+  <data name="RestoreMissingFormat" xml:space="preserve"><value>{0} sheets were not found in your Drive (deleted or moved?) and were skipped: {1}.</value></data>
+  <data name="RestoreLanguageNote" xml:space="preserve"><value>Restart the app to apply the restored language.</value></data>
+  <data name="BackupFailedTitle" xml:space="preserve"><value>Backup problem</value></data>
+  <data name="BackupNotFoundMessage" xml:space="preserve"><value>No backup was found in this Google account.</value></data>
+  <data name="BackupBadFormatMessage" xml:space="preserve"><value>The backup could not be read. It may be damaged or made by a newer version of the app.</value></data>
+  <data name="BackupAuthRequiredMessage" xml:space="preserve"><value>Google sign-in is needed. Connect your account and try again.</value></data>
+  <data name="BackupUnavailableMessage" xml:space="preserve"><value>Google sign-in is not available on this device (it needs Google Play services) or is not set up in this build.</value></data>
+  <data name="BackupQuotaMessage" xml:space="preserve"><value>Your Google Drive is full. Free some space and try again.</value></data>
+  <data name="BackupGenericFailureFormat" xml:space="preserve"><value>Something went wrong: {0}</value></data>
+  <data name="BackupSignInCancelled" xml:space="preserve"><value>Sign-in was cancelled.</value></data>
+  <data name="BackupBusyMessage" xml:space="preserve"><value>Another backup or restore is already running.</value></data>
 </root>

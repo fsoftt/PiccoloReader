@@ -218,4 +218,49 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="IconRest8th" xml:space="preserve"><value>Silencio de corchea</value></data>
   <data name="IconRest16th" xml:space="preserve"><value>Silencio de semicorchea</value></data>
   <data name="IconRest32nd" xml:space="preserve"><value>Silencio de fusa</value></data>
+  <data name="SettingsBackupSection" xml:space="preserve"><value>Copia de seguridad</value></data>
+  <data name="BackupAccountTitle" xml:space="preserve"><value>Cuenta de Google</value></data>
+  <data name="BackupNotConnected" xml:space="preserve"><value>Sin conectar</value></data>
+  <data name="BackupAccountDescription" xml:space="preserve"><value>Tu copia se guarda en tu propio Google Drive</value></data>
+  <data name="BackupConnect" xml:space="preserve"><value>Conectar</value></data>
+  <data name="BackupDisconnect" xml:space="preserve"><value>Desconectar</value></data>
+  <data name="BackupDisconnectTitle" xml:space="preserve"><value>¿Desconectar la cuenta de Google?</value></data>
+  <data name="BackupDisconnectMessage" xml:space="preserve"><value>Las copias automáticas se detendrán. La copia que ya está en tu Drive se conserva.</value></data>
+  <data name="BackupNowTitle" xml:space="preserve"><value>Hacer copia ahora</value></data>
+  <data name="BackupNowDescription" xml:space="preserve"><value>Sube tus partituras, anotaciones y ajustes a Google Drive</value></data>
+  <data name="RestoreTitle" xml:space="preserve"><value>Restaurar desde Google Drive</value></data>
+  <data name="RestoreDescription" xml:space="preserve"><value>Reemplaza esta biblioteca con tu última copia</value></data>
+  <data name="RestoreConfirmTitle" xml:space="preserve"><value>¿Restaurar desde Google Drive?</value></data>
+  <data name="RestoreConfirmMessage" xml:space="preserve"><value>Esto reemplaza tu biblioteca actual (partituras, carpetas, anotaciones, marcadores y recortes) con la copia. Se guarda en este dispositivo una copia de seguridad de la biblioteca actual.</value></data>
+  <data name="RestoreConfirmAction" xml:space="preserve"><value>Restaurar</value></data>
+  <data name="AutoBackupTitle" xml:space="preserve"><value>Copia automática</value></data>
+  <data name="AutoBackupDescription" xml:space="preserve"><value>Una vez al día, con Wi-Fi o conexión sin límite de datos</value></data>
+  <data name="AutoBackupNeedsSignIn" xml:space="preserve"><value>Vuelve a conectar tu cuenta para reanudar las copias automáticas</value></data>
+  <data name="LastBackupFormat" xml:space="preserve"><value>Última copia: {0}</value></data>
+  <data name="LastBackupNever" xml:space="preserve"><value>Aún no hay copias</value></data>
+  <data name="LastBackupFailedFormat" xml:space="preserve"><value>El último intento falló: {0}</value></data>
+  <data name="BackupProgressPreparing" xml:space="preserve"><value>Preparando…</value></data>
+  <data name="BackupProgressUploadingFormat" xml:space="preserve"><value>Subiendo partituras {0} de {1}…</value></data>
+  <data name="BackupProgressUploadingLibrary" xml:space="preserve"><value>Guardando datos de la biblioteca…</value></data>
+  <data name="BackupProgressCleaning" xml:space="preserve"><value>Limpiando archivos antiguos…</value></data>
+  <data name="BackupProgressDownloadingLibrary" xml:space="preserve"><value>Leyendo la copia…</value></data>
+  <data name="BackupProgressDownloadingFormat" xml:space="preserve"><value>Descargando partituras {0} de {1}…</value></data>
+  <data name="BackupProgressSafetyCopy" xml:space="preserve"><value>Guardando copia de seguridad local…</value></data>
+  <data name="BackupProgressApplying" xml:space="preserve"><value>Restaurando…</value></data>
+  <data name="BackupCompleteTitle" xml:space="preserve"><value>Copia completada</value></data>
+  <data name="BackupCompleteFormat" xml:space="preserve"><value>{0} partituras subidas, {1} ya estaban al día.</value></data>
+  <data name="BackupCompleteMissingFormat" xml:space="preserve"><value>{0} partituras no se pudieron copiar porque falta su archivo: {1}.</value></data>
+  <data name="RestoreCompleteTitle" xml:space="preserve"><value>Restauración completada</value></data>
+  <data name="RestoreCompleteFormat" xml:space="preserve"><value>{0} partituras restauradas.</value></data>
+  <data name="RestoreMissingFormat" xml:space="preserve"><value>{0} partituras no se encontraron en tu Drive (¿borradas o movidas?) y se omitieron: {1}.</value></data>
+  <data name="RestoreLanguageNote" xml:space="preserve"><value>Reinicia la app para aplicar el idioma restaurado.</value></data>
+  <data name="BackupFailedTitle" xml:space="preserve"><value>Problema con la copia</value></data>
+  <data name="BackupNotFoundMessage" xml:space="preserve"><value>No se encontró ninguna copia en esta cuenta de Google.</value></data>
+  <data name="BackupBadFormatMessage" xml:space="preserve"><value>No se pudo leer la copia. Puede estar dañada o ser de una versión más nueva de la app.</value></data>
+  <data name="BackupAuthRequiredMessage" xml:space="preserve"><value>Hace falta iniciar sesión en Google. Conecta tu cuenta e inténtalo de nuevo.</value></data>
+  <data name="BackupUnavailableMessage" xml:space="preserve"><value>El inicio de sesión de Google no está disponible en este dispositivo (requiere Google Play Services) o no está configurado en esta versión.</value></data>
+  <data name="BackupQuotaMessage" xml:space="preserve"><value>Tu Google Drive está lleno. Libera espacio e inténtalo de nuevo.</value></data>
+  <data name="BackupGenericFailureFormat" xml:space="preserve"><value>Algo salió mal: {0}</value></data>
+  <data name="BackupSignInCancelled" xml:space="preserve"><value>Se canceló el inicio de sesión.</value></data>
+  <data name="BackupBusyMessage" xml:space="preserve"><value>Ya hay una copia o restauración en curso.</value></data>
 </root>
