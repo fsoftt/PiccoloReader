@@ -67,6 +67,8 @@ public sealed class AndroidExternalLibraryStore : IExternalLibraryStore, IExtern
 
     public Task<bool> DeleteAsync(string relativePath) => Backend.DeleteAsync(relativePath);
 
+    public Task<bool> DeleteEmptyDirectoryAsync(string relativeDirectory) => Backend.DeleteEmptyDirectoryAsync(relativeDirectory);
+
     public Task<string> MoveAsync(string fromPath, string toPath) => Backend.MoveAsync(fromPath, toPath);
 
     public Task<IReadOnlyList<string>> ListAsync() => Backend.ListAsync();

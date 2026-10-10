@@ -63,6 +63,23 @@ internal sealed class SafTreeLibraryStore : IExternalLibraryStore
         return id is not null && DocumentsContract.DeleteDocument(Resolver, DocumentUri(id));
     });
 
+    public Task<bool> DeleteEmptyDirectoryAsync(string relativeDirectory) => Task.Run(() =>
+    {
+        try
+        {
+            var id = relativeDirectory.Length == 0 ? null : Resolve(relativeDirectory);
+            return id is not null
+                && id != _rootDocumentId
+                && Children(id).Count == 0
+                && DocumentsContract.DeleteDocument(Resolver, DocumentUri(id));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Cannot remove empty directory {relativeDirectory}: {ex.Message}");
+            return false;
+        }
+    });
+
     // Callers fall back to write + delete (the local cache is the source).
     public Task<string> MoveAsync(string fromPath, string toPath) => throw new NotSupportedException();
 

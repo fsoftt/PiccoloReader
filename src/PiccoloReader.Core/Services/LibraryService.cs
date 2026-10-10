@@ -85,6 +85,7 @@ public class LibraryService
             .Where(f => f.Id == folderId)
             .FirstAsync();
         await _database.Connection.DeleteAsync(folder);
+        var folderName = folder.Name;
 
         if (_externalSync is not null)
         {
@@ -97,6 +98,7 @@ public class LibraryService
                 }
             }
 
+            await _externalSync.RemoveFolderDirectoryAsync(folderName);
             _externalSync.NotifyChanged();
         }
     }

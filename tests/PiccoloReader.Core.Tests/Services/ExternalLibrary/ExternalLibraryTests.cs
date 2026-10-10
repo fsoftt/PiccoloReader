@@ -29,18 +29,18 @@ internal sealed class AppInstall : IDisposable
 
     public LibraryRecovery Recovery { get; }
 
-    public AppInstall(IExternalLibraryStore store)
+    public AppInstall(IExternalLibraryStore store, IPdfPageRenderer? renderer = null)
     {
         Batteries_V2.Init();
         Database = new AppDatabase(Storage.DatabasePath);
         Database.InitializeAsync().GetAwaiter().GetResult();
-        Sync = new ExternalLibrarySync(Database, Storage, store, State, TimeSpan.Zero);
+        Sync = new ExternalLibrarySync(Database, Storage, store, State, TimeSpan.Zero, renderer);
         Library = new LibraryService(Database, Storage, Sync);
         Import = new PdfImportService(Database, Storage, Sync);
         Annotations = new AnnotationService(Database, Sync);
         Bookmarks = new BookmarkService(Database, Sync);
         Crops = new PageCropService(Database, Sync);
-        Recovery = new LibraryRecovery(Database, Storage);
+        Recovery = new LibraryRecovery(Database, Storage, renderer);
     }
 
     public async Task<Sheet> ImportPdfAsync(string title, string content, int? folderId = null)
@@ -194,6 +194,138 @@ public class ExternalLibraryTests
         Assert.False(_store.Files.ContainsKey("Rock/Song.pdf"));
     }
 
+
+    [Fact]
+    public async Task DeleteSheet_LastOneInFolder_RemovesTheEmptyDirectory()
+    {
+        using var app = new AppInstall(_store);
+        var folder = await app.Library.CreateFolderAsync("Etudes");
+        var a = await app.ImportPdfAsync("A", "a", folder.Id);
+        var b = await app.ImportPdfAsync("B", "b", folder.Id);
+
+        await app.Library.DeleteSheetAsync(a);
+        Assert.Contains("Etudes", _store.Directories);
+
+        await app.Library.DeleteSheetAsync(b);
+        Assert.DoesNotContain("Etudes", _store.Directories);
+    }
+
+    [Fact]
+    public async Task DeleteFolder_KeepingSheets_RemovesTheEmptyDirectory()
+    {
+        using var app = new AppInstall(_store);
+        var folder = await app.Library.CreateFolderAsync("Etudes");
+        await app.ImportPdfAsync("Song", "s", folder.Id);
+
+        await app.Library.DeleteFolderAsync(folder.Id, deleteSheets: false);
+
+        Assert.DoesNotContain("Etudes", _store.Directories);
+        Assert.True(_store.Files.ContainsKey("Song.pdf"));
+    }
+
+    [Fact]
+    public async Task DeleteFolder_WithSheets_RemovesTheEmptyDirectory()
+    {
+        using var app = new AppInstall(_store);
+        var folder = await app.Library.CreateFolderAsync("Etudes");
+        await app.ImportPdfAsync("Song", "s", folder.Id);
+
+        await app.Library.DeleteFolderAsync(folder.Id, deleteSheets: true);
+
+        Assert.DoesNotContain("Etudes", _store.Directories);
+    }
+
+    [Fact]
+    public async Task DeleteFolder_LeftoverEmptyDirectory_IsRemoved()
+    {
+        using var app = new AppInstall(_store);
+        var folder = await app.Library.CreateFolderAsync("Etudes");
+        _store.Directories.Add("Etudes");
+
+        await app.Library.DeleteFolderAsync(folder.Id, deleteSheets: false);
+
+        Assert.DoesNotContain("Etudes", _store.Directories);
+    }
+
+    [Fact]
+    public async Task DeleteSheet_DirectoryWithForeignFiles_IsKept()
+    {
+        using var app = new AppInstall(_store);
+        var folder = await app.Library.CreateFolderAsync("Etudes");
+        var sheet = await app.ImportPdfAsync("Song", "s", folder.Id);
+        _store.Files["Etudes/notes.txt"] = new byte[] { 1 };
+
+        await app.Library.DeleteSheetAsync(sheet);
+        await app.Library.DeleteFolderAsync(folder.Id, deleteSheets: true);
+
+        Assert.Contains("Etudes", _store.Directories);
+        Assert.True(_store.Files.ContainsKey("Etudes/notes.txt"));
+    }
+
+    [Fact]
+    public async Task MoveSheet_OutOfFolder_RemovesTheEmptiedDirectory()
+    {
+        using var app = new AppInstall(_store);
+        var folder = await app.Library.CreateFolderAsync("Etudes");
+        var sheet = await app.ImportPdfAsync("Song", "s", folder.Id);
+
+        await app.Library.MoveSheetAsync(sheet, null);
+
+        Assert.DoesNotContain("Etudes", _store.Directories);
+        Assert.True(_store.Files.ContainsKey("Song.pdf"));
+    }
+
+    [Fact]
+    public async Task Migration_FillsMissingPageCounts_AndSnapshotHasThem()
+    {
+        _store.AccessGranted = false;
+        var renderer = new FakePdfPageRenderer { Pages = 5 };
+        using var app = new AppInstall(_store, renderer);
+        await app.ImportPdfAsync("Never opened", "x");
+        _store.AccessGranted = true;
+        Assert.Equal(1, await app.Sync.CountUnknownPageCountAsync());
+
+        await app.Sync.SyncAllAsync();
+
+        Assert.Equal(0, await app.Sync.CountUnknownPageCountAsync());
+        Assert.Equal(5, (await app.Library.GetSheetsAsync(null)).Single().PageCount);
+        Assert.Equal(5, (await app.Sync.BuildSnapshotAsync()).Sheets.Single().PageCount);
+    }
+
+    [Fact]
+    public async Task Import_SetsPageCount_AndRendererFailureLeavesItUnknown()
+    {
+        using var app = new AppInstall(_store, new FakePdfPageRenderer { Pages = 2 });
+        Assert.Equal(2, (await app.ImportPdfAsync("Good", "g")).PageCount);
+
+        using var broken = new AppInstall(new FakeExternalLibraryStore(), new FakePdfPageRenderer { Throws = true });
+        var sheet = await broken.ImportPdfAsync("Bad", "b");
+        Assert.Equal(0, sheet.PageCount);
+        Assert.NotNull(sheet.ExternalPath);
+    }
+
+    [Fact]
+    public async Task Recovery_ComputesPageCountWhenSnapshotHasNone()
+    {
+        using (var old = new AppInstall(_store))
+        {
+            var folder = await old.Library.CreateFolderAsync("Jazz");
+            await old.ImportPdfAsync("Song", "s", folder.Id);
+            await old.Sync.WaitForPendingAsync();
+        }
+
+        // A stray PDF has no snapshot entry at all.
+        _store.Files["Stray.pdf"] = new byte[] { 9 };
+
+        using var fresh = new AppInstall(_store, new FakePdfPageRenderer { Pages = 7 });
+        await fresh.Recovery.RecoverAsync(_store);
+
+        var root = await fresh.Library.GetSheetsAsync(null);
+        var folders = await fresh.Library.GetFoldersAsync();
+        var inFolder = await fresh.Library.GetSheetsAsync(folders.Single().Id);
+        Assert.Equal(2, root.Count + inFolder.Count);
+        Assert.All(root.Concat(inFolder), s => Assert.Equal(7, s.PageCount));
+    }
     [Fact]
     public async Task Changes_AreDebouncedIntoOneSnapshotWrite()
     {
