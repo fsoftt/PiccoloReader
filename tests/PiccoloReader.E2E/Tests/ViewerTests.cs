@@ -116,7 +116,7 @@ public class ViewerTests : E2ETestBase
         AppSession.Relaunch();
         LibraryScreen.OpenSheet(SheetTitle);
 
-        Assert.That(ViewerScreen.IsContinuous, Is.True, "the saved reading mode is restored on the next launch");
+        Ui.Poll(() => ViewerScreen.IsContinuous, 15, "the saved reading mode (continuous list) to be restored on the next launch");
     }
 
     [Test]
