@@ -45,7 +45,7 @@
   <data name="Move" xml:space="preserve"><value>Move</value></data>
   <data name="Delete" xml:space="preserve"><value>Delete</value></data>
   <data name="DeleteSheetTitle" xml:space="preserve"><value>Delete sheet</value></data>
-  <data name="DeleteSheetMessageFormat" xml:space="preserve"><value>Delete "{0}"? This cannot be undone.</value></data>
+  <data name="DeleteSheetMessageFormat" xml:space="preserve"><value>Delete "{0}"? The PDF will also be deleted from Documents/PiccoloReader. This cannot be undone.</value></data>
   <data name="RootOption" xml:space="preserve"><value>Root</value></data>
   <data name="MoveToTitle" xml:space="preserve"><value>Move to…</value></data>
   <data name="NoFoldersToMoveMessage" xml:space="preserve"><value>Create a folder first to move sheets into.</value></data>
@@ -218,4 +218,23 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="IconRest8th" xml:space="preserve"><value>Eighth rest</value></data>
   <data name="IconRest16th" xml:space="preserve"><value>Sixteenth rest</value></data>
   <data name="IconRest32nd" xml:space="preserve"><value>32nd rest</value></data>
+  <data name="SettingsStorageSection" xml:space="preserve"><value>Storage</value></data>
+  <data name="StorageLocationLabel" xml:space="preserve"><value>Library location</value></data>
+  <data name="StorageLocationValue" xml:space="preserve"><value>Documents/PiccoloReader</value></data>
+  <data name="StorageLastSyncFormat" xml:space="preserve"><value>Last saved: {0}</value></data>
+  <data name="StorageNeverSynced" xml:space="preserve"><value>Not saved yet</value></data>
+  <data name="StoragePendingFormat" xml:space="preserve"><value>Waiting to be saved: {0}</value></data>
+  <data name="RecoverLibraryLabel" xml:space="preserve"><value>Recover library from folder</value></data>
+  <data name="RecoverLibraryDescription" xml:space="preserve"><value>Restore sheets, folders and annotations after reinstalling</value></data>
+  <data name="RecoverLibraryButton" xml:space="preserve"><value>Recover library</value></data>
+  <data name="RecoverLibraryIntroTitle" xml:space="preserve"><value>Recover library</value></data>
+  <data name="RecoverLibraryIntroMessage" xml:space="preserve"><value>Choose the PiccoloReader folder inside Documents. Your sheets, folders, annotations, bookmarks and crops will be restored.</value></data>
+  <data name="RecoverChooseFolder" xml:space="preserve"><value>Choose folder</value></data>
+  <data name="RecoverNothingFound" xml:space="preserve"><value>No library was found in that folder.</value></data>
+  <data name="RecoverResultFormat" xml:space="preserve"><value>Restored {0} sheets, {1} annotations and {2} bookmarks.</value></data>
+  <data name="RecoverMissingFormat" xml:space="preserve"><value>{0} PDF files were missing and were skipped.</value></data>
+  <data name="RecoverFailedMessage" xml:space="preserve"><value>The library could not be recovered. Please try again.</value></data>
+  <data name="StorageSyncProgressFormat" xml:space="preserve"><value>Saving your library to Documents/PiccoloReader… {0}/{1}</value></data>
+  <data name="StorageSyncDone" xml:space="preserve"><value>Library saved to Documents/PiccoloReader</value></data>
+  <data name="StorageSyncPending" xml:space="preserve"><value>Some sheets could not be saved yet. We will retry later.</value></data>
 </root>

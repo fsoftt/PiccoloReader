@@ -2,7 +2,7 @@
 
 # Política de Privacidad
 
-**Última actualización:** enero de 2026
+**Última actualización:** octubre de 2026
 
 **Fecha de entrada en vigor:** enero de 2026
 
@@ -22,6 +22,7 @@ Lee esta Política de Privacidad con atención. Si no estás de acuerdo con nues
 - Tus partituras en PDF, la estructura de carpetas y tus anotaciones se almacenan **íntegramente en tu dispositivo**
 - NO recopilamos, almacenamos, transmitimos ni tenemos acceso a tus archivos PDF ni a tus anotaciones personales
 - Todos los datos permanecen bajo tu control en el almacenamiento local de tu dispositivo
+- Tus partituras y un archivo de biblioteca (`piccolo-library.json`: carpetas, anotaciones, marcadores y recortes de página) se guardan en la carpeta **Documentos/PiccoloReader** de tu dispositivo, para que puedas recuperarlos tras reinstalar la app. La app nunca los envía fuera de tu dispositivo
 
 **Información de cuenta:**
 - Piccolo Music Reader NO requiere cuentas de usuario, registro ni inicio de sesión
@@ -105,10 +106,11 @@ Usamos la información recopilada para:
 
 ### 3.1 Seguridad del almacenamiento local
 
-- Tus archivos PDF se almacenan en el entorno aislado (sandbox) de la app en tu dispositivo (directorio privado)
-- Solo Piccolo Music Reader puede acceder a estos datos; otras apps no pueden ver tus archivos
+- Tus archivos PDF se almacenan en la carpeta **Documentos/PiccoloReader** del almacenamiento compartido de tu dispositivo, y la app mantiene una copia de trabajo en su directorio privado
+- Otras apps a las que permitas acceder a los archivos de tu dispositivo (por ejemplo un administrador de archivos) pueden ver la carpeta Documentos/PiccoloReader
 - La seguridad integrada de tu dispositivo (bloqueo de pantalla, cifrado) protege estos datos
-- Si desinstalas la app, se eliminan todos los datos locales
+- Si desinstalas la app, se elimina su copia privada, pero la carpeta Documentos/PiccoloReader permanece en tu dispositivo para que puedas recuperar tu biblioteca con "Recuperar biblioteca desde carpeta" en la app
+- En Android 6-9 la app solicita el permiso de almacenamiento para escribir en esta carpeta; en Android 10 y posteriores no necesita permiso para escribir y solo usa el selector de carpetas del sistema cuando recuperas tu biblioteca
 
 ### 3.2 Sin almacenamiento en la nube
 
@@ -164,8 +166,8 @@ Piccolo Music Reader utiliza bibliotecas de código abierto (SkiaSharp, SQLite, 
 
 - **Tus datos:** Todas tus partituras se almacenan localmente en TU dispositivo
 - **Descarga:** Los PDFs que importaste permanecen en el almacenamiento de tu dispositivo
-- **Eliminación:** Desinstalar Piccolo Music Reader elimina de forma permanente todos los datos locales
-- **Exportación:** Puedes copiar manualmente tus PDFs desde la app a otra ubicación
+- **Eliminación:** Eliminar una partitura en la app también elimina su PDF de Documentos/PiccoloReader. Desinstalar la app elimina sus datos privados pero no la carpeta Documentos/PiccoloReader, que puedes borrar tú mismo en cualquier momento
+- **Exportación:** Tus PDFs son archivos normales en Documentos/PiccoloReader; puedes copiarlos a cualquier lugar
 
 ### 5.2 Preferencias de publicidad
 
@@ -216,7 +218,7 @@ Si nos enteramos de que hemos recopilado datos de un menor de 13 años, los elim
 
 ## 7. Conservación de datos
 
-- **Datos locales:** Se almacenan indefinidamente hasta que los elimines manualmente o desinstales la app
+- **Datos locales:** Se almacenan indefinidamente hasta que los elimines manualmente (incluida la carpeta Documentos/PiccoloReader)
 - **Datos de entrega de anuncios:** Los conserva Google según https://policies.google.com/privacy
 - **Informes de fallos:** Se conservan 30 días para depuración
 - **Registros de uso de la app:** Se conservan 90 días y luego se eliminan automáticamente
