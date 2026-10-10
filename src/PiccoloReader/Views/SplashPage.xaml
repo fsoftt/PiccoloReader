@@ -12,7 +12,6 @@
         <skia:SKLottieView
             x:Name="LottieView"
             Grid.Row="1"
-            Source="musical-notes.json"
             RepeatCount="0"
             AnimationCompleted="OnAnimationCompleted"
             HorizontalOptions="Center"
