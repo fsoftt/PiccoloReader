@@ -21,10 +21,21 @@ public partial class ContinuousPage : ObservableObject
     [ObservableProperty]
     private byte[]? _imageBytes;
 
-    // Height divided by width. Starts as an estimate (the screen's own
-    // ratio) and is corrected from the rendered image once it arrives.
+    // Height divided by width of what is SHOWN (the cropped part, when the
+    // page has a crop). Starts as an estimate (the screen's own ratio) and is
+    // corrected from the rendered image once it arrives.
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FullAspectRatio))]
     private double _aspectRatio;
+
+    // The visible part of the page, normalized to the full page. Annotations
+    // stay normalized to the full page and are mapped through it.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FullAspectRatio))]
+    private PageCrop _crop = PageCrop.Full;
+
+    // Height divided by width of the whole page.
+    public double FullAspectRatio => Crop.FullAspectRatio(AspectRatio);
 
     [ObservableProperty]
     private IReadOnlyList<Annotation> _annotations = Array.Empty<Annotation>();
