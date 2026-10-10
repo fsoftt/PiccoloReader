@@ -32,8 +32,8 @@
 		<ApplicationId>com.fsoftt.piccoloreader</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>1.1.0</ApplicationDisplayVersion>
-		<ApplicationVersion>2</ApplicationVersion>
+		<ApplicationDisplayVersion>1.2.0</ApplicationDisplayVersion>
+		<ApplicationVersion>3</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<!-- 24 (Android 7.0): Play's automatic app protection rejects bundles
