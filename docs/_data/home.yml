@@ -1,0 +1,97 @@
+# Home page hero and "movements" copy, per language. Body text stays in index.md / es/index.md.
+en:
+  description: Piccolo Reader is a sheet-music PDF reader for musicians. Your sheets and annotations are stored locally on your device.
+  hero:
+    eyebrow: Sheet music reader for musicians
+    pitch: Your sheet music, always at hand.
+    lede: Import your PDFs into the Library and start reading. Organize them in folders, mark them up with a pencil and music symbols, and bookmark the pages you come back to most.
+    facts:
+      - Stored locally on your device
+      - No account required
+      - Open source
+    github: View on GitHub
+    docs: Privacy & legal
+    mock_label: "Illustration: a sheet of music open in Piccolo Reader, with a pencil mark around a bar, a bookmark ribbon and two music-symbol annotations."
+  movements_intro:
+    eyebrow: The app, in six movements
+    title: Everything a music stand needs, and nothing it doesn't
+    label: Movement
+  movements:
+    - numeral: I
+      glyph: "&#xE050;"
+      at: 3
+      title: Your library
+      text: Create folders, move sheets between them, sort by name or date added, and use the search bar to find anything fast.
+    - numeral: II
+      glyph: "&#xE040;"
+      at: 4
+      title: Reading
+      text: Tap the edges or swipe to turn pages, pinch to zoom, and tap the page indicator to jump to a page. Read left to right, top to bottom page by page, or with continuous scrolling.
+    - numeral: III
+      glyph: "&#xE522;"
+      at: 3
+      title: Annotations
+      text: Add music symbols, draw with the pencil or erase with the eraser. Made a mistake? Undo and redo any change.
+    - numeral: IV
+      glyph: "&#xE047;"
+      at: 3.5
+      title: Bookmarks
+      text: Bookmark the pages you come back to most and jump straight to them whenever you need.
+    - numeral: V
+      glyph: "&#xE4C0;"
+      at: -0.6
+      title: Private by design
+      text: All your sheets are stored locally on your device. No cloud sync and no account required. Your PDFs never leave your phone.
+    - numeral: VI
+      glyph: "&#xE048;"
+      at: 3.8
+      title: Open source
+      text: Piccolo Reader is open source on GitHub. Read the code, report a bug or suggest a feature.
+es:
+  description: Piccolo Reader es un lector de partituras en PDF para músicos. Tus partituras y anotaciones se almacenan localmente en tu dispositivo.
+  hero:
+    eyebrow: Lector de partituras para músicos
+    pitch: Tus partituras, siempre a mano.
+    lede: Importa tus PDF a la Biblioteca y empieza a leer. Organízalos en carpetas, anótalos con el lápiz y con símbolos musicales, y marca las páginas a las que más vuelves.
+    facts:
+      - Almacenamiento local en tu dispositivo
+      - Sin cuenta obligatoria
+      - Código abierto
+    github: Ver en GitHub
+    docs: Privacidad y aspectos legales
+    mock_label: "Ilustración: una partitura abierta en Piccolo Reader, con un trazo de lápiz alrededor de un compás, una cinta de marcador y dos anotaciones con símbolos musicales."
+  movements_intro:
+    eyebrow: La app, en seis movimientos
+    title: Todo lo que necesita un atril, y nada que le sobre
+    label: Movimiento
+  movements:
+    - numeral: I
+      glyph: "&#xE050;"
+      at: 3
+      title: Tu biblioteca
+      text: Crea carpetas, mueve partituras entre ellas, ordénalas por nombre o fecha de incorporación y usa la búsqueda para encontrar todo rápido.
+    - numeral: II
+      glyph: "&#xE040;"
+      at: 4
+      title: Lectura
+      text: Toca los bordes o desliza para pasar de página, pellizca para hacer zoom y toca el indicador de página para saltar a una página. Lee de izquierda a derecha, de arriba a abajo página por página o con desplazamiento continuo.
+    - numeral: III
+      glyph: "&#xE522;"
+      at: 3
+      title: Anotaciones
+      text: Añade símbolos musicales, dibuja con el lápiz o borra con la goma. ¿Te equivocaste? Deshaz y rehaz cualquier cambio.
+    - numeral: IV
+      glyph: "&#xE047;"
+      at: 3.5
+      title: Marcadores
+      text: Marca las páginas a las que más vuelves y salta directamente a ellas cuando quieras.
+    - numeral: V
+      glyph: "&#xE4C0;"
+      at: -0.6
+      title: Privado por diseño
+      text: Todas tus partituras se almacenan localmente en tu dispositivo. Sin sincronización en la nube y sin cuenta obligatoria. Tus PDFs nunca salen de tu teléfono.
+    - numeral: VI
+      glyph: "&#xE048;"
+      at: 3.8
+      title: Código abierto
+      text: Piccolo Reader es de código abierto en GitHub. Lee el código, reporta un error o sugiere una función.

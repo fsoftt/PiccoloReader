@@ -1,0 +1,72 @@
+---
+layout: default
+---
+{%- assign lang = page.lang | default: "en" -%}
+{%- assign t = site.data.i18n[lang] -%}
+{%- assign home = site.data.home[lang] -%}
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero__staff" aria-hidden="true"></div>
+  <div class="hero__inner">
+    <div class="hero__copy">
+      <p class="eyebrow">{{ home.hero.eyebrow }}</p>
+      <h1 id="hero-title" class="hero__title">
+        <span class="wordmark">Piccolo</span>
+        <span class="hero__reader">Reader</span>
+      </h1>
+      <p class="hero__pitch">{{ home.hero.pitch }}</p>
+      <p class="hero__lede">{{ home.hero.lede }}</p>
+      <ul class="hero__facts">
+        {%- for fact in home.hero.facts %}
+        <li>{{ fact }}</li>
+        {%- endfor %}
+      </ul>
+      <p class="hero__actions">
+        <a class="button button--primary" href="https://github.com/fsoftt/PiccoloReader">{{ home.hero.github }}</a>
+        <a class="button button--ghost" href="#docs">{{ home.hero.docs }}</a>
+      </p>
+    </div>
+    <figure class="mock" role="img" aria-label="{{ home.hero.mock_label }}">
+      <div class="mock__device">
+        {% include sheet-mock.svg.html %}
+      </div>
+      <div class="mock__tools" aria-hidden="true">
+        <span class="mock__tool mock__tool--glyph">&#xE522;</span>
+        <span class="mock__tool mock__tool--active">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 20l1.2-4.6L16.4 4.2l3.4 3.4L8.6 18.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </span>
+        <span class="mock__tool">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M7 20h11M4.5 15.5l9-9 5 5-6.5 6.5H8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </span>
+        <span class="mock__sep"></span>
+        <span class="mock__tool">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<section class="movements" aria-labelledby="movements-title">
+  <div class="section-head">
+    <p class="eyebrow">{{ home.movements_intro.eyebrow }}</p>
+    <h2 id="movements-title">{{ home.movements_intro.title }}</h2>
+  </div>
+  <ol class="movements__list">
+    {%- for m in home.movements %}
+    <li class="movement" style="--at: {{ m.at | default: 3 }}">
+      <span class="movement__glyph" aria-hidden="true">{{ m.glyph }}</span>
+      <p class="movement__num"><span class="visually-hidden">{{ home.movements_intro.label }} </span>{{ m.numeral }}</p>
+      <h3 class="movement__title">{{ m.title }}</h3>
+      <p class="movement__text">{{ m.text }}</p>
+    </li>
+    {%- endfor %}
+  </ol>
+</section>
+
+<div class="staff-rule" aria-hidden="true"><span>&#xE062;</span></div>
+
+<article class="sheet sheet--home" id="docs">
+  <div class="prose">
+    {{ content }}
+  </div>
+</article>

@@ -1,0 +1,26 @@
+en:
+  skip: Skip to content
+  nav_label: Main
+  home: Home
+  privacy: Privacy
+  terms: Terms
+  github: GitHub
+  language: Language
+  tagline: Your sheet music, always at hand.
+  footer_note: Open source on GitHub.
+  privacy_policy: Privacy Policy
+  terms_of_service: Terms of Service
+  source: Source code
+es:
+  skip: Saltar al contenido
+  nav_label: Principal
+  home: Inicio
+  privacy: Privacidad
+  terms: Términos
+  github: GitHub
+  language: Idioma
+  tagline: Tus partituras, siempre a mano.
+  footer_note: Código abierto en GitHub.
+  privacy_policy: Política de Privacidad
+  terms_of_service: Términos de Servicio
+  source: Código fuente

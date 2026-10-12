@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+{%- assign lang = page.lang | default: site.lang | default: "en" -%}
+{%- assign t = site.data.i18n[lang] -%}
+{%- if lang == "es" -%}
+  {%- assign root = "/es/" -%}
+  {%- assign alt_lang = "en" -%}
+  {%- assign alt_url = page.url | remove_first: "/es" -%}
+{%- else -%}
+  {%- assign root = "/" -%}
+  {%- assign alt_lang = "es" -%}
+  {%- assign alt_url = page.url | prepend: "/es" -%}
+{%- endif -%}
+{%- assign alt_page = site.pages | where: "url", alt_url | first -%}
+{%- if alt_page -%}
+  {%- assign alt_href = alt_url -%}
+{%- elsif alt_lang == "es" -%}
+  {%- assign alt_href = "/es/" -%}
+{%- else -%}
+  {%- assign alt_href = "/" -%}
+{%- endif -%}
+{%- assign privacy_url = root | append: "privacy-policy.html" -%}
+{%- assign terms_url = root | append: "terms-of-service.html" -%}
+{%- if page.url == root -%}
+  {%- assign full_title = site.title | append: " · " | append: t.tagline -%}
+{%- elsif page.title -%}
+  {%- assign full_title = page.title | append: " · " | append: site.title -%}
+{%- else -%}
+  {%- assign full_title = site.title -%}
+{%- endif -%}
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ full_title | escape }}</title>
+  <meta name="description" content="{{ page.description | default: site.data.home[lang].description | default: site.description | escape }}">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F6F6FA" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0E16" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="{{ '/assets/favicon.svg' | relative_url }}" type="image/svg+xml">
+  <link rel="alternate" hreflang="{{ lang }}" href="{{ page.url | absolute_url }}">
+  {%- if alt_page %}
+  <link rel="alternate" hreflang="{{ alt_lang }}" href="{{ alt_url | absolute_url }}">
+  {%- endif %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap&text=Piccolo">
+  <link rel="preload" href="{{ '/assets/fonts/piccolo-music-glyphs.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}">
+</head>
+<body class="{% if page.layout == "home" %}is-home{% else %}is-doc{% endif %}">
+  <a class="skip" href="#main">{{ t.skip }}</a>
+
+  <header class="masthead">
+    <div class="masthead__inner">
+      <a class="brand" href="{{ root | relative_url }}" aria-label="Piccolo Reader, {{ t.home }}">
+        <span class="brand__clef" aria-hidden="true">&#xE050;</span>
+        <span class="wordmark">Piccolo</span>
+        <span class="brand__reader">Reader</span>
+      </a>
+
+      <nav class="nav" aria-label="{{ t.nav_label }}">
+        <ul class="nav__links">
+          <li><a href="{{ root | relative_url }}"{% if page.url == root %} aria-current="page"{% endif %}>{{ t.home }}</a></li>
+          <li><a href="{{ privacy_url | relative_url }}"{% if page.url == privacy_url %} aria-current="page"{% endif %}>{{ t.privacy }}</a></li>
+          <li><a href="{{ terms_url | relative_url }}"{% if page.url == terms_url %} aria-current="page"{% endif %}>{{ t.terms }}</a></li>
+          <li><a href="https://github.com/fsoftt/PiccoloReader">{{ t.github }}</a></li>
+        </ul>
+      </nav>
+
+      <div class="lang" role="group" aria-label="{{ t.language }}">
+        {%- if lang == "en" %}
+        <span class="lang__opt" aria-current="true" lang="en" title="English">EN</span>
+        <a class="lang__opt" href="{{ alt_href | relative_url }}" hreflang="es" lang="es" title="Español">ES</a>
+        {%- else %}
+        <a class="lang__opt" href="{{ alt_href | relative_url }}" hreflang="en" lang="en" title="English">EN</a>
+        <span class="lang__opt" aria-current="true" lang="es" title="Español">ES</span>
+        {%- endif %}
+      </div>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    {%- if page.layout == "home" %}
+    {{ content }}
+    {%- else %}
+    <article class="sheet">
+      <div class="prose">
+        {{ content }}
+      </div>
+    </article>
+    {%- endif %}
+  </main>
+
+  <footer class="colophon">
+    <div class="colophon__staff" aria-hidden="true"><span>&#xE050;</span><span>&#xE032;</span></div>
+    <div class="colophon__inner">
+      <p class="colophon__brand"><span class="wordmark">Piccolo</span> <span class="brand__reader">Reader</span></p>
+      <p class="colophon__tagline">{{ t.tagline }}</p>
+      <ul class="colophon__links">
+        <li><a href="{{ privacy_url | relative_url }}">{{ t.privacy_policy }}</a></li>
+        <li><a href="{{ terms_url | relative_url }}">{{ t.terms_of_service }}</a></li>
+        <li><a href="https://github.com/fsoftt/PiccoloReader">{{ t.source }}</a></li>
+      </ul>
+      <p class="colophon__small">© 2026 fsoftt · {{ t.footer_note }}</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,6 +1,4 @@
-[Leer en español](https://fsoftt.github.io/PiccoloReader/es/)
-
-# Piccolo Reader — Documentation & Legal
+## Documentation & Legal
 
 Welcome to the Piccolo Music Reader documentation site. Here you'll find legal policies, terms, and information about how Piccolo handles your data.
 
@@ -8,24 +6,27 @@ Welcome to the Piccolo Music Reader documentation site. Here you'll find legal p
 
 ## Quick Links
 
-### 📋 Legal & Compliance
+### Legal & Compliance
 
 - **[Privacy Policy](privacy-policy.md)** — How Piccolo Music Reader collects, uses, and protects your information
 - **[Terms of Service](terms-of-service.md)** — Licensing, usage restrictions, and liability disclaimers
+{: .link-cards}
 
-### 🔒 What You Need to Know
+### What You Need to Know
 
 **Piccolo Music Reader is private by design:**
-- ✅ All your sheets stored **locally on your device**
-- ✅ No cloud sync, no account required, no personal data collection
-- ✅ Your PDFs never leave your phone
-- ✅ Open source on GitHub
+- All your sheets stored **locally on your device**
+- No cloud sync, no account required, no personal data collection
+- Your PDFs never leave your phone
+- Open source on GitHub
+{: .checks}
 
 **Compliant with:**
-- ✅ GDPR (European users)
-- ✅ CCPA (California users)
-- ✅ Play Store policies
-- ✅ App Store policies
+- GDPR (European users)
+- CCPA (California users)
+- Play Store policies
+- App Store policies
+{: .checks}
 
 ---
 
@@ -50,19 +51,21 @@ Welcome to the Piccolo Music Reader documentation site. Here you'll find legal p
 
 ### How to Use Piccolo Music Reader Legally
 
-**✅ Legal Uses:**
+**Legal Uses:**
 - Store music sheets you own or have permission to use
 - Personal practice and learning
 - Annotate PDFs for your own reference
 - Share sheets with people you've authorized
+{: .checks}
 
-**❌ Legal Issues to Avoid:**
+**Legal Issues to Avoid:**
 - Importing copyrighted sheet music without rights
 - Copying protected PDFs (DMCA concerns)
 - Violating music licensing agreements
 - Using others' sheet collections without permission
+{: .crosses}
 
-**📝 Responsibility:**
+**Responsibility:**
 - You're responsible for imported content
 - Ensure you have rights to any sheet music you add
 - fsoftt is not liable for copyright infringement by users
@@ -89,7 +92,7 @@ The **Donate page** includes ads powered by Google AdMob.
 
 ## Privacy by Region
 
-### 🇪🇺 GDPR (European Users)
+### GDPR (European Users)
 
 Piccolo Music Reader complies with GDPR:
 - No mandatory user data collection
@@ -103,7 +106,7 @@ Piccolo Music Reader complies with GDPR:
 - Portability: Export your PDFs from the app
 - Withdraw Consent: Disable ads anytime
 
-### 🇺🇸 CCPA (California Users)
+### CCPA (California Users)
 
 Piccolo Music Reader complies with CCPA:
 - We don't "sell" personal information
@@ -116,7 +119,7 @@ Piccolo Music Reader complies with CCPA:
 - Deletion: Uninstall to delete all data
 - No discrimination for exercising rights
 
-### 🇦🇺 Australian Privacy Act
+### Australian Privacy Act
 
 Piccolo Music Reader complies with Australian Privacy Principles:
 - Minimal data collection
@@ -195,7 +198,7 @@ Piccolo Music Reader complies with Australian Privacy Principles:
 
 ### Privacy Questions
 
-📧 **Email:** fsilva@duck.com
+**Email:** fsilva@duck.com
 
 **Include:**
 - Your question or concern
@@ -206,7 +209,7 @@ Piccolo Music Reader complies with Australian Privacy Principles:
 
 ### Legal Issues or Disputes
 
-📧 **Email:** fsilva@duck.com
+**Email:** fsilva@duck.com
 
 **Include:**
 - Your name
@@ -217,7 +220,7 @@ Piccolo Music Reader complies with Australian Privacy Principles:
 
 ### Bug Reports & Feature Requests
 
-🐛 **GitHub Issues:** https://github.com/fsoftt/PiccoloReader/issues
+**GitHub Issues:** https://github.com/fsoftt/PiccoloReader/issues
 
 ---
 
@@ -235,13 +238,14 @@ Each third-party library is licensed under its own license. We comply with all o
 
 ## Compliance Summary
 
-✅ **GDPR Compliant** — EU data protection regulations  
-✅ **CCPA Compliant** — California consumer privacy rights  
-✅ **COPPA Compliant** — Children's online privacy  
-✅ **Play Store Compliant** — Google Play policies  
-✅ **App Store Compliant** — Apple App Store policies  
-✅ **No Dark Patterns** — Clear opt-outs and user control  
-✅ **Transparent** — Full disclosure in privacy policy  
+- **GDPR Compliant** — EU data protection regulations
+- **CCPA Compliant** — California consumer privacy rights
+- **COPPA Compliant** — Children's online privacy
+- **Play Store Compliant** — Google Play policies
+- **App Store Compliant** — Apple App Store policies
+- **No Dark Patterns** — Clear opt-outs and user control
+- **Transparent** — Full disclosure in privacy policy
+{: .checks}
 
 ---
 
@@ -293,7 +297,7 @@ For version history and changelog, see:
 
 ## Questions?
 
-📧 For any questions not answered here:
+For any questions not answered here:
 
 - **Privacy:** fsilva@duck.com
 - **Legal:** fsilva@duck.com
