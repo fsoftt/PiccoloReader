@@ -1,6 +1,4 @@
-[Read in English](https://fsoftt.github.io/PiccoloReader/)
-
-# Piccolo Reader — Documentación y aspectos legales
+## Documentación y aspectos legales
 
 Te damos la bienvenida al sitio de documentación de Piccolo Music Reader. Aquí encontrarás las políticas legales, los términos e información sobre cómo Piccolo maneja tus datos.
 
@@ -8,24 +6,27 @@ Te damos la bienvenida al sitio de documentación de Piccolo Music Reader. Aquí
 
 ## Enlaces rápidos
 
-### 📋 Aspectos legales y cumplimiento
+### Aspectos legales y cumplimiento
 
 - **[Política de Privacidad](privacy-policy.md)** — Cómo Piccolo Music Reader recopila, usa y protege tu información
 - **[Términos de Servicio](terms-of-service.md)** — Licencias, restricciones de uso y descargos de responsabilidad
+{: .link-cards}
 
-### 🔒 Lo que debes saber
+### Lo que debes saber
 
 **Piccolo Music Reader es privado por diseño:**
-- ✅ Todas tus partituras se almacenan **localmente en tu dispositivo**
-- ✅ Sin sincronización en la nube, sin cuenta obligatoria, sin recopilación de datos personales
-- ✅ Tus PDFs nunca salen de tu teléfono
-- ✅ Código abierto en GitHub
+- Todas tus partituras se almacenan **localmente en tu dispositivo**
+- Sin sincronización en la nube, sin cuenta obligatoria, sin recopilación de datos personales
+- Tus PDFs nunca salen de tu teléfono
+- Código abierto en GitHub
+{: .checks}
 
 **Cumple con:**
-- ✅ RGPD (usuarios europeos)
-- ✅ CCPA (usuarios de California)
-- ✅ Políticas de Play Store
-- ✅ Políticas de App Store
+- RGPD (usuarios europeos)
+- CCPA (usuarios de California)
+- Políticas de Play Store
+- Políticas de App Store
+{: .checks}
 
 ---
 
@@ -50,19 +51,21 @@ Te damos la bienvenida al sitio de documentación de Piccolo Music Reader. Aquí
 
 ### Cómo usar Piccolo Music Reader de forma legal
 
-**✅ Usos legales:**
+**Usos legales:**
 - Almacenar partituras que son tuyas o para las que tienes permiso de uso
 - Práctica personal y aprendizaje
 - Anotar PDFs para tu propia referencia
 - Compartir partituras con personas que hayas autorizado
+{: .checks}
 
-**❌ Problemas legales que debes evitar:**
+**Problemas legales que debes evitar:**
 - Importar partituras protegidas por derechos de autor sin tener los derechos
 - Copiar PDFs protegidos (problemas con la DMCA)
 - Incumplir acuerdos de licencias musicales
 - Usar colecciones de partituras de otras personas sin permiso
+{: .crosses}
 
-**📝 Responsabilidad:**
+**Responsabilidad:**
 - Eres responsable del contenido que importas
 - Asegúrate de tener los derechos de cualquier partitura que añadas
 - fsoftt no es responsable de las infracciones de derechos de autor cometidas por los usuarios
@@ -89,7 +92,7 @@ La **página Donar** incluye anuncios proporcionados por Google AdMob.
 
 ## Privacidad por región
 
-### 🇪🇺 RGPD (usuarios europeos)
+### RGPD (usuarios europeos)
 
 Piccolo Music Reader cumple con el RGPD:
 - Sin recopilación obligatoria de datos de usuario
@@ -103,7 +106,7 @@ Piccolo Music Reader cumple con el RGPD:
 - Portabilidad: Exporta tus PDFs desde la app
 - Retirar el consentimiento: Desactiva los anuncios en cualquier momento
 
-### 🇺🇸 CCPA (usuarios de California)
+### CCPA (usuarios de California)
 
 Piccolo Music Reader cumple con la CCPA:
 - No "vendemos" información personal
@@ -116,7 +119,7 @@ Piccolo Music Reader cumple con la CCPA:
 - Eliminación: Desinstala la app para eliminar todos los datos
 - Sin discriminación por ejercer tus derechos
 
-### 🇦🇺 Ley de Privacidad de Australia
+### Ley de Privacidad de Australia
 
 Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 - Recopilación mínima de datos
@@ -195,7 +198,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 
 ### Preguntas sobre privacidad
 
-📧 **Correo electrónico:** fsilva@duck.com
+**Correo electrónico:** fsilva@duck.com
 
 **Incluye:**
 - Tu pregunta o inquietud
@@ -206,7 +209,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 
 ### Asuntos legales o disputas
 
-📧 **Correo electrónico:** fsilva@duck.com
+**Correo electrónico:** fsilva@duck.com
 
 **Incluye:**
 - Tu nombre
@@ -217,7 +220,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 
 ### Reportes de errores y solicitudes de funciones
 
-🐛 **Incidencias en GitHub:** https://github.com/fsoftt/PiccoloReader/issues
+**Incidencias en GitHub:** https://github.com/fsoftt/PiccoloReader/issues
 
 ---
 
@@ -235,13 +238,14 @@ Cada biblioteca de terceros está licenciada bajo su propia licencia. Cumplimos 
 
 ## Resumen de cumplimiento
 
-✅ **Cumple con el RGPD** — Normativa de protección de datos de la UE  
-✅ **Cumple con la CCPA** — Derechos de privacidad del consumidor de California  
-✅ **Cumple con la COPPA** — Privacidad en línea de los menores  
-✅ **Cumple con Play Store** — Políticas de Google Play  
-✅ **Cumple con App Store** — Políticas de Apple App Store  
-✅ **Sin patrones oscuros** — Opciones de exclusión claras y control del usuario  
-✅ **Transparente** — Divulgación completa en la política de privacidad  
+- **Cumple con el RGPD** — Normativa de protección de datos de la UE
+- **Cumple con la CCPA** — Derechos de privacidad del consumidor de California
+- **Cumple con la COPPA** — Privacidad en línea de los menores
+- **Cumple con Play Store** — Políticas de Google Play
+- **Cumple con App Store** — Políticas de Apple App Store
+- **Sin patrones oscuros** — Opciones de exclusión claras y control del usuario
+- **Transparente** — Divulgación completa en la política de privacidad
+{: .checks}
 
 ---
 
@@ -293,7 +297,7 @@ Para ver el historial de versiones y el registro de cambios, consulta:
 
 ## ¿Preguntas?
 
-📧 Para cualquier pregunta que no se responda aquí:
+Para cualquier pregunta que no se responda aquí:
 
 - **Privacidad:** fsilva@duck.com
 - **Asuntos legales:** fsilva@duck.com

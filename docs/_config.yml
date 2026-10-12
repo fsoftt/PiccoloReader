@@ -1,0 +1,47 @@
+title: Piccolo Reader
+description: A sheet-music PDF reader for musicians. Your sheets and annotations stay on your device.
+lang: en
+repository: fsoftt/PiccoloReader
+
+# The same plugins GitHub Pages enables by default, listed so local builds match.
+plugins:
+  - jekyll-optional-front-matter
+  - jekyll-relative-links
+  - jekyll-titles-from-headings
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+      lang: en
+  - scope:
+      path: "es"
+    values:
+      lang: es
+  - scope:
+      path: "index.md"
+    values:
+      layout: home
+      title: Piccolo Reader
+  - scope:
+      path: "es/index.md"
+    values:
+      layout: home
+      title: Piccolo Reader
+  - scope:
+      path: "privacy-policy.md"
+    values:
+      title: Privacy Policy
+  - scope:
+      path: "terms-of-service.md"
+    values:
+      title: Terms of Service
+  - scope:
+      path: "es/privacy-policy.md"
+    values:
+      title: Política de Privacidad
+  - scope:
+      path: "es/terms-of-service.md"
+    values:
+      title: Términos de Servicio
