@@ -1,9 +1,13 @@
 ﻿using Android.App;
 using Android.Content.PM;
 using Android.OS;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace PiccoloReader;
 
+// "Open with" / Share for PDFs. No data scheme: matches both content:// and file://.
+[IntentFilter(new[] { Android.Content.Intent.ActionView }, Categories = new[] { Android.Content.Intent.CategoryDefault, Android.Content.Intent.CategoryBrowsable }, DataMimeType = "application/pdf")]
+[IntentFilter(new[] { Android.Content.Intent.ActionSend, Android.Content.Intent.ActionSendMultiple }, Categories = new[] { Android.Content.Intent.CategoryDefault }, DataMimeType = "application/pdf")]
 [Activity(Theme = "@style/Maui.SplashTheme", MainLauncher = true, LaunchMode = LaunchMode.SingleTop, ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density | ConfigChanges.FontScale)]
 public class MainActivity : MauiAppCompatActivity
 {
@@ -23,6 +27,47 @@ public class MainActivity : MauiAppCompatActivity
 
         UpdateSystemBarAppearance();
         DisableFocusHighlight();
+
+        // A cold start from "open with" / share carries the PDF in the launch
+        // intent. After a recreation the original intent is delivered again,
+        // so only a fresh launch may consume it.
+        if (savedInstanceState is null)
+        {
+            HandleSharedPdfIntent(Intent);
+        }
+    }
+
+    protected override void OnNewIntent(Android.Content.Intent? intent)
+    {
+        base.OnNewIntent(intent);
+        HandleSharedPdfIntent(intent);
+    }
+
+    // Copies the shared PDFs while the temporary read grant is valid, then
+    // hands them to the import flow (which asks for the destination). The
+    // intent is replaced so it can never be handled twice.
+    private void HandleSharedPdfIntent(Android.Content.Intent? intent)
+    {
+        if (!Platforms.Android.SharedPdfIntentReader.IsSharedPdfIntent(intent))
+        {
+            return;
+        }
+
+        var uris = Platforms.Android.SharedPdfIntentReader.GetUris(intent!);
+        Intent = new Android.Content.Intent(Android.Content.Intent.ActionMain);
+
+        var flow = IPlatformApplication.Current?.Services.GetService<PiccoloReader.Services.SharedPdfImportFlow>();
+        if (flow is null || uris.Count == 0)
+        {
+            return;
+        }
+
+        var context = ApplicationContext ?? this;
+        _ = Task.Run(async () =>
+        {
+            var (paths, unreadable) = await Platforms.Android.SharedPdfIntentReader.CopyToCacheAsync(context, uris);
+            flow.Enqueue(paths, unreadable);
+        });
     }
 
     // After the soft keyboard closes with the Back key the window is in
