@@ -244,4 +244,11 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="StorageSyncProgressFormat" xml:space="preserve"><value>Saving your library to Documents/PiccoloReader… {0}/{1}</value></data>
   <data name="StorageSyncDone" xml:space="preserve"><value>Library saved to Documents/PiccoloReader</value></data>
   <data name="StorageSyncPending" xml:space="preserve"><value>Some sheets could not be saved yet. We will retry later.</value></data>
+  <data name="ImportDestinationTitle" xml:space="preserve"><value>Import PDF into…</value></data>
+  <data name="ImportDestinationTitleMultipleFormat" xml:space="preserve"><value>Import {0} PDFs into…</value></data>
+  <data name="LibraryRootOption" xml:space="preserve"><value>Library (no folder)</value></data>
+  <data name="SharedPdfImportedFormat" xml:space="preserve"><value>Imported "{0}"</value></data>
+  <data name="SharedPdfImportedMultipleFormat" xml:space="preserve"><value>Imported {0} PDFs</value></data>
+  <data name="SharedPdfImportFailedMessage" xml:space="preserve"><value>Couldn't import the PDF. Make sure it is a valid, readable file.</value></data>
+  <data name="SharedPdfImportPartialFormat" xml:space="preserve"><value>Imported {0}, couldn't import {1}.</value></data>
 </root>

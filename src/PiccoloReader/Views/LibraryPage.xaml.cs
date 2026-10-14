@@ -12,13 +12,16 @@ public partial class LibraryPage : ContentPage
     private readonly LibraryViewModel _viewModel;
     private readonly LibraryService _libraryService;
     private readonly LibraryRecoveryFlow _recoveryFlow;
+    private readonly SharedPdfImportFlow _sharedImportFlow;
 
-    public LibraryPage(LibraryViewModel viewModel, LibraryService libraryService, LibraryRecoveryFlow recoveryFlow)
+    public LibraryPage(LibraryViewModel viewModel, LibraryService libraryService, LibraryRecoveryFlow recoveryFlow, SharedPdfImportFlow sharedImportFlow)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _libraryService = libraryService;
         _recoveryFlow = recoveryFlow;
+        _sharedImportFlow = sharedImportFlow;
+        _sharedImportFlow.LibraryChanged += async () => await _viewModel.LoadAsync();
         BindingContext = _viewModel;
         _viewModel.Folders.CollectionChanged += (_, _) => RebuildFolderGrid();
 
@@ -53,6 +56,9 @@ public partial class LibraryPage : ContentPage
     {
         base.OnAppearing();
         await _viewModel.LoadAsync();
+
+        // A PDF shared into the app before the shell was ready.
+        _ = _sharedImportFlow.ProcessPendingAsync();
 
         // Copies sheets the external folder lacks (first run after updating
         // from 1.1.0, or after an earlier failure) without blocking the UI.

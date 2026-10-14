@@ -132,6 +132,8 @@ public static class MauiProgram
 		builder.Services.AddSingleton<LibraryRecoveryFlow>();
 		builder.Services.AddSingleton<LibraryService>();
 		builder.Services.AddSingleton<PdfImportService>();
+		builder.Services.AddSingleton<SharedPdfImportService>();
+		builder.Services.AddSingleton<SharedPdfImportFlow>();
 		builder.Services.AddSingleton<AnnotationService>();
 		builder.Services.AddSingleton<BookmarkService>();
 		builder.Services.AddSingleton<PageCropService>();

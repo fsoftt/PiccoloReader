@@ -143,6 +143,13 @@ public static class AppStrings
     public static string OpenPrivacyPolicy => Get(nameof(OpenPrivacyPolicy));
 
     public static string ImportPdf => Get(nameof(ImportPdf));
+    public static string ImportDestinationTitle => Get(nameof(ImportDestinationTitle));
+    public static string LibraryRootOption => Get(nameof(LibraryRootOption));
+    public static string SharedPdfImportedFormat => Get(nameof(SharedPdfImportedFormat));
+    public static string SharedPdfImportedMultipleFormat => Get(nameof(SharedPdfImportedMultipleFormat));
+    public static string SharedPdfImportFailedMessage => Get(nameof(SharedPdfImportFailedMessage));
+    public static string SharedPdfImportPartialFormat => Get(nameof(SharedPdfImportPartialFormat));
+    public static string ImportDestinationTitleMultipleFormat => Get(nameof(ImportDestinationTitleMultipleFormat));
     public static string NewFolder => Get(nameof(NewFolder));
     public static string MoreOptions => Get(nameof(MoreOptions));
     public static string CropPage => Get(nameof(CropPage));
