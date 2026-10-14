@@ -244,4 +244,11 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="StorageSyncProgressFormat" xml:space="preserve"><value>Guardando tu biblioteca en Documentos/PiccoloReader… {0}/{1}</value></data>
   <data name="StorageSyncDone" xml:space="preserve"><value>Biblioteca guardada en Documentos/PiccoloReader</value></data>
   <data name="StorageSyncPending" xml:space="preserve"><value>Algunas partituras aún no se pudieron guardar. Se reintentará más tarde.</value></data>
+  <data name="ImportDestinationTitle" xml:space="preserve"><value>Importar PDF en…</value></data>
+  <data name="ImportDestinationTitleMultipleFormat" xml:space="preserve"><value>Importar {0} PDF en…</value></data>
+  <data name="LibraryRootOption" xml:space="preserve"><value>Biblioteca (sin carpeta)</value></data>
+  <data name="SharedPdfImportedFormat" xml:space="preserve"><value>Se importó "{0}"</value></data>
+  <data name="SharedPdfImportedMultipleFormat" xml:space="preserve"><value>Se importaron {0} PDF</value></data>
+  <data name="SharedPdfImportFailedMessage" xml:space="preserve"><value>No se pudo importar el PDF. Comprueba que sea un archivo válido y legible.</value></data>
+  <data name="SharedPdfImportPartialFormat" xml:space="preserve"><value>Importados: {0}. No se pudieron importar: {1}.</value></data>
 </root>
