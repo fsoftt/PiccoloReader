@@ -21,7 +21,13 @@ public class AnnotationPainter
 
     // A crop clips the drawing to the visible part of the page: with it the
     // frame is the FULL page's, which extends past what is shown.
-    public void DrawAnnotations(SKCanvas canvas, SKImageInfo info, IEnumerable<Annotation> annotations, PageFrame? pageFrame = null, PageCrop? crop = null)
+    public void DrawAnnotations(SKCanvas canvas, SKImageInfo info, IEnumerable<Annotation> annotations, PageFrame? pageFrame = null, PageCrop? crop = null) =>
+        DrawAnnotations(canvas, info.Width, info.Height, annotations, pageFrame, crop);
+
+    // The same for a canvas size that isn't a whole number of pixels: the sharp
+    // zoom overlays draw a magnified part of the page by pretending the canvas
+    // is the whole page area at a higher resolution.
+    public void DrawAnnotations(SKCanvas canvas, float width, float height, IEnumerable<Annotation> annotations, PageFrame? pageFrame = null, PageCrop? crop = null)
     {
         var frame = pageFrame ?? PageFrame.Full;
         var restoreCount = canvas.Save();
@@ -29,17 +35,17 @@ public class AnnotationPainter
         {
             var visible = frame.VisibleRegion(visibleCrop);
             canvas.ClipRect(new SKRect(
-                (float)(visible.X * info.Width),
-                (float)(visible.Y * info.Height),
-                (float)((visible.X + visible.Width) * info.Width),
-                (float)((visible.Y + visible.Height) * info.Height)));
+                (float)(visible.X * width),
+                (float)(visible.Y * height),
+                (float)((visible.X + visible.Width) * width),
+                (float)((visible.Y + visible.Height) * height)));
         }
 
         foreach (var annotation in annotations)
         {
             if (annotation.IsStroke)
             {
-                DrawStroke(canvas, annotation, info, frame);
+                DrawStroke(canvas, annotation, width, height, frame);
                 continue;
             }
 
@@ -50,10 +56,10 @@ public class AnnotationPainter
             }
 
             var targetRect = new SKRect(
-                (float)(frame.ToContainerX(annotation.X) * info.Width),
-                (float)(frame.ToContainerY(annotation.Y) * info.Height),
-                (float)(frame.ToContainerX(annotation.X + annotation.Width) * info.Width),
-                (float)(frame.ToContainerY(annotation.Y + annotation.Height) * info.Height));
+                (float)(frame.ToContainerX(annotation.X) * width),
+                (float)(frame.ToContainerY(annotation.Y) * height),
+                (float)(frame.ToContainerX(annotation.X + annotation.Width) * width),
+                (float)(frame.ToContainerY(annotation.Y + annotation.Height) * height));
 
             DrawGlyphFitted(canvas, icon.Codepoint, targetRect, icon.VisualScale);
         }
@@ -61,7 +67,7 @@ public class AnnotationPainter
         canvas.RestoreToCount(restoreCount);
     }
 
-    private static void DrawStroke(SKCanvas canvas, Annotation annotation, SKImageInfo info, PageFrame frame)
+    private static void DrawStroke(SKCanvas canvas, Annotation annotation, float width, float height, PageFrame frame)
     {
         var points = AnnotationService.DeserializePoints(annotation.Points);
         if (points.Count < 2 || annotation.ColorHex is null)
@@ -70,16 +76,16 @@ public class AnnotationPainter
         }
 
         using var path = new SKPath();
-        path.MoveTo((float)(frame.ToContainerX(points[0].X) * info.Width), (float)(frame.ToContainerY(points[0].Y) * info.Height));
+        path.MoveTo((float)(frame.ToContainerX(points[0].X) * width), (float)(frame.ToContainerY(points[0].Y) * height));
         for (var i = 1; i < points.Count; i++)
         {
-            path.LineTo((float)(frame.ToContainerX(points[i].X) * info.Width), (float)(frame.ToContainerY(points[i].Y) * info.Height));
+            path.LineTo((float)(frame.ToContainerX(points[i].X) * width), (float)(frame.ToContainerY(points[i].Y) * height));
         }
 
         using var paint = new SKPaint
         {
             Color = SKColor.Parse(annotation.ColorHex),
-            StrokeWidth = (float)(annotation.StrokeWidth * frame.Width * info.Width),
+            StrokeWidth = (float)(annotation.StrokeWidth * frame.Width * width),
             Style = SKPaintStyle.Stroke,
             StrokeCap = SKStrokeCap.Round,
             StrokeJoin = SKStrokeJoin.Round,
