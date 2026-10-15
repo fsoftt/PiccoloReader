@@ -173,4 +173,37 @@ public class SheetViewerViewModelCropTests : IDisposable
         Assert.Equal(0.4, stored.Y, 9);
         Assert.Equal(0.3, _sut.CurrentPageAnnotations.Single().X, 9);
     }
+
+    [Fact]
+    public async Task RenderPageDetail_PassesRegionSizeAndCropToTheRenderer()
+    {
+        var sheet = await InsertSheetAsync(3);
+        await _sut.LoadAsync(sheet.Id, 800, 1000);
+        await _sut.SetPageCropAsync(0, Crop);
+        var region = DetailRegion.Compute(new RectD(0, 0, 100, 200), new RectD(0, 0, 400, 800), 2, 3, 4096)!.Value;
+
+        var bytes = await _sut.RenderPageDetailAsync(0, region, CancellationToken.None);
+
+        Assert.NotNull(bytes);
+        var rendered = Assert.Single(_renderer.RenderedRegions);
+        Assert.Equal(0, rendered.PageIndex);
+        Assert.Equal(region.NormWidth, rendered.Width, 9);
+        Assert.Equal(region.PixelWidth, rendered.PixelWidth);
+        Assert.Equal(region.PixelHeight, rendered.PixelHeight);
+        Assert.Equal(Crop, rendered.Crop);
+    }
+
+    [Fact]
+    public async Task RenderPageDetail_AlreadyCancelled_DoesNotRender()
+    {
+        var sheet = await InsertSheetAsync(3);
+        await _sut.LoadAsync(sheet.Id, 800, 1000);
+        var region = DetailRegion.Compute(new RectD(0, 0, 100, 200), new RectD(0, 0, 400, 800), 2, 3, 4096)!.Value;
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _sut.RenderPageDetailAsync(0, region, cts.Token));
+
+        Assert.Empty(_renderer.RenderedRegions);
+    }
 }
