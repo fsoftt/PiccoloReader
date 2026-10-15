@@ -126,6 +126,7 @@ public partial class SheetViewerPage : ContentPage
 
 #if ANDROID
         AttachAndroidPageContainerTouchListener();
+        AttachAndroidPencilPinchListener();
         AttachAndroidContinuousZoomListener();
         AttachAndroidSelectionDragListeners();
 #endif
@@ -1511,6 +1512,28 @@ public partial class SheetViewerPage : ContentPage
         };
     }
 
+    // Two-finger pinch zooms the page while Pencil is active - see
+    // DrawingPinchTouchListener. The stroke the first finger started is
+    // discarded (OnPencilDrawingLineCompleted checks the flag).
+    private PiccoloReader.Platforms.Android.DrawingPinchTouchListener? _pencilPinchTouchListener;
+
+    private void AttachAndroidPencilPinchListener()
+    {
+        PencilDrawingView.HandlerChanged += (_, _) =>
+        {
+            if (PencilDrawingView.Handler?.PlatformView is global::Android.Views.View platformView)
+            {
+                _pencilPinchTouchListener = new PiccoloReader.Platforms.Android.DrawingPinchTouchListener(
+                    onPinchBegin: () => _discardPencilLine = true,
+                    pinchTarget: () =>
+                        _pageContainerTouchListener is not null && PageContainer.Handler?.PlatformView is global::Android.Views.View pageView
+                            ? (_pageContainerTouchListener, pageView)
+                            : null);
+                platformView.SetOnTouchListener(_pencilPinchTouchListener);
+            }
+        };
+    }
+
     // SelectionBorder (icon move) and ResizeHandle (icon resize) are both
     // nested inside PageContainer's live zoom transform - and, one level
     // closer, inside SelectionOverlay's own TranslationX/Y, which is
@@ -2741,11 +2764,22 @@ public partial class SheetViewerPage : ContentPage
     // of staying open over the page for the whole stroke.
     private void OnPencilDrawingLineStarted(object? sender, DrawingLineStartedEventArgs e)
     {
+        _discardPencilLine = false;
         ToolSheet.IsVisible = false;
     }
 
+    // Set when a second finger turns the stroke into a pinch (Android, see
+    // AttachAndroidPencilPinchListener); that stroke is not saved.
+    private bool _discardPencilLine;
+
     private async void OnPencilDrawingLineCompleted(object? sender, DrawingLineCompletedEventArgs e)
     {
+        if (_discardPencilLine)
+        {
+            _discardPencilLine = false;
+            return;
+        }
+
         if (PageContainer.Width <= 0 || PageContainer.Height <= 0 || !int.TryParse(SheetId, out var sheetId))
         {
             return;
