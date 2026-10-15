@@ -58,7 +58,7 @@ public partial class SheetViewerPage : ContentPage
         _viewModel = viewModel;
         BindingContext = _viewModel;
 
-        _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => AnnotationCanvas.InvalidateSurface();
+        _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => InvalidateAnnotations();
         _viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(SheetViewerViewModel.ReadingMode))
@@ -68,7 +68,7 @@ public partial class SheetViewerPage : ContentPage
             }
             else if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageCrop))
             {
-                AnnotationCanvas.InvalidateSurface();
+                InvalidateAnnotations();
                 RepositionSelectionOverlay();
                 RestartPagedDetail();
             }
@@ -101,7 +101,7 @@ public partial class SheetViewerPage : ContentPage
                 // Defensive: repaint the annotation layer whenever a tool sheet
                 // opens or closes (Bug 16: a glyph stayed unpainted until the next
                 // insert forced a repaint).
-                AnnotationCanvas.InvalidateSurface();
+                InvalidateAnnotations();
             }
         };
         BuildSymbolCategoryTabs();
@@ -203,7 +203,7 @@ public partial class SheetViewerPage : ContentPage
 
         await _viewModel.LoadAsync(sheetId, targetWidthPx, targetHeightPx);
         ResetZoom();
-        AnnotationCanvas.InvalidateSurface();
+        InvalidateAnnotations();
         UpdateReadingModeUi();
     }
 
@@ -342,6 +342,8 @@ public partial class SheetViewerPage : ContentPage
     private const int DetailDebounceMs = 150;
     private CancellationTokenSource? _detailCts;
     private bool _continuousDetailShown;
+    private RectD _annotationDetailArea;
+    private bool _annotationDetailPainted;
 
     // A page/crop/size change in the paged view or the editor: whatever was
     // rendered no longer matches, so redo it if still zoomed in.
@@ -367,6 +369,14 @@ public partial class SheetViewerPage : ContentPage
         {
             DetailImage.IsVisible = false;
             DetailImage.Source = null;
+        }
+
+        if (AnnotationDetailCanvas.IsVisible)
+        {
+            // The base canvas draws the annotations again.
+            AnnotationDetailCanvas.IsVisible = false;
+            _annotationDetailPainted = false;
+            AnnotationCanvas.InvalidateSurface();
         }
 
         if (_continuousDetailShown)
@@ -459,6 +469,30 @@ public partial class SheetViewerPage : ContentPage
         DetailImage.TranslationX = region.Local.X;
         DetailImage.TranslationY = region.Local.Y;
         DetailImage.IsVisible = true;
+
+        // Annotations over the same part, drawn at screen resolution: sized
+        // `scale` times larger and scaled back down, so it covers the region
+        // without magnifying its pixels.
+        _annotationDetailArea = region.Local;
+        AnnotationDetailCanvas.WidthRequest = DetailRegion.LayoutRequest(region.Local.Width * scale, density);
+        AnnotationDetailCanvas.HeightRequest = DetailRegion.LayoutRequest(region.Local.Height * scale, density);
+        AnnotationDetailCanvas.Scale = 1 / scale;
+        AnnotationDetailCanvas.TranslationX = region.Local.X;
+        AnnotationDetailCanvas.TranslationY = region.Local.Y;
+        _annotationDetailPainted = false;
+        AnnotationDetailCanvas.IsVisible = true;
+        AnnotationDetailCanvas.InvalidateSurface();
+    }
+
+    // Repaints the annotation layer: the sharp overlay while it is shown,
+    // otherwise (also) the base canvas.
+    private void InvalidateAnnotations()
+    {
+        AnnotationCanvas.InvalidateSurface();
+        if (AnnotationDetailCanvas.IsVisible)
+        {
+            AnnotationDetailCanvas.InvalidateSurface();
+        }
     }
 
     // The list is zoomed as a whole, so the visible part of its content
@@ -524,7 +558,7 @@ public partial class SheetViewerPage : ContentPage
             {
                 if (reference.TryGetTarget(out var view) && ReferenceEquals(view.Page, page))
                 {
-                    view.ShowDetail(bytes, new RectD(region.Local.X, region.Local.Y - top, region.Local.Width, region.Local.Height), density);
+                    view.ShowDetail(bytes, new RectD(region.Local.X, region.Local.Y - top, region.Local.Width, region.Local.Height), density, zoom);
                     _continuousDetailShown = true;
                     break;
                 }
@@ -757,7 +791,7 @@ public partial class SheetViewerPage : ContentPage
     // bounds, not the visual union of where its children overflow to.
     private void UpdateSelectionOverlay()
     {
-        AnnotationCanvas.InvalidateSurface();
+        InvalidateAnnotations();
         RepositionSelectionOverlay();
 
         // A fresh selection (new tap, newly placed icon) always starts
@@ -1008,7 +1042,7 @@ public partial class SheetViewerPage : ContentPage
         annotation.X = _moveStartX + totalX / (pageRect.Width * _currentScale);
         annotation.Y = _moveStartY + totalY / (pageRect.Height * _currentScale);
         RepositionSelectionOverlay();
-        AnnotationCanvas.InvalidateSurface();
+        InvalidateAnnotations();
     }
 
     private async Task HandleSelectionMoveEndedAsync()
@@ -1124,7 +1158,7 @@ public partial class SheetViewerPage : ContentPage
         annotation.Width = Math.Max(0.02, _resizeStartWidth + totalX / (pageRect.Width * _currentScale));
         annotation.Height = Math.Max(0.02, _resizeStartHeight + totalY / (pageRect.Height * _currentScale));
         RepositionSelectionOverlay();
-        AnnotationCanvas.InvalidateSurface();
+        InvalidateAnnotations();
     }
 
     private void HandleSelectionResizeEnded()
@@ -1579,7 +1613,7 @@ public partial class SheetViewerPage : ContentPage
         if (hit is not null)
         {
             _ = _viewModel.EraseAnnotationAsync(hit);
-            AnnotationCanvas.InvalidateSurface();
+            InvalidateAnnotations();
         }
     }
 
@@ -1793,7 +1827,7 @@ public partial class SheetViewerPage : ContentPage
         }
         else
         {
-            AnnotationCanvas.InvalidateSurface();
+            InvalidateAnnotations();
         }
 
         UpdateContinuousLayers();
@@ -1951,7 +1985,7 @@ public partial class SheetViewerPage : ContentPage
             _viewModel.SelectedAnnotation = _viewModel.CurrentPageAnnotations.FirstOrDefault(a => a.Id == id);
         }
 
-        AnnotationCanvas.InvalidateSurface();
+        InvalidateAnnotations();
         ResetZoom();
 
         // PageContainer was hidden until now - give it a layout pass before
@@ -2186,7 +2220,7 @@ public partial class SheetViewerPage : ContentPage
         await _viewModel.UndoCommand.ExecuteAsync(null);
         // Undo/redo of a move or resize mutates the annotation in place (no
         // collection change), so repaint the glyphs explicitly.
-        AnnotationCanvas.InvalidateSurface();
+        InvalidateAnnotations();
         UpdateSelectionOverlay();
     }
 
@@ -2195,7 +2229,7 @@ public partial class SheetViewerPage : ContentPage
         await _viewModel.RedoCommand.ExecuteAsync(null);
         // Undo/redo of a move or resize mutates the annotation in place (no
         // collection change), so repaint the glyphs explicitly.
-        AnnotationCanvas.InvalidateSurface();
+        InvalidateAnnotations();
         UpdateSelectionOverlay();
     }
 
@@ -2729,7 +2763,7 @@ public partial class SheetViewerPage : ContentPage
             .ToList();
 
         await _viewModel.AddClippedStrokeAsync(sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, normalizedPoints);
-        AnnotationCanvas.InvalidateSurface();
+        InvalidateAnnotations();
     }
 
     private async Task EnsureBravuraTypefaceLoadedAsync()
@@ -2778,6 +2812,49 @@ public partial class SheetViewerPage : ContentPage
     {
         var canvas = e.Surface.Canvas;
         canvas.Clear(SKColors.Transparent);
+        if (AnnotationDetailCanvas.IsVisible && _annotationDetailPainted)
+        {
+            return;
+        }
+
         _annotationPainter.DrawAnnotations(canvas, e.Info, _viewModel.CurrentPageAnnotations, EditorPageFrame(), _viewModel.CurrentPageCrop);
+    }
+
+    // Draws the part of the page area in _annotationDetailArea: the same
+    // drawing as the base canvas, at k pixels per unit and shifted so the
+    // area's corner is the origin.
+    private void OnAnnotationDetailPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
+    {
+        var canvas = e.Surface.Canvas;
+        canvas.Clear(SKColors.Transparent);
+
+        var area = _annotationDetailArea;
+        if (area.IsEmpty || PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return;
+        }
+
+        var k = e.Info.Width / area.Width;
+        canvas.Translate((float)(-area.X * k), (float)(-area.Y * k));
+        _annotationPainter.DrawAnnotations(
+            canvas,
+            (float)(PageContainer.Width * k),
+            (float)(PageContainer.Height * k),
+            _viewModel.CurrentPageAnnotations,
+            EditorPageFrame(),
+            _viewModel.CurrentPageCrop);
+
+        MarkAnnotationDetailPainted();
+    }
+
+    // The base canvas keeps drawing until the overlay has really painted, so
+    // the annotations never go missing for a frame while it appears.
+    private void MarkAnnotationDetailPainted()
+    {
+        if (!_annotationDetailPainted)
+        {
+            _annotationDetailPainted = true;
+            AnnotationCanvas.InvalidateSurface();
+        }
     }
 }

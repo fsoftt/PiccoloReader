@@ -53,6 +53,21 @@
 
             <skia:SKCanvasView x:Name="AnnotationCanvas" AutomationId="AnnotationCanvas" PaintSurface="OnAnnotationCanvasPaintSurface" />
 
+            <!-- Sharp annotations while zoomed in: sized to the screen pixels
+                 of the visible part and scaled back down by the zoom (placed
+                 by code), so Skia draws at native resolution instead of
+                 magnifying the 1x AnnotationCanvas bitmap. While it is
+                 visible the base canvas skips drawing annotations. -->
+            <skia:SKCanvasView
+                x:Name="AnnotationDetailCanvas"
+                IsVisible="False"
+                InputTransparent="True"
+                AnchorX="0"
+                AnchorY="0"
+                HorizontalOptions="Start"
+                VerticalOptions="Start"
+                PaintSurface="OnAnnotationDetailPaintSurface" />
+
             <Grid
                 x:Name="SelectionOverlay"
                 IsVisible="False"
