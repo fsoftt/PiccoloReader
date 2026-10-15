@@ -9,6 +9,7 @@ using UraniumUI;
 using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Services.ExternalLibrary;
+using PiccoloReader.Core.Services.Metronome;
 using PiccoloReader.Core.ViewModels;
 using PiccoloReader.Services;
 using PiccoloReader.Views;
@@ -88,10 +89,13 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IAdsPreferenceService, MauiAdsPreferenceService>();
 		builder.Services.AddSingleton<ITutorialPreferenceService, MauiTutorialPreferenceService>();
 		builder.Services.AddSingleton<IReadingPreferenceService, MauiReadingPreferenceService>();
+		builder.Services.AddSingleton<IMetronomePreferenceService, MauiMetronomePreferenceService>();
 #if ANDROID
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.Android.PdfPageRenderer>();
+		builder.Services.AddSingleton<IMetronomePlayer, PiccoloReader.Platforms.Android.AndroidMetronomePlayer>();
 #elif IOS
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.iOS.PdfPageRenderer>();
+		builder.Services.AddSingleton<IMetronomePlayer, UnsupportedMetronomePlayer>();
 #endif
 		builder.Services.AddSingleton(sp =>
 		{
@@ -138,6 +142,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<BookmarkService>();
 		builder.Services.AddSingleton<PageCropService>();
 
+		builder.Services.AddSingleton<MetronomeViewModel>();
 		builder.Services.AddTransient<LibraryViewModel>();
 		builder.Services.AddTransient<FolderViewModel>();
 		builder.Services.AddTransient<SheetViewerViewModel>();
@@ -150,6 +155,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<SheetViewerPage>();
 		builder.Services.AddTransient<SettingsPage>();
 		builder.Services.AddTransient<DonatePage>();
+		builder.Services.AddTransient<MetronomePage>();
 		builder.Services.AddTransient<TutorialPage>();
 
 		return builder.Build();
