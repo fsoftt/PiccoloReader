@@ -24,6 +24,9 @@ public class ContinuousPageView : ContentView
     private readonly Image _image;
     private readonly Image _detail;
     private readonly SKCanvasView _canvas;
+    private readonly SKCanvasView _annotationDetail;
+    private RectD _detailArea;
+    private bool _annotationDetailPainted;
     private readonly ActivityIndicator _loadingIndicator;
     private ContinuousPage? _page;
 
@@ -49,6 +52,16 @@ public class ContinuousPageView : ContentView
         };
         _canvas = new SKCanvasView { InputTransparent = true };
         _canvas.PaintSurface += OnCanvasPaintSurface;
+        _annotationDetail = new SKCanvasView
+        {
+            IsVisible = false,
+            InputTransparent = true,
+            AnchorX = 0,
+            AnchorY = 0,
+            HorizontalOptions = LayoutOptions.Start,
+            VerticalOptions = LayoutOptions.Start
+        };
+        _annotationDetail.PaintSurface += OnAnnotationDetailPaintSurface;
         _loadingIndicator = new ActivityIndicator
         {
             HorizontalOptions = LayoutOptions.Center,
@@ -59,7 +72,7 @@ public class ContinuousPageView : ContentView
         {
             BackgroundColor = Colors.White,
             Margin = new Thickness(0, 0, 0, Spacing),
-            Children = { _image, _detail, _canvas, _loadingIndicator }
+            Children = { _image, _detail, _canvas, _annotationDetail, _loadingIndicator }
         };
         Content = _pageArea;
 
@@ -111,7 +124,7 @@ public class ContinuousPageView : ContentView
     // Sharp re-render of the part of this page that is on screen while the
     // list is zoomed in. `area` is in this page's own unscaled space, so the
     // list's zoom magnifies it together with the page image below it.
-    public void ShowDetail(byte[] bytes, RectD area, double pixelsPerUnit)
+    public void ShowDetail(byte[] bytes, RectD area, double pixelsPerUnit, double zoom)
     {
         _detail.Source = ImageSource.FromStream(() => new MemoryStream(bytes));
         _detail.WidthRequest = DetailRegion.LayoutRequest(area.Width, pixelsPerUnit);
@@ -119,6 +132,18 @@ public class ContinuousPageView : ContentView
         _detail.TranslationX = area.X;
         _detail.TranslationY = area.Y;
         _detail.IsVisible = true;
+
+        // Annotations over the same area at screen resolution: laid out
+        // `zoom` times larger and scaled back down by the list's zoom.
+        _detailArea = area;
+        _annotationDetail.WidthRequest = DetailRegion.LayoutRequest(area.Width * zoom, pixelsPerUnit);
+        _annotationDetail.HeightRequest = DetailRegion.LayoutRequest(area.Height * zoom, pixelsPerUnit);
+        _annotationDetail.Scale = 1 / zoom;
+        _annotationDetail.TranslationX = area.X;
+        _annotationDetail.TranslationY = area.Y;
+        _annotationDetailPainted = false;
+        _annotationDetail.IsVisible = true;
+        _annotationDetail.InvalidateSurface();
     }
 
     public void HideDetail()
@@ -127,6 +152,23 @@ public class ContinuousPageView : ContentView
         {
             _detail.IsVisible = false;
             _detail.Source = null;
+        }
+
+        if (_annotationDetail.IsVisible)
+        {
+            // The base canvas draws the annotations again.
+            _annotationDetail.IsVisible = false;
+            _annotationDetailPainted = false;
+            _canvas.InvalidateSurface();
+        }
+    }
+
+    private void InvalidateCanvases()
+    {
+        _canvas.InvalidateSurface();
+        if (_annotationDetail.IsVisible)
+        {
+            _annotationDetail.InvalidateSurface();
         }
     }
 
@@ -139,6 +181,7 @@ public class ContinuousPageView : ContentView
                 UpdateImage();
                 break;
             case nameof(ContinuousPage.AspectRatio):
+                HideDetail();
                 UpdateHeight();
                 break;
             case nameof(ContinuousPage.Crop):
@@ -146,7 +189,7 @@ public class ContinuousPageView : ContentView
                 _canvas.InvalidateSurface();
                 break;
             case nameof(ContinuousPage.Annotations):
-                _canvas.InvalidateSurface();
+                InvalidateCanvases();
                 break;
         }
     }
@@ -183,12 +226,13 @@ public class ContinuousPageView : ContentView
 
     // The page repaints when asked to, e.g. after the editor changed its
     // annotations while the list was hidden.
-    public void InvalidateAnnotations() => _canvas.InvalidateSurface();
+    public void InvalidateAnnotations() => InvalidateCanvases();
 
     // Item heights are derived from the list width, which can change while
     // the list is hidden (rotation with the editor open); Width is stale then.
     public void Relayout(double listWidth)
     {
+        HideDetail();
         UpdateHeight(listWidth);
         _canvas.InvalidateSurface();
     }
@@ -198,7 +242,7 @@ public class ContinuousPageView : ContentView
         var canvas = e.Surface.Canvas;
         canvas.Clear(SkiaSharp.SKColors.Transparent);
 
-        if (_page is not null)
+        if (_page is not null && !(_annotationDetail.IsVisible && _annotationDetailPainted))
         {
             // The image is AspectFit inside _pageArea, whose height can lag the
             // page aspect for a moment (row relayout after a rotation), so the
@@ -206,6 +250,34 @@ public class ContinuousPageView : ContentView
             // assuming the canvas is exactly the page.
             var frame = PageFrame.Fit(e.Info.Width, e.Info.Height, _page.FullAspectRatio, _page.Crop);
             _painter.DrawAnnotations(canvas, e.Info, _page.Annotations, frame, _page.Crop);
+        }
+    }
+
+    // The part of the page in _detailArea, drawn like the base canvas but at
+    // k pixels per unit and shifted so the area's corner is the origin.
+    private void OnAnnotationDetailPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
+    {
+        var canvas = e.Surface.Canvas;
+        canvas.Clear(SkiaSharp.SKColors.Transparent);
+
+        if (_page is null || _detailArea.IsEmpty || _canvas.Width <= 0 || _canvas.Height <= 0)
+        {
+            return;
+        }
+
+        var k = e.Info.Width / _detailArea.Width;
+        var width = (float)(_canvas.Width * k);
+        var height = (float)(_canvas.Height * k);
+        canvas.Translate((float)(-_detailArea.X * k), (float)(-_detailArea.Y * k));
+        var frame = PageFrame.Fit(width, height, _page.FullAspectRatio, _page.Crop);
+        _painter.DrawAnnotations(canvas, width, height, _page.Annotations, frame, _page.Crop);
+
+        // The base canvas keeps drawing until this has really painted, so the
+        // annotations never go missing for a frame while the overlay appears.
+        if (!_annotationDetailPainted)
+        {
+            _annotationDetailPainted = true;
+            _canvas.InvalidateSurface();
         }
     }
 }
