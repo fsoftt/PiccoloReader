@@ -59,3 +59,25 @@ go straight to `production` — Google requires a closed test with 12+
 testers over 14 continuous days first. Promote through Play Console's
 UI once that requirement is met; extending this workflow to also push
 to `production` isn't worth doing until then.
+
+## Pending
+
+Play Console shows two warnings on every uploaded App Bundle. Neither
+blocks a release; both only make crash and ANR reports harder to read.
+
+- **No deobfuscation file.** When R8/ProGuard shrinks and renames the
+  Java side of the app (AndroidX, MAUI's Java glue), Play needs the
+  `mapping.txt` it produced to turn renamed stack frames back into real
+  class and method names. To do: check whether the Release build runs R8
+  (look for `mapping.txt` under `obj/Release`). If it does, upload that
+  file with each bundle (the upload step in the release workflow can
+  attach it). If it doesn't, the warning is generic and can be ignored.
+  (2026-10-14: a local QA Release build produced no `mapping.txt`, so R8
+  does not seem to run; confirm on the CI bundle build.)
+- **No native debug symbols.** The bundle ships native libraries (.NET
+  runtime, SkiaSharp, the PDF renderer). A crash inside one shows only
+  memory addresses unless a `native-debug-symbols.zip` (the unstripped
+  `.so` files per ABI) is uploaded. To do: see whether the .NET Android
+  build can keep unstripped libraries, zip them per ABI and upload them
+  with the bundle. Low priority: crashes in our own C# code are managed
+  exceptions and don't need these symbols.
