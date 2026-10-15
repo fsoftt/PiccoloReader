@@ -39,6 +39,7 @@ public partial class SheetViewerPage : ContentPage
     private bool _isToolFabExpanded;
 
     private const double MaxContinuousZoom = 5;
+    private const double MaxPagedZoom = 5;
     private double _continuousZoom = 1;
     private double _lastPageWidth;
     private double _lastPageHeight;
@@ -62,20 +63,24 @@ public partial class SheetViewerPage : ContentPage
         {
             if (e.PropertyName == nameof(SheetViewerViewModel.ReadingMode))
             {
+                HideDetail();
                 UpdateReadingModeUi();
             }
             else if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageCrop))
             {
                 AnnotationCanvas.InvalidateSurface();
                 RepositionSelectionOverlay();
+                RestartPagedDetail();
             }
             else if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageImageBytes))
             {
+                RestartPagedDetail();
                 // The pencil's on-screen width follows the page's size.
                 UpdatePencilDrawingViewLineWidth();
             }
             else if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageIndex))
             {
+                HideDetail();
                 UpdateBookmarkButton();
                 UpdateEditingUi();
             }
@@ -251,6 +256,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         _orientationFlipped = false;
+        RestartPagedDetail();
         InvalidateContinuousAnnotations();
     }
 
@@ -263,6 +269,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         _lastListWidth = width;
+        ScheduleDetail();
 
         _continuousViews.RemoveAll(r => !r.TryGetTarget(out _));
         foreach (var reference in _continuousViews)
@@ -325,8 +332,193 @@ public partial class SheetViewerPage : ContentPage
             frame.Height * PageContainer.Height);
     }
 
+    // Sharp zoomed-in view ("detail"). The page image is rendered once at
+    // screen width, so zooming alone only magnifies those pixels. Once a
+    // pinch/pan/scroll has settled, the part of the page that is on screen is
+    // re-rendered at its on-screen resolution and laid over the base image.
+    // The overlay is dropped the moment anything moves, so the (blurrier) base
+    // image underneath is what shows during gestures and the swap is never a
+    // flash of nothing.
+    private const int DetailDebounceMs = 150;
+    private CancellationTokenSource? _detailCts;
+    private bool _continuousDetailShown;
+
+    // A page/crop/size change in the paged view or the editor: whatever was
+    // rendered no longer matches, so redo it if still zoomed in.
+    private void RestartPagedDetail()
+    {
+        if (!IsContinuousListActive)
+        {
+            ScheduleDetail();
+        }
+    }
+
+    private bool IsContinuousListActive => _viewModel.IsContinuousReading && !_viewModel.IsContinuousEditing;
+
+    private bool IsZoomedForDetail => IsContinuousListActive ? _continuousZoom > ZoomedInThreshold : _currentScale > ZoomedInThreshold;
+
+    // Cancels a pending/in-flight detail render and removes the overlay.
+    private void HideDetail()
+    {
+        _detailCts?.Cancel();
+        _detailCts = null;
+
+        if (DetailImage.IsVisible)
+        {
+            DetailImage.IsVisible = false;
+            DetailImage.Source = null;
+        }
+
+        if (_continuousDetailShown)
+        {
+            _continuousDetailShown = false;
+            foreach (var reference in _continuousViews)
+            {
+                if (reference.TryGetTarget(out var view))
+                {
+                    view.HideDetail();
+                }
+            }
+        }
+    }
+
+    // Hides the overlay and, if still zoomed in, requests a fresh one once
+    // things have been quiet for DetailDebounceMs.
+    private void ScheduleDetail()
+    {
+        HideDetail();
+        if (!IsZoomedForDetail)
+        {
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        _detailCts = cts;
+        _ = RunDetailAsync(cts.Token);
+    }
+
+    private async Task RunDetailAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(DetailDebounceMs, ct);
+            if (IsContinuousListActive)
+            {
+                await ShowContinuousDetailAsync(ct);
+            }
+            else
+            {
+                await ShowPagedDetailAsync(ct);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            // Best effort: the base image is still there.
+        }
+    }
+
+    private static int DetailMaxSidePx()
+    {
+        var display = DeviceDisplay.Current.MainDisplayInfo;
+        return (int)Math.Max(display.Width, display.Height);
+    }
+
+    private async Task ShowPagedDetailAsync(CancellationToken ct)
+    {
+        var width = PageContainer.Width;
+        var height = PageContainer.Height;
+        var scale = PageContainer.Scale;
+        if (_currentScale <= ZoomedInThreshold || width <= 0 || height <= 0 || _viewModel.CurrentPageAspectRatio <= 0)
+        {
+            return;
+        }
+
+        var pageIndex = _viewModel.CurrentPageIndex;
+        var visible = DetailRegion.VisibleLocalRect(width, height, scale, PageContainer.TranslationX, PageContainer.TranslationY);
+        var imageRect = EditorVisibleRect();
+        var image = new RectD(imageRect.X, imageRect.Y, imageRect.Width, imageRect.Height);
+        var density = DeviceDisplay.Current.MainDisplayInfo.Density;
+        if (DetailRegion.Compute(visible, image, scale, density, DetailMaxSidePx()) is not { } region)
+        {
+            return;
+        }
+
+        var bytes = await _viewModel.RenderPageDetailAsync(pageIndex, region, ct);
+        ct.ThrowIfCancellationRequested();
+        if (bytes is null || pageIndex != _viewModel.CurrentPageIndex)
+        {
+            return;
+        }
+
+        DetailImage.Source = ImageSource.FromStream(() => new MemoryStream(bytes));
+        DetailImage.WidthRequest = region.Local.Width;
+        DetailImage.HeightRequest = region.Local.Height;
+        DetailImage.TranslationX = region.Local.X;
+        DetailImage.TranslationY = region.Local.Y;
+        DetailImage.IsVisible = true;
+    }
+
+    // The list is zoomed as a whole, so the visible part of its content
+    // (x from the horizontal shift, y from the scroll offset) can span a few
+    // pages; each page that intersects it gets its own overlay.
+    private async Task ShowContinuousDetailAsync(CancellationToken ct)
+    {
+        var width = ContinuousPagesView.Width;
+        var height = ContinuousPagesView.Height;
+        var zoom = _continuousZoom;
+        if (zoom <= ZoomedInThreshold || width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        var pages = _viewModel.ContinuousPages;
+        var scroll = ContinuousScrollOffset();
+        var visible = new RectD(-ContinuousPagesView.TranslationX / zoom, scroll, width / zoom, height / zoom);
+        var first = ContinuousLayout.PageAt(pages, visible.Y, width, ContinuousPageView.Spacing);
+        var last = ContinuousLayout.PageAt(pages, visible.Bottom, width, ContinuousPageView.Spacing);
+        var density = DeviceDisplay.Current.MainDisplayInfo.Density;
+
+        for (var index = first; index <= last && index < pages.Count; index++)
+        {
+            var page = pages[index];
+            if (page.ImageBytes is null)
+            {
+                continue;
+            }
+
+            var top = ContinuousLayout.PageTop(pages, index, width, ContinuousPageView.Spacing);
+            var image = new RectD(0, top, width, ContinuousLayout.PageHeight(page, width));
+            if (DetailRegion.Compute(visible, image, zoom, density, DetailMaxSidePx()) is not { } region)
+            {
+                continue;
+            }
+
+            var bytes = await _viewModel.RenderPageDetailAsync(index, region, ct);
+            ct.ThrowIfCancellationRequested();
+            if (bytes is null)
+            {
+                continue;
+            }
+
+            _continuousViews.RemoveAll(r => !r.TryGetTarget(out _));
+            foreach (var reference in _continuousViews)
+            {
+                if (reference.TryGetTarget(out var view) && ReferenceEquals(view.Page, page))
+                {
+                    view.ShowDetail(bytes, new RectD(region.Local.X, region.Local.Y - top, region.Local.Width, region.Local.Height));
+                    _continuousDetailShown = true;
+                    break;
+                }
+            }
+        }
+    }
+
     private void ResetZoom()
     {
+        HideDetail();
         _currentScale = 1;
         _xOffset = 0;
         _yOffset = 0;
@@ -967,18 +1159,20 @@ public partial class SheetViewerPage : ContentPage
         {
             PageContainer.AnchorX = 0;
             PageContainer.AnchorY = 0;
+            HideDetail();
         }
         else if (e.Status == GestureStatus.Running)
         {
             var previousScale = _currentScale;
             _currentScale += e.Scale - 1;
-            _currentScale = Math.Max(1, _currentScale);
+            _currentScale = Math.Clamp(_currentScale, 1, MaxPagedZoom);
             ApplyPinchTranslation(previousScale, e.ScaleOrigin.X, e.ScaleOrigin.Y);
         }
         else if (e.Status is GestureStatus.Completed or GestureStatus.Canceled)
         {
             _xOffset = PageContainer.TranslationX;
             _yOffset = PageContainer.TranslationY;
+            ScheduleDetail();
         }
     }
 
@@ -1067,6 +1261,7 @@ public partial class SheetViewerPage : ContentPage
     {
         if (_currentScale > ZoomedInThreshold)
         {
+            HideDetail();
             PageContainer.TranslationX = Math.Clamp(_xOffset + totalX, -PageContainer.Width * (_currentScale - 1), 0);
             PageContainer.TranslationY = Math.Clamp(_yOffset + totalY, -PageContainer.Height * (_currentScale - 1), 0);
         }
@@ -1081,6 +1276,7 @@ public partial class SheetViewerPage : ContentPage
         {
             _xOffset = PageContainer.TranslationX;
             _yOffset = PageContainer.TranslationY;
+            ScheduleDetail();
         }
         else
         {
@@ -1113,6 +1309,7 @@ public partial class SheetViewerPage : ContentPage
     {
         PageContainer.AnchorX = 0;
         PageContainer.AnchorY = 0;
+        HideDetail();
     }
 
     // rawScaleFactor is PageContainerTouchListener's own hand-rolled
@@ -1125,7 +1322,7 @@ public partial class SheetViewerPage : ContentPage
     private void AndroidHandlePinchRunning(double rawScaleFactor, double originXFraction, double originYFraction)
     {
         var previousScale = _currentScale;
-        _currentScale = Math.Max(1, _currentScale * rawScaleFactor);
+        _currentScale = Math.Clamp(_currentScale * rawScaleFactor, 1, MaxPagedZoom);
         ApplyPinchTranslation(previousScale, originXFraction, originYFraction);
     }
 
@@ -1133,6 +1330,7 @@ public partial class SheetViewerPage : ContentPage
     {
         _xOffset = PageContainer.TranslationX;
         _yOffset = PageContainer.TranslationY;
+        ScheduleDetail();
     }
 
     private void AndroidHandlePanRunning(double totalXDp, double totalYDp)
@@ -1597,6 +1795,11 @@ public partial class SheetViewerPage : ContentPage
     private async void OnContinuousPagesScrolled(object? sender, ItemsViewScrolledEventArgs e)
     {
         _continuousScrollOffsetFallback = e.VerticalOffset;
+        if (IsContinuousListActive)
+        {
+            ScheduleDetail();
+        }
+
         await UpdateContinuousViewportAsync();
     }
 
@@ -1763,6 +1966,7 @@ public partial class SheetViewerPage : ContentPage
         PageContainer.TranslationY = Math.Clamp(pageScreenTop - PageContainer.Y - pageTopInContainer * scale, -PageContainer.Height * (scale - 1), 0);
         _xOffset = PageContainer.TranslationX;
         _yOffset = PageContainer.TranslationY;
+        ScheduleDetail();
         UpdateResizeHandleScale();
         UpdateSelectionOverlay();
     }
@@ -1803,6 +2007,7 @@ public partial class SheetViewerPage : ContentPage
     {
         ContinuousPagesView.AnchorX = 0;
         ContinuousPagesView.AnchorY = 0;
+        HideDetail();
     }
 
     // Horizontal: same anchored-translation math as ApplyPinchTranslation.
@@ -1841,6 +2046,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         await UpdateContinuousViewportAsync();
+        ScheduleDetail();
     }
 
     private void ContinuousPanHorizontally(double deltaDp)
@@ -1854,6 +2060,7 @@ public partial class SheetViewerPage : ContentPage
             ContinuousPagesView.TranslationX + deltaDp,
             -ContinuousPagesView.Width * (_continuousZoom - 1),
             0);
+        ScheduleDetail();
     }
 
     private void ScrollContinuousBy(double deltaDp)

@@ -34,6 +34,10 @@ public partial class SheetViewerViewModel : ObservableObject
     private readonly Dictionary<int, Task<byte[]?>> _pageRenders = new();
     private readonly SemaphoreSlim _renderGate = new(1, 1);
 
+    // Detail renders (the sharp zoomed-in view) have their own gate so they
+    // never hold up page renders/prefetch, and only one is in memory at once.
+    private readonly SemaphoreSlim _detailGate = new(1, 1);
+
     // Pages worth rendering/keeping right now: current page +/-
     // PrefetchRadius in the paged modes, the visible pages plus one on
     // each side in continuous mode.
@@ -893,6 +897,32 @@ public partial class SheetViewerViewModel : ObservableObject
         foreach (var key in distant)
         {
             _pageRenders.Remove(key);
+        }
+    }
+
+    // Renders the visible part of a page at the resolution it has on screen
+    // (the region is normalized to the page as displayed, i.e. cropped).
+    // Cancellable: a newer pan/zoom/page change supersedes it.
+    public async Task<byte[]?> RenderPageDetailAsync(
+        int pageIndex, DetailRegion region, CancellationToken cancellationToken)
+    {
+        if (_sheet is null || pageIndex < 0 || pageIndex >= PageCount)
+        {
+            return null;
+        }
+
+        await _detailGate.WaitAsync(cancellationToken);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var crop = GetPageCrop(pageIndex);
+            return await _pdfPageRenderer.RenderPageRegionAsync(
+                _filePath, pageIndex, region.NormX, region.NormY, region.NormWidth, region.NormHeight,
+                region.PixelWidth, region.PixelHeight, crop.IsFull ? null : crop, cancellationToken);
+        }
+        finally
+        {
+            _detailGate.Release();
         }
     }
 

@@ -39,6 +39,18 @@
                 Source="{Binding CurrentPageImageBytes, Converter={StaticResource ByteArrayToImageSource}}"
                 Aspect="AspectFit" />
 
+            <!-- Sharp re-render of the part of the page on screen while zoomed
+                 in. It lives inside PageContainer, in its unscaled local
+                 space (placed by code), so it is magnified with the page and
+                 lines up pixel for pixel; below the annotations. -->
+            <Image
+                x:Name="DetailImage"
+                IsVisible="False"
+                InputTransparent="True"
+                Aspect="Fill"
+                HorizontalOptions="Start"
+                VerticalOptions="Start" />
+
             <skia:SKCanvasView x:Name="AnnotationCanvas" AutomationId="AnnotationCanvas" PaintSurface="OnAnnotationCanvasPaintSurface" />
 
             <Grid

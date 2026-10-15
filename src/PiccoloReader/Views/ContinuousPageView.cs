@@ -22,6 +22,7 @@ public class ContinuousPageView : ContentView
     private readonly AnnotationPainter _painter;
     private readonly Grid _pageArea;
     private readonly Image _image;
+    private readonly Image _detail;
     private readonly SKCanvasView _canvas;
     private readonly ActivityIndicator _loadingIndicator;
     private ContinuousPage? _page;
@@ -38,6 +39,14 @@ public class ContinuousPageView : ContentView
         _painter = painter;
 
         _image = new Image { Aspect = Aspect.AspectFit };
+        _detail = new Image
+        {
+            Aspect = Aspect.Fill,
+            IsVisible = false,
+            InputTransparent = true,
+            HorizontalOptions = LayoutOptions.Start,
+            VerticalOptions = LayoutOptions.Start
+        };
         _canvas = new SKCanvasView { InputTransparent = true };
         _canvas.PaintSurface += OnCanvasPaintSurface;
         _loadingIndicator = new ActivityIndicator
@@ -50,7 +59,7 @@ public class ContinuousPageView : ContentView
         {
             BackgroundColor = Colors.White,
             Margin = new Thickness(0, 0, 0, Spacing),
-            Children = { _image, _canvas, _loadingIndicator }
+            Children = { _image, _detail, _canvas, _loadingIndicator }
         };
         Content = _pageArea;
 
@@ -91,9 +100,34 @@ public class ContinuousPageView : ContentView
             _page.PropertyChanged += OnPagePropertyChanged;
         }
 
+        HideDetail();
         UpdateImage();
         UpdateHeight();
         _canvas.InvalidateSurface();
+    }
+
+    public ContinuousPage? Page => _page;
+
+    // Sharp re-render of the part of this page that is on screen while the
+    // list is zoomed in. `area` is in this page's own unscaled space, so the
+    // list's zoom magnifies it together with the page image below it.
+    public void ShowDetail(byte[] bytes, RectD area)
+    {
+        _detail.Source = ImageSource.FromStream(() => new MemoryStream(bytes));
+        _detail.WidthRequest = area.Width;
+        _detail.HeightRequest = area.Height;
+        _detail.TranslationX = area.X;
+        _detail.TranslationY = area.Y;
+        _detail.IsVisible = true;
+    }
+
+    public void HideDetail()
+    {
+        if (_detail.IsVisible || _detail.Source is not null)
+        {
+            _detail.IsVisible = false;
+            _detail.Source = null;
+        }
     }
 
     private void OnPagePropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -101,12 +135,16 @@ public class ContinuousPageView : ContentView
         switch (e.PropertyName)
         {
             case nameof(ContinuousPage.ImageBytes):
+                HideDetail();
                 UpdateImage();
                 break;
             case nameof(ContinuousPage.AspectRatio):
                 UpdateHeight();
                 break;
             case nameof(ContinuousPage.Crop):
+                HideDetail();
+                _canvas.InvalidateSurface();
+                break;
             case nameof(ContinuousPage.Annotations):
                 _canvas.InvalidateSurface();
                 break;
