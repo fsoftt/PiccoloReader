@@ -197,3 +197,13 @@ Session-scoped (in-memory, resets per page) undo/redo for annotation edits: plac
 | Item | Status | PR |
 |---|---|---|
 | Reversible action types + undo/redo stacks + toolbar buttons | Merged | [#69](https://github.com/fsoftt/PiccoloReader/pull/69) |
+
+## Plan: Metronome
+
+Spec: [`2026-10-15-metronome-design.md`](../specs/2026-10-15-metronome-design.md)
+
+Android-only click track (tempo, beats per bar, accent, subdivision, tap tempo, beat indicator) in its own Shell tab, with a play/stop toggle in the sheet viewer. Sample-exact scheduling in Core, one streaming `AudioTrack` on a dedicated audio-priority thread that exists only while playing; stops when the app goes to the background. Stage 2 (planned): a tuner, active only inside its own screen.
+
+| Item | Status | PR |
+|---|---|---|
+| Metronome engine (scheduler, click synth, tap tempo), view model, Android player, Metronome tab, viewer toggle | In progress | - |
