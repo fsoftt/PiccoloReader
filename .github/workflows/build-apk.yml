@@ -62,12 +62,15 @@ jobs:
       # previous ones (Android rejects the signature mismatch) - fail
       # fast instead of finding out from a phone.
       - name: Verify APK is signed with the committed debug keystore
+        # apksigner, not `keytool -printcert -jarfile`: with minSdk 24 the APK
+        # only carries v2/v3 signatures, which keytool can't read.
         run: |
           KEYSTORE_FINGERPRINT=$(keytool -list -v -keystore src/PiccoloReader/debug.keystore -storepass android -alias androiddebugkey \
-            | grep 'SHA256:' | head -1 | sed 's/.*SHA256: //')
+            | grep 'SHA256:' | head -1 | sed 's/.*SHA256: //' | tr -d ':' | tr 'A-F' 'a-f')
           APK_PATH=$(ls src/PiccoloReader/bin/Release/net10.0-android/*-Signed.apk)
-          APK_FINGERPRINT=$(keytool -printcert -jarfile "$APK_PATH" \
-            | grep 'SHA256:' | head -1 | sed 's/.*SHA256: //')
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          APK_FINGERPRINT=$("$APKSIGNER" verify --print-certs "$APK_PATH" \
+            | grep 'certificate SHA-256 digest:' | head -1 | sed 's/.*digest: //')
           echo "debug.keystore fingerprint: $KEYSTORE_FINGERPRINT"
           echo "Built APK fingerprint:      $APK_FINGERPRINT"
           if [ "$KEYSTORE_FINGERPRINT" != "$APK_FINGERPRINT" ]; then
