@@ -454,8 +454,8 @@ public partial class SheetViewerPage : ContentPage
         }
 
         DetailImage.Source = ImageSource.FromStream(() => new MemoryStream(bytes));
-        DetailImage.WidthRequest = region.Local.Width;
-        DetailImage.HeightRequest = region.Local.Height;
+        DetailImage.WidthRequest = DetailRegion.LayoutRequest(region.Local.Width, density);
+        DetailImage.HeightRequest = DetailRegion.LayoutRequest(region.Local.Height, density);
         DetailImage.TranslationX = region.Local.X;
         DetailImage.TranslationY = region.Local.Y;
         DetailImage.IsVisible = true;
@@ -477,6 +477,11 @@ public partial class SheetViewerPage : ContentPage
         var pages = _viewModel.ContinuousPages;
         var scroll = ContinuousScrollOffset();
         var visible = new RectD(-ContinuousPagesView.TranslationX / zoom, scroll, width / zoom, height / zoom);
+        // Rows are laid out in whole pixels (each rounded up), so after a few
+        // pages they sit a pixel or more off the sum of their heights in
+        // units. Where the platform can tell, use each row's real position:
+        // positions are then relative to the viewport (scroll 0).
+        var viewport = new RectD(visible.X, 0, visible.Width, visible.Height);
         var first = ContinuousLayout.PageAt(pages, visible.Y, width, ContinuousPageView.Spacing);
         var last = ContinuousLayout.PageAt(pages, visible.Bottom, width, ContinuousPageView.Spacing);
         var density = DeviceDisplay.Current.MainDisplayInfo.Density;
@@ -490,8 +495,19 @@ public partial class SheetViewerPage : ContentPage
             }
 
             var top = ContinuousLayout.PageTop(pages, index, width, ContinuousPageView.Spacing);
-            var image = new RectD(0, top, width, ContinuousLayout.PageHeight(page, width));
-            if (DetailRegion.Compute(visible, image, zoom, density, DetailMaxSidePx()) is not { } region)
+            var pageHeight = ContinuousLayout.PageHeight(page, width);
+            var area = visible;
+            if (TryGetContinuousRow(index, density, out var rowTop, out var rowHeight))
+            {
+                top = rowTop;
+                pageHeight = rowHeight - ContinuousPageView.Spacing;
+                area = viewport;
+            }
+
+            // The row height is rounded to whole units; the image is AspectFit inside it.
+            var fit = DetailRegion.AspectFit(width, pageHeight, page.AspectRatio);
+            var image = new RectD(fit.X, top + fit.Y, fit.Width, fit.Height);
+            if (DetailRegion.Compute(area, image, zoom, density, DetailMaxSidePx()) is not { } region)
             {
                 continue;
             }
@@ -508,12 +524,30 @@ public partial class SheetViewerPage : ContentPage
             {
                 if (reference.TryGetTarget(out var view) && ReferenceEquals(view.Page, page))
                 {
-                    view.ShowDetail(bytes, new RectD(region.Local.X, region.Local.Y - top, region.Local.Width, region.Local.Height));
+                    view.ShowDetail(bytes, new RectD(region.Local.X, region.Local.Y - top, region.Local.Width, region.Local.Height), density);
                     _continuousDetailShown = true;
                     break;
                 }
             }
         }
+    }
+
+    // The position (relative to the list's viewport) and height of a page's
+    // row as the platform actually laid it out, in units. False when the
+    // row isn't laid out (or off Android), where the computed layout stands.
+    private bool TryGetContinuousRow(int index, double density, out double top, out double height)
+    {
+        top = 0;
+        height = 0;
+#if ANDROID
+        if (_continuousRecyclerView?.GetLayoutManager()?.FindViewByPosition(index) is { } child && child.Height > 0)
+        {
+            top = child.Top / density;
+            height = child.Height / density;
+            return true;
+        }
+#endif
+        return false;
     }
 
     private void ResetZoom()

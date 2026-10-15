@@ -28,34 +28,25 @@ public class PdfPageRenderer : IPdfPageRenderer
         var regionHeight = page.Height * region.Height;
         var scale = Math.Min(targetWidthPx / regionWidth, targetHeightPx / regionHeight);
 
+        var width = Math.Max(1, (int)(regionWidth * scale));
+        var height = Math.Max(1, (int)(regionHeight * scale));
+        using var bitmap = Bitmap.CreateBitmap(width, height, Bitmap.Config.Argb8888!);
+        bitmap.EraseColor(global::Android.Graphics.Color.White);
+
         if (region.IsFull)
         {
-            var width = Math.Max(1, (int)(page.Width * scale));
-            var height = Math.Max(1, (int)(page.Height * scale));
-            using var bitmap = Bitmap.CreateBitmap(width, height, Bitmap.Config.Argb8888!);
-            bitmap.EraseColor(global::Android.Graphics.Color.White);
             page.Render(bitmap, null, null, PdfRenderMode.ForDisplay);
             return Encode(bitmap);
         }
 
-        // PdfRenderer can only render the whole page into a bitmap, so the
-        // page is rendered at the scale that makes the crop fill the target
-        // (capped, to bound memory) and the crop is cut out of it.
-        const float MaxSidePx = 4096f;
-        scale = Math.Min(scale, Math.Min(MaxSidePx / page.Width, MaxSidePx / page.Height));
-        var fullWidth = Math.Max(1, (int)Math.Round(page.Width * scale));
-        var fullHeight = Math.Max(1, (int)Math.Round(page.Height * scale));
-
-        using var full = Bitmap.CreateBitmap(fullWidth, fullHeight, Bitmap.Config.Argb8888!);
-        full.EraseColor(global::Android.Graphics.Color.White);
-        page.Render(full, null, null, PdfRenderMode.ForDisplay);
-
-        var left = Math.Clamp((int)Math.Round(region.Left * fullWidth), 0, fullWidth - 1);
-        var top = Math.Clamp((int)Math.Round(region.Top * fullHeight), 0, fullHeight - 1);
-        var cropWidth = Math.Clamp((int)Math.Round(region.Width * fullWidth), 1, fullWidth - left);
-        var cropHeight = Math.Clamp((int)Math.Round(region.Height * fullHeight), 1, fullHeight - top);
-        using var cropped = Bitmap.CreateBitmap(full, left, top, cropWidth, cropHeight);
-        return Encode(cropped);
+        // The bitmap is exactly the crop, stretched to its whole-pixel size,
+        // so it covers the same area as the detail renders (which map the
+        // crop fractionally) with no rounding of a crop rectangle in between.
+        using var matrix = new Matrix();
+        matrix.SetTranslate((float)(-region.Left * page.Width), (float)(-region.Top * page.Height));
+        matrix.PostScale((float)(width / regionWidth), (float)(height / regionHeight));
+        page.Render(bitmap, null, matrix, PdfRenderMode.ForDisplay);
+        return Encode(bitmap);
     });
 
     // Draws only the requested part of a page, so the cost and memory are

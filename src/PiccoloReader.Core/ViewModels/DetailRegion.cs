@@ -66,6 +66,23 @@ public readonly record struct DetailRegion(
         return new RectD((containerWidth - width) / 2, (containerHeight - height) / 2, width, height);
     }
 
+    // The rectangle with every edge moved to the nearest physical pixel (and
+    // at least one pixel in size).
+    public static RectD SnapToPixels(RectD rect, double pixelsPerUnit)
+    {
+        var left = Math.Round(rect.X * pixelsPerUnit);
+        var top = Math.Round(rect.Y * pixelsPerUnit);
+        var right = Math.Max(left + 1, Math.Round(rect.Right * pixelsPerUnit));
+        var bottom = Math.Max(top + 1, Math.Round(rect.Bottom * pixelsPerUnit));
+        return new RectD(left / pixelsPerUnit, top / pixelsPerUnit, (right - left) / pixelsPerUnit, (bottom - top) / pixelsPerUnit);
+    }
+
+    // The size to request for an overlay view that must cover `units` exactly:
+    // platforms convert it to whole pixels by rounding up (Android) or to the
+    // nearest, so ask for a hair under the pixel count and both give it.
+    public static double LayoutRequest(double units, double pixelsPerUnit) =>
+        (Math.Max(1, Math.Round(units * pixelsPerUnit)) - 0.1) / pixelsPerUnit;
+
     // `visible` is the viewport and `image` the displayed page image, both in
     // the same local space; `scale` magnifies that space on screen and
     // `pixelsPerUnit` converts screen units to physical pixels (the display
@@ -82,6 +99,13 @@ public readonly record struct DetailRegion(
         {
             return null;
         }
+
+        // The overlay view is laid out in whole physical pixels, so give the
+        // region a whole-pixel size: the bitmap is then stretched over exactly
+        // the area it was rendered for (otherwise the platform rounds the view
+        // size up and magnifies the content by up to a pixel, which the zoom
+        // multiplies into a visible drift across the width).
+        local = SnapToPixels(local, pixelsPerUnit);
 
         var pixelWidth = local.Width * scale * pixelsPerUnit;
         var pixelHeight = local.Height * scale * pixelsPerUnit;
