@@ -288,6 +288,20 @@ public static class AppStrings
     public static string IconRest16th => Get(nameof(IconRest16th));
     public static string IconRest32nd => Get(nameof(IconRest32nd));
     public static string AppVersionFormat => Get(nameof(AppVersionFormat));
+    public static string Metronome => Get(nameof(Metronome));
+    public static string MetronomeBeatsPerBar => Get(nameof(MetronomeBeatsPerBar));
+    public static string MetronomeSubdivision => Get(nameof(MetronomeSubdivision));
+    public static string MetronomeAccentFirstBeat => Get(nameof(MetronomeAccentFirstBeat));
+    public static string MetronomeTap => Get(nameof(MetronomeTap));
+    public static string MetronomeStart => Get(nameof(MetronomeStart));
+    public static string MetronomeStop => Get(nameof(MetronomeStop));
+    public static string MetronomeBpmUnit => Get(nameof(MetronomeBpmUnit));
+    public static string MetronomeDecreaseBpm => Get(nameof(MetronomeDecreaseBpm));
+    public static string MetronomeIncreaseBpm => Get(nameof(MetronomeIncreaseBpm));
+    public static string SubdivisionNone => Get(nameof(SubdivisionNone));
+    public static string SubdivisionEighths => Get(nameof(SubdivisionEighths));
+    public static string SubdivisionTriplets => Get(nameof(SubdivisionTriplets));
+    public static string SubdivisionSixteenths => Get(nameof(SubdivisionSixteenths));
 
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;

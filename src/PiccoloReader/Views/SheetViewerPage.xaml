@@ -556,7 +556,7 @@
             Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
             <Grid>
-            <Grid x:Name="ReadingBarContent" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="2">
+            <Grid x:Name="ReadingBarContent" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="2">
                 <ImageButton
                     x:Name="BackButton"
                     Grid.Column="0"
@@ -586,8 +586,16 @@
                 </VerticalStackLayout>
 
                 <ImageButton
-                    x:Name="ReadingModeButton"
+                    x:Name="MetronomeButton"
                     Grid.Column="2"
+                    Style="{StaticResource IconButton}"
+                    AutomationId="ViewerMetronomeButton"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.Metronome}"
+                    Clicked="OnMetronomeClicked" />
+
+                <ImageButton
+                    x:Name="ReadingModeButton"
+                    Grid.Column="3"
                     Style="{StaticResource IconButton}"
                     AutomationId="ViewerModeButton"
                     SemanticProperties.Description="{x:Static strings:AppStrings.ReadingModeLabel}"
@@ -599,7 +607,7 @@
 
                 <ImageButton
                     x:Name="BookmarkButton"
-                    Grid.Column="3"
+                    Grid.Column="4"
                     Style="{StaticResource IconButton}"
                     AutomationId="ViewerBookmarkButton"
                     SemanticProperties.Description="{x:Static strings:AppStrings.BookmarksTitle}"
@@ -607,7 +615,7 @@
 
                 <ImageButton
                     x:Name="MoreButton"
-                    Grid.Column="4"
+                    Grid.Column="5"
                     Style="{StaticResource IconButton}"
                     AutomationId="ViewerMoreButton"
                     SemanticProperties.Description="{x:Static strings:AppStrings.MoreOptions}"

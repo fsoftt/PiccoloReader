@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="PiccoloReader.Views.MetronomePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource BackgroundDark}}"
+    Title="{x:Static strings:AppStrings.Metronome}">
+
+    <ContentPage.Resources>
+        <!-- Row building blocks: same as the Settings page. -->
+        <Style x:Key="RowGrid" TargetType="Grid">
+            <Setter Property="MinimumHeightRequest" Value="56" />
+            <Setter Property="Padding" Value="16,0,14,0" />
+            <Setter Property="ColumnSpacing" Value="14" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+        </Style>
+        <Style x:Key="RowDivider" TargetType="BoxView">
+            <Setter Property="HeightRequest" Value="1" />
+            <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" />
+        </Style>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="0,0,0,24">
+
+            <Label
+                Style="{StaticResource PageTitle}"
+                Text="{x:Static strings:AppStrings.Metronome}"
+                Padding="20,16,20,0"
+                SemanticProperties.HeadingLevel="Level1"
+                TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+            <!-- Tempo -->
+            <Border Style="{StaticResource Card}" Margin="20,0" Padding="20,16">
+                <VerticalStackLayout Spacing="8">
+                    <Label
+                        AutomationId="MetronomeBpmLabel"
+                        Text="{Binding Bpm}"
+                        FontSize="72"
+                        FontFamily="OpenSansSemibold"
+                        HorizontalOptions="Center"
+                        TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    <Label
+                        Style="{StaticResource SectionLabel}"
+                        Text="{x:Static strings:AppStrings.MetronomeBpmUnit}"
+                        HorizontalOptions="Center"
+                        Margin="0,-8,0,0" />
+
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="4">
+                        <ImageButton
+                            Grid.Column="0"
+                            Style="{StaticResource IconButton}"
+                            AutomationId="MetronomeBpmMinusButton"
+                            SemanticProperties.Description="{x:Static strings:AppStrings.MetronomeDecreaseBpm}"
+                            Command="{Binding DecrementBpmCommand}">
+                            <ImageButton.Source>
+                                <FontImageSource Glyph="&#xE15B;" FontFamily="MaterialOutlined" Size="24"
+                                    Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                            </ImageButton.Source>
+                        </ImageButton>
+                        <Slider
+                            Grid.Column="1"
+                            AutomationId="MetronomeBpmSlider"
+                            VerticalOptions="Center"
+                            Minimum="30"
+                            Maximum="250"
+                            Value="{Binding BpmSlider}"
+                            MinimumTrackColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                            ThumbColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                        <ImageButton
+                            Grid.Column="2"
+                            Style="{StaticResource IconButton}"
+                            AutomationId="MetronomeBpmPlusButton"
+                            SemanticProperties.Description="{x:Static strings:AppStrings.MetronomeIncreaseBpm}"
+                            Command="{Binding IncrementBpmCommand}">
+                            <ImageButton.Source>
+                                <FontImageSource Glyph="&#xE145;" FontFamily="MaterialOutlined" Size="24"
+                                    Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                            </ImageButton.Source>
+                        </ImageButton>
+                    </Grid>
+
+                    <!-- Beat dots, built in code-behind from BeatsPerBar. -->
+                    <HorizontalStackLayout
+                        x:Name="DotsLayout"
+                        AutomationId="MetronomeBeatDots"
+                        Spacing="8"
+                        HorizontalOptions="Center"
+                        HeightRequest="26"
+                        Margin="0,8" />
+
+                    <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="16" Margin="0,4,0,0">
+                        <Border
+                            Grid.Column="0"
+                            AutomationId="MetronomeTapButton"
+                            SemanticProperties.Description="{x:Static strings:AppStrings.MetronomeTap}"
+                            HeightRequest="48"
+                            StrokeShape="RoundRectangle 24"
+                            StrokeThickness="1"
+                            Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryContainerLight}, Dark={StaticResource PrimaryContainerDark}}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding TapCommand}" />
+                            </Border.GestureRecognizers>
+                            <Label
+                                Text="{x:Static strings:AppStrings.MetronomeTap}"
+                                Style="{StaticResource RowTitle}"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center"
+                                TextColor="{AppThemeBinding Light={StaticResource OnPrimaryContainerLight}, Dark={StaticResource OnPrimaryContainerDark}}" />
+                        </Border>
+
+                        <Border
+                            Grid.Column="1"
+                            x:Name="PlayButton"
+                            AutomationId="MetronomePlayButton"
+                            SemanticProperties.Description="{x:Static strings:AppStrings.MetronomeStart}"
+                            WidthRequest="72"
+                            HeightRequest="72"
+                            Padding="0"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 36"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding TogglePlayCommand}" />
+                            </Border.GestureRecognizers>
+                            <Image HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource x:Name="PlayGlyph" Glyph="&#xE037;" FontFamily="MaterialOutlined" Size="36"
+                                        Color="{AppThemeBinding Light={StaticResource OnPrimaryLight}, Dark={StaticResource OnPrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                        </Border>
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Options -->
+            <Border Style="{StaticResource Card}" Margin="20,0" Padding="0">
+                <VerticalStackLayout>
+                    <Grid Style="{StaticResource RowGrid}" AutomationId="MetronomeBeatsPerBarRow" ColumnDefinitions="*,Auto,20"
+                          SemanticProperties.Description="{x:Static strings:AppStrings.MetronomeBeatsPerBar}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnBeatsPerBarRowTapped" />
+                        </Grid.GestureRecognizers>
+                        <Label Grid.Column="0" Style="{StaticResource RowTitle}" VerticalOptions="Center"
+                               Text="{x:Static strings:AppStrings.MetronomeBeatsPerBar}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Label Grid.Column="1" Style="{StaticResource Caption}" FontSize="14" VerticalOptions="Center"
+                               AutomationId="MetronomeBeatsPerBarValue" Text="{Binding BeatsPerBar}" />
+                        <Image Grid.Column="2" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE5CC;" FontFamily="MaterialOutlined" Size="20"
+                                    Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                            </Image.Source>
+                        </Image>
+                    </Grid>
+                    <BoxView Style="{StaticResource RowDivider}" />
+                    <Grid Style="{StaticResource RowGrid}" AutomationId="MetronomeSubdivisionRow" ColumnDefinitions="*,Auto,20"
+                          SemanticProperties.Description="{x:Static strings:AppStrings.MetronomeSubdivision}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnSubdivisionRowTapped" />
+                        </Grid.GestureRecognizers>
+                        <Label Grid.Column="0" Style="{StaticResource RowTitle}" VerticalOptions="Center"
+                               Text="{x:Static strings:AppStrings.MetronomeSubdivision}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Label Grid.Column="1" x:Name="SubdivisionValueLabel" Style="{StaticResource Caption}" FontSize="14" VerticalOptions="Center"
+                               AutomationId="MetronomeSubdivisionValue" />
+                        <Image Grid.Column="2" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE5CC;" FontFamily="MaterialOutlined" Size="20"
+                                    Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                            </Image.Source>
+                        </Image>
+                    </Grid>
+                    <BoxView Style="{StaticResource RowDivider}" />
+                    <Grid Style="{StaticResource RowGrid}" ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Style="{StaticResource RowTitle}" VerticalOptions="Center"
+                               Text="{x:Static strings:AppStrings.MetronomeAccentFirstBeat}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Switch Grid.Column="1" AutomationId="MetronomeAccentSwitch" VerticalOptions="Center"
+                                SemanticProperties.Description="{x:Static strings:AppStrings.MetronomeAccentFirstBeat}"
+                                OnColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                                IsToggled="{Binding AccentFirstBeat}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
