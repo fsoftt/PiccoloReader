@@ -111,11 +111,11 @@ public class ContinuousPageView : ContentView
     // Sharp re-render of the part of this page that is on screen while the
     // list is zoomed in. `area` is in this page's own unscaled space, so the
     // list's zoom magnifies it together with the page image below it.
-    public void ShowDetail(byte[] bytes, RectD area)
+    public void ShowDetail(byte[] bytes, RectD area, double pixelsPerUnit)
     {
         _detail.Source = ImageSource.FromStream(() => new MemoryStream(bytes));
-        _detail.WidthRequest = area.Width;
-        _detail.HeightRequest = area.Height;
+        _detail.WidthRequest = DetailRegion.LayoutRequest(area.Width, pixelsPerUnit);
+        _detail.HeightRequest = DetailRegion.LayoutRequest(area.Height, pixelsPerUnit);
         _detail.TranslationX = area.X;
         _detail.TranslationY = area.Y;
         _detail.IsVisible = true;
