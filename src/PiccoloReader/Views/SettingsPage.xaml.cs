@@ -76,11 +76,17 @@ public partial class SettingsPage : ContentPage
         await DisplayAlertAsync(AppStrings.RestartRequiredTitle, AppStrings.RestartRequiredMessage, AppStrings.OK);
     }
 
-    private async void OnCreditLinkTapped(object? sender, TappedEventArgs e)
+    private void OnCreditLinkTapped(object? sender, TappedEventArgs e) =>
+        OpenCreditUrl("https://fsoftt.github.io");
+
+    private void OnTesterCreditLinkTapped(object? sender, TappedEventArgs e) =>
+        OpenCreditUrl("https://github.com/Giomelchors");
+
+    private static async void OpenCreditUrl(string url)
     {
         try
         {
-            await Launcher.Default.OpenAsync(new Uri("https://fsoftt.github.io"));
+            await Launcher.Default.OpenAsync(new Uri(url));
         }
         catch (Exception ex)
         {

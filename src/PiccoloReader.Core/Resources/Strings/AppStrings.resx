@@ -25,6 +25,7 @@
   <data name="Library" xml:space="preserve"><value>Library</value></data>
   <data name="Settings" xml:space="preserve"><value>Settings</value></data>
   <data name="MadeWithLoveBy" xml:space="preserve"><value>Made with love by</value></data>
+  <data name="TestedWithLoveBy" xml:space="preserve"><value>Tested with love by</value></data>
   <data name="Folders" xml:space="preserve"><value>Folders</value></data>
   <data name="Sheets" xml:space="preserve"><value>Sheets</value></data>
   <data name="SearchFoldersPlaceholder" xml:space="preserve"><value>Search folders</value></data>
