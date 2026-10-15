@@ -214,17 +214,35 @@
             <!-- Footer -->
             <VerticalStackLayout Spacing="0" HorizontalOptions="Center" Margin="0,8,0,0">
                 <Label x:Name="VersionLabel" Style="{StaticResource Caption}" FontSize="12" HorizontalTextAlignment="Center" />
-                <HorizontalStackLayout Spacing="4" HorizontalOptions="Center">
-                    <Label Style="{StaticResource Caption}" FontSize="12" VerticalOptions="Center"
-                           Text="{x:Static strings:AppStrings.MadeWithLoveBy}" />
-                    <Label AutomationId="SettingsCreditLink" Text="@fsoftt" FontSize="12" VerticalOptions="Center"
-                           Padding="4,14" TextDecorations="Underline"
-                           TextColor="{AppThemeBinding Light={StaticResource OnPrimaryContainerLight}, Dark={StaticResource OnPrimaryContainerDark}}">
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnCreditLinkTapped" />
-                        </Label.GestureRecognizers>
-                    </Label>
-                </HorizontalStackLayout>
+                <!-- One Label per credit line so prefix and link share a baseline; the whole line is the tap target -->
+                <Label AutomationId="SettingsCreditLink" Style="{StaticResource Caption}" FontSize="12"
+                       HorizontalTextAlignment="Center" Margin="0,16,0,0" Padding="0,8">
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="{x:Static strings:AppStrings.MadeWithLoveBy}" />
+                            <Span Text=" " />
+                            <Span Text="@fsoftt" TextDecorations="Underline"
+                                  TextColor="{AppThemeBinding Light={StaticResource OnPrimaryContainerLight}, Dark={StaticResource OnPrimaryContainerDark}}" />
+                        </FormattedString>
+                    </Label.FormattedText>
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnCreditLinkTapped" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label AutomationId="SettingsTesterCreditLink" Style="{StaticResource Caption}" FontSize="12"
+                       HorizontalTextAlignment="Center" Padding="0,8">
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="{x:Static strings:AppStrings.TestedWithLoveBy}" />
+                            <Span Text=" " />
+                            <Span Text="@giomelchors" TextDecorations="Underline"
+                                  TextColor="{AppThemeBinding Light={StaticResource OnPrimaryContainerLight}, Dark={StaticResource OnPrimaryContainerDark}}" />
+                        </FormattedString>
+                    </Label.FormattedText>
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnTesterCreditLinkTapped" />
+                    </Label.GestureRecognizers>
+                </Label>
             </VerticalStackLayout>
 
         </VerticalStackLayout>

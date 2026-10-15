@@ -11,6 +11,7 @@ public static class AppStrings
     public static string Library => Get(nameof(Library));
     public static string Settings => Get(nameof(Settings));
     public static string MadeWithLoveBy => Get(nameof(MadeWithLoveBy));
+    public static string TestedWithLoveBy => Get(nameof(TestedWithLoveBy));
     public static string Folders => Get(nameof(Folders));
     public static string Sheets => Get(nameof(Sheets));
     public static string SearchFoldersPlaceholder => Get(nameof(SearchFoldersPlaceholder));

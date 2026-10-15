@@ -30,7 +30,7 @@
                 TextColor="{AppThemeBinding Light={StaticResource Tertiary}, Dark={StaticResource OnPrimaryContainerDark}}"
                 HorizontalOptions="Center" />
             <Label
-                Text="Music Reader by fsoftt"
+                Text="Music Reader by fsoftt and giomelchors"
                 FontFamily="OpenSansSemibold"
                 FontSize="14"
                 CharacterSpacing="1"
