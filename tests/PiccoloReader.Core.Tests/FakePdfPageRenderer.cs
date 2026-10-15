@@ -33,6 +33,17 @@ public class FakePdfPageRenderer : IPdfPageRenderer
             : RenderAfterGateAsync(RenderGate, pageIndex);
     }
 
+    public List<(int PageIndex, double X, double Y, double Width, double Height, int PixelWidth, int PixelHeight, PageCrop? Crop)> RenderedRegions { get; } = new();
+
+    public Task<byte[]> RenderPageRegionAsync(
+        string filePath, int pageIndex, double regionX, double regionY, double regionWidth, double regionHeight,
+        int outputWidthPx, int outputHeightPx, PageCrop? crop, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        RenderedRegions.Add((pageIndex, regionX, regionY, regionWidth, regionHeight, outputWidthPx, outputHeightPx, crop));
+        return Task.FromResult(new byte[] { 1, (byte)pageIndex });
+    }
+
     private static async Task<byte[]> RenderAfterGateAsync(TaskCompletionSource gate, int pageIndex)
     {
         await gate.Task;

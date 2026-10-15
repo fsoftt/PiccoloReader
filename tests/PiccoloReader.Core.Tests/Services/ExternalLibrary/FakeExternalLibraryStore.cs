@@ -97,4 +97,7 @@ public class FakePdfPageRenderer : PiccoloReader.Core.Services.IPdfPageRenderer
 
     public Task<byte[]> RenderPageAsync(string filePath, int pageIndex, int targetWidthPx, int targetHeightPx, PiccoloReader.Core.ViewModels.PageCrop? crop = null) =>
         Task.FromResult(Array.Empty<byte>());
+
+    public Task<byte[]> RenderPageRegionAsync(string filePath, int pageIndex, double regionX, double regionY, double regionWidth, double regionHeight, int outputWidthPx, int outputHeightPx, PiccoloReader.Core.ViewModels.PageCrop? crop, CancellationToken cancellationToken) =>
+        Task.FromResult(Array.Empty<byte>());
 }

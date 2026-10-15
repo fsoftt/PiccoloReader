@@ -58,6 +58,65 @@ public class PdfPageRenderer : IPdfPageRenderer
         return Encode(cropped);
     });
 
+    // Draws only the requested part of a page, so the cost and memory are
+    // those of one screen-sized bitmap however far the user has zoomed in.
+    // PdfRenderer lets the caller pass a transform from page units (points)
+    // to bitmap pixels, which is what makes rendering just a window possible
+    // without ever allocating the zoomed-in page.
+    public Task<byte[]> RenderPageRegionAsync(
+        string filePath,
+        int pageIndex,
+        double regionX,
+        double regionY,
+        double regionWidth,
+        double regionHeight,
+        int outputWidthPx,
+        int outputHeightPx,
+        PageCrop? crop,
+        CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        using var descriptor = ParcelFileDescriptor.Open(new Java.IO.File(filePath), ParcelFileMode.ReadOnly);
+        using var renderer = new global::Android.Graphics.Pdf.PdfRenderer(descriptor!);
+        using var page = renderer.OpenPage(pageIndex);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var shown = crop is { IsFull: false, IsValid: true } ? crop.Value : PageCrop.Full;
+
+        // The region is relative to the displayed (cropped) page: map it to
+        // page units, then scale it up to fill the output bitmap.
+        var left = (shown.Left + regionX * shown.Width) * page.Width;
+        var top = (shown.Top + regionY * shown.Height) * page.Height;
+        var regionWidthPts = regionWidth * shown.Width * page.Width;
+        var regionHeightPts = regionHeight * shown.Height * page.Height;
+        if (regionWidthPts <= 0 || regionHeightPts <= 0)
+        {
+            throw new ArgumentException("Empty region.");
+        }
+
+        var width = Math.Max(1, outputWidthPx);
+        var height = Math.Max(1, outputHeightPx);
+        using var bitmap = Bitmap.CreateBitmap(width, height, Bitmap.Config.Argb8888!);
+        bitmap.EraseColor(global::Android.Graphics.Color.White);
+
+        using var matrix = new Matrix();
+        matrix.SetTranslate((float)-left, (float)-top);
+        matrix.PostScale((float)(width / regionWidthPts), (float)(height / regionHeightPts));
+        page.Render(bitmap, null, matrix, PdfRenderMode.ForDisplay);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // JPEG, not PNG: the bitmap is opaque (white background), and PNG at
+        // q100 of a screen-sized bitmap is several times slower to encode,
+        // which would delay the swap to the sharp image. q92 keeps text
+        // edges clean at the density they are shown.
+        using var stream = new MemoryStream();
+        bitmap.Compress(Bitmap.CompressFormat.Jpeg!, 92, stream);
+        return stream.ToArray();
+    }, cancellationToken);
+
     private static byte[] Encode(Bitmap bitmap)
     {
         using var stream = new MemoryStream();
