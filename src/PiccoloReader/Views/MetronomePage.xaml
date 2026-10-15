@@ -97,6 +97,8 @@
                             AutomationId="MetronomeTapButton"
                             SemanticProperties.Description="{x:Static strings:AppStrings.MetronomeTap}"
                             HeightRequest="48"
+                            WidthRequest="96"
+                            HorizontalOptions="End"
                             StrokeShape="RoundRectangle 24"
                             StrokeThickness="1"
                             Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"

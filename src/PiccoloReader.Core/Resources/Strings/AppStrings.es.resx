@@ -266,4 +266,5 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="SubdivisionEighths" xml:space="preserve"><value>Corcheas (2)</value></data>
   <data name="SubdivisionTriplets" xml:space="preserve"><value>Tresillos (3)</value></data>
   <data name="SubdivisionSixteenths" xml:space="preserve"><value>Semicorcheas (4)</value></data>
+  <data name="MetronomeStartFailed" xml:space="preserve"><value>No se pudo iniciar el audio del metrónomo.</value></data>
 </root>

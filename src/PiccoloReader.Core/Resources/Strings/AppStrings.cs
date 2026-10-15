@@ -302,6 +302,7 @@ public static class AppStrings
     public static string SubdivisionEighths => Get(nameof(SubdivisionEighths));
     public static string SubdivisionTriplets => Get(nameof(SubdivisionTriplets));
     public static string SubdivisionSixteenths => Get(nameof(SubdivisionSixteenths));
+    public static string MetronomeStartFailed => Get(nameof(MetronomeStartFailed));
 
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;

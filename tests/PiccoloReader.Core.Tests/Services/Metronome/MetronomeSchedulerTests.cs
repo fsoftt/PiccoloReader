@@ -44,6 +44,7 @@ public class MetronomeSchedulerTests
         var clicks = Render(scheduler, tenMinutes, 960, _ => settings);
 
         Assert.Equal(1200, clicks.Count);
+        Assert.Equal(24000L * 1199, clicks[^1].Frame);
         for (var i = 0; i < clicks.Count; i++)
         {
             Assert.Equal(24000L * i, clicks[i].Frame);
@@ -185,6 +186,34 @@ public class MetronomeSchedulerTests
         Assert.Equal(
             new[] { AccentValue, NormalValue, AccentValue, AccentValue, AccentValue },
             clicks.Select(c => c.Value));
+    }
+
+    [Fact]
+    public void Fill_BeatsPerBarGrows_ContinuesBarWithoutRestart()
+    {
+        var scheduler = new MetronomeScheduler(48000, ImpulseClicks());
+        var two = new MetronomeSettings { Bpm = 120, BeatsPerBar = 2 };
+        var four = new MetronomeSettings { Bpm = 120, BeatsPerBar = 4 };
+
+        // Beat 1 (frame 24000) is scheduled under 2/4; from beat 2 on the bar is 4 beats long.
+        var clicks = Render(scheduler, 24000L * 8, 960, start => start < 24480 ? two : four);
+
+        Assert.Equal(
+            new[] { AccentValue, NormalValue, NormalValue, NormalValue, AccentValue, NormalValue, NormalValue, NormalValue },
+            clicks.Select(c => c.Value));
+    }
+
+    [Fact]
+    public void Fill_AccentToggledMidBeat_TakesEffectFromNextBeat()
+    {
+        var scheduler = new MetronomeScheduler(48000, ImpulseClicks());
+        var accented = new MetronomeSettings { Bpm = 120, BeatsPerBar = 1, AccentFirstBeat = true };
+        var plain = accented with { AccentFirstBeat = false };
+
+        // Beat 0 (frame 0) was scheduled with the accent; later beats use the new setting.
+        var clicks = Render(scheduler, 24000L * 3, 960, start => start < 1000 ? accented : plain);
+
+        Assert.Equal(new[] { AccentValue, NormalValue, NormalValue }, clicks.Select(c => c.Value));
     }
 
     [Fact]

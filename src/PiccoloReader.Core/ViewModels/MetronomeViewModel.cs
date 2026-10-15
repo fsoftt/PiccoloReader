@@ -172,6 +172,12 @@ public partial class MetronomeViewModel : ObservableObject
 
     private void OnBeatTicked(int beatInBar, bool isAccent)
     {
+        // A beat already in flight when playback stopped must not light a dot.
+        if (!IsPlaying)
+        {
+            return;
+        }
+
         CurrentBeat = beatInBar;
         CurrentBeatIsAccent = isAccent;
     }
