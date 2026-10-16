@@ -1,6 +1,8 @@
 ﻿using Android.App;
 using Android.Content.PM;
 using Android.OS;
+using Android.Views;
+using PiccoloReader.Core.Services.PageTurn;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace PiccoloReader;
@@ -96,6 +98,133 @@ public class MainActivity : MauiAppCompatActivity
         }
     }
 
+    // Bluetooth page-turn pedals and keyboards. Handled here rather than in
+    // a view so a focused child (list, scroll view) can't swallow the key.
+    // A key the page took is swallowed through its repeats and its key-up, so
+    // holding a pedal turns exactly one page and nothing else reacts to it.
+    // The per-(device, key) bookkeeping lives in PedalKeyTracker. Android
+    // eats the key-down of a navigation key that leaves touch mode (the
+    // first Page/D-pad press after a screen touch) but still delivers its
+    // key-up; that unseen key-up turns the page instead.
+    private readonly PedalKeyTracker _pedalKeys = new();
+
+    // A lost key-up (focus change, pause) must never leave a key stuck.
+    private void ClearSwallowed() => _pedalKeys.Clear();
+
+    protected override void OnPause()
+    {
+        ClearSwallowed();
+        base.OnPause();
+    }
+
+    public override void OnWindowFocusChanged(bool hasFocus)
+    {
+        if (!hasFocus)
+        {
+            ClearSwallowed();
+        }
+
+        base.OnWindowFocusChanged(hasFocus);
+    }
+
+    public override bool DispatchKeyEvent(KeyEvent? e)
+    {
+        if (e is null || (e.Action != KeyEventActions.Down && e.Action != KeyEventActions.Up))
+        {
+            return base.DispatchKeyEvent(e);
+        }
+
+        try
+        {
+            var key = ToPageTurnKey(e.KeyCode);
+            if (key == PageTurnKey.Other)
+            {
+                return base.DispatchKeyEvent(e);
+            }
+
+            var id = PedalKeyTracker.IdOf(e.DeviceId, (int)e.KeyCode);
+            var isDown = e.Action == KeyEventActions.Down;
+            var decision = isDown ? _pedalKeys.OnDown(id, e.RepeatCount) : _pedalKeys.OnUp(id);
+            if (decision == PedalKeyDecision.Swallow)
+            {
+                return true;
+            }
+
+            if (decision == PedalKeyDecision.TryTurn)
+            {
+                // Every Down that does not turn (typing, focused button,
+                // overlay, no viewer yet, an exception) is recorded as passed
+                // through, so its repeats and Up never look like a new press.
+                var handled = false;
+                try
+                {
+                    handled = CanTurnPagesWithKeys(key)
+                        && IPlatformApplication.Current?.Services.GetService<IPageTurnInput>() is { } input
+                        && input.Handle(key, e.IsShiftPressed);
+                }
+                catch (Exception ex)
+                {
+                    Android.Util.Log.Warn("PiccoloReader", $"Pedal page turn failed: {ex}");
+                }
+
+                if (isDown)
+                {
+                    _pedalKeys.Record(id, handled);
+                }
+
+                if (handled)
+                {
+                    return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Android.Util.Log.Warn("PiccoloReader", $"Pedal page turn failed: {ex}");
+        }
+
+        return base.DispatchKeyEvent(e);
+    }
+
+    // Not while typing, not over a modal page (dialogs have their own window
+    // and never reach the activity), and - for the keys that also drive
+    // focus navigation (Enter, D-pad) - not while a button or similar
+    // actionable view holds focus, so a hardware keyboard, D-pad or
+    // TalkBack can still operate it.
+    private bool CanTurnPagesWithKeys(PageTurnKey key)
+    {
+        var focus = CurrentFocus;
+        if (focus is Android.Widget.EditText)
+        {
+            return false;
+        }
+
+        if (PedalKeyMap.IsFocusNavigationKey(key) && focus is { Clickable: true, IsFocused: true }
+            && focus is not Microsoft.Maui.Platform.ContentViewGroup
+            && focus is not AndroidX.RecyclerView.Widget.RecyclerView)
+        {
+            return false;
+        }
+
+        return Microsoft.Maui.Controls.Shell.Current?.Navigation.ModalStack.Count is null or 0;
+    }
+
+    private static PageTurnKey ToPageTurnKey(Keycode code) => code switch
+    {
+        Keycode.PageDown => PageTurnKey.PageDown,
+        Keycode.PageUp => PageTurnKey.PageUp,
+        Keycode.DpadRight => PageTurnKey.DpadRight,
+        Keycode.DpadLeft => PageTurnKey.DpadLeft,
+        Keycode.DpadDown => PageTurnKey.DpadDown,
+        Keycode.DpadUp => PageTurnKey.DpadUp,
+        Keycode.Space => PageTurnKey.Space,
+        Keycode.Enter => PageTurnKey.Enter,
+        Keycode.NumpadEnter => PageTurnKey.NumpadEnter,
+        Keycode.MediaNext => PageTurnKey.MediaNext,
+        Keycode.MediaPrevious => PageTurnKey.MediaPrevious,
+        _ => PageTurnKey.Other
+    };
+
     // Result of the library folder picker (reinstall recovery).
     protected override void OnActivityResult(int requestCode, Result resultCode, Android.Content.Intent? data)
     {
@@ -106,6 +235,7 @@ public class MainActivity : MauiAppCompatActivity
     public override void OnConfigurationChanged(Android.Content.Res.Configuration newConfig)
     {
         base.OnConfigurationChanged(newConfig);
+        ClearSwallowed();
         UpdateSystemBarAppearance();
     }
 

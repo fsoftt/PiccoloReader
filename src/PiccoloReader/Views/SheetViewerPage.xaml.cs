@@ -3,6 +3,7 @@ using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Services.Metronome;
+using PiccoloReader.Core.Services.PageTurn;
 using PiccoloReader.Core.ViewModels;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
@@ -56,14 +57,17 @@ public partial class SheetViewerPage : ContentPage
 
     private readonly PiccoloReader.Services.SheetShareFlow _shareFlow;
     private readonly LibraryService _libraryService;
+    private readonly IPageTurnInput _pageTurnInput;
 
-    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService)
+    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput)
     {
         InitializeComponent();
+        Unloaded += (_, _) => _pageTurnInput.Requested -= OnPageTurnRequested;
         _viewModel = viewModel;
         _metronome = metronome;
         _shareFlow = shareFlow;
         _libraryService = libraryService;
+        _pageTurnInput = pageTurnInput;
         BindingContext = _viewModel;
 
         _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => InvalidateAnnotations();
@@ -184,6 +188,7 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnDisappearing();
         _metronome.PropertyChanged -= OnMetronomePropertyChanged;
+        _pageTurnInput.Requested -= OnPageTurnRequested;
     }
 
     private void OnMetronomePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -217,6 +222,8 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnAppearing();
         _metronome.PropertyChanged += OnMetronomePropertyChanged;
+        _pageTurnInput.Requested -= OnPageTurnRequested;
+        _pageTurnInput.Requested += OnPageTurnRequested;
         UpdateMetronomeButton();
 
 
@@ -1734,6 +1741,63 @@ public partial class SheetViewerPage : ContentPage
 
         EraseAt(point.X, point.Y);
     }
+
+    // Bluetooth pedal / keyboard page turn (see IPageTurnInput). Paged modes
+    // reuse the tap/swipe path, which also resets any zoom; the continuous
+    // list scrolls by a viewport (or to the next page) instead. Returns
+    // false to let the key through to whatever else is on screen.
+    private bool OnPageTurnRequested(PageTurnIntent intent)
+    {
+        if (!CanAcceptPageTurn)
+        {
+            return false;
+        }
+
+        if (!_viewModel.IsContinuousReading)
+        {
+            // At the first/last page this is a consumed no-op, so a pedal
+            // press never activates a focused control.
+            if (intent == PageTurnIntent.Next)
+            {
+                TryGoToNextPage();
+            }
+            else
+            {
+                TryGoToPreviousPage();
+            }
+
+            return true;
+        }
+
+        var width = ContinuousPagesView.Width;
+        var height = ContinuousPagesView.Height;
+        if (width <= 0 || height <= 0)
+        {
+            return false; // list not laid out yet
+        }
+
+        _continuousScrollRemainderPx = 0;
+        var scroll = ContinuousScrollOffset();
+        var target = ContinuousPageTurn.TargetOffset(
+            _viewModel.ContinuousPages, width, ContinuousPageView.Spacing, scroll, height / _continuousZoom, intent);
+        if (target is { } offset)
+        {
+            ScrollContinuousBy(offset - scroll);
+        }
+
+        return true;
+    }
+
+    // False while something else owns the keys: annotation editing (the tool
+    // sheet included), the add-bookmark sheet, the crop overlay, or no
+    // document loaded. (Dialogs, action sheets and the tutorial are separate
+    // windows/pages and never reach the viewer.)
+    private bool CanAcceptPageTurn =>
+        !_viewModel.IsContinuousEditing
+        && !IsEditing
+        && _viewModel.PageCount > 0
+        && !AddBookmarkOverlay.IsVisible
+        && !CropOverlay.IsVisible;
 
     private void TryGoToNextPage()
     {
