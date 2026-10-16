@@ -42,7 +42,7 @@ public class TunerEngineTests(ITestOutputHelper output)
     {
         var hz = TunerTestSignals.HzFor(midi + detuneCents / 100, 442);
 
-        var readings = TunerTestSignals.Run(TunerTestSignals.Sine(hz, 1.0), new TunerSettings { A4Hz = 442 });
+        var readings = TunerTestSignals.Run(TunerTestSignals.Sine(hz, 1.0));
 
         var last = readings[^1].Reading;
         Assert.True(last.HasPitch);
@@ -171,7 +171,7 @@ public class TunerEngineTests(ITestOutputHelper output)
         var floats = TunerTestSignals.Sine(1318.5, 1);
         var pcm = floats.Select(f => (short)Math.Round(f * 32767)).ToArray();
         TunerReading? last = null;
-        var engine = new TunerEngine(TunerTestSignals.SampleRate, null, r => last = r);
+        var engine = new TunerEngine(TunerTestSignals.SampleRate, r => last = r);
 
         for (var i = 0; i < pcm.Length; i += 480)
         {
@@ -192,7 +192,7 @@ public class TunerEngineTests(ITestOutputHelper output)
         }
 
         TunerReading last = default;
-        var engine = new TunerEngine(44100, null, r => last = r);
+        var engine = new TunerEngine(44100, r => last = r);
         for (var i = 0; i < data.Length; i += 441)
         {
             engine.ProcessBlock(data.AsSpan(i, Math.Min(441, data.Length - i)));
@@ -207,7 +207,7 @@ public class TunerEngineTests(ITestOutputHelper output)
     {
         var count = 0;
         TunerReading last = default;
-        var engine = new TunerEngine(TunerTestSignals.SampleRate, null, r => { count++; last = r; });
+        var engine = new TunerEngine(TunerTestSignals.SampleRate, r => { count++; last = r; });
         var tone = TunerTestSignals.Sine(1000, 1);
         engine.ProcessBlock(tone);
         Assert.True(last.HasPitch);
@@ -220,13 +220,31 @@ public class TunerEngineTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void UpdateSettings_IsVisibleToEngine()
+    public void Constructor_RejectsLowSampleRate()
     {
-        var engine = new TunerEngine(TunerTestSignals.SampleRate);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TunerEngine(16000));
+    }
 
-        engine.UpdateSettings(new TunerSettings { A4Hz = 442 });
+    [Fact]
+    public void AccentedNote_LocksWithin150MsOfOnset()
+    {
+        // Tongued attack: 2x amplitude decaying linearly to 1x over 40 ms, then steady.
+        const double onsetMs = 100;
+        var tone = new float[(int)(TunerTestSignals.SampleRate * 1.0)];
+        var onset = (int)(TunerTestSignals.SampleRate * onsetMs / 1000);
+        var decay = (int)(TunerTestSignals.SampleRate * 0.040);
+        for (var i = onset; i < tone.Length; i++)
+        {
+            var gain = 0.1 * (i - onset < decay ? 2.0 - (i - onset) / (double)decay : 1.0);
+            tone[i] = (float)(gain * Math.Sin(2 * Math.PI * 880 * i / TunerTestSignals.SampleRate));
+        }
 
-        Assert.Equal(442, engine.Settings.A4Hz);
+        var readings = TunerTestSignals.Run(tone);
+
+        var first = readings.First(r => r.Reading.HasPitch);
+        var latency = first.TimeMs - onsetMs;
+        output.WriteLine($"Accented note locked {latency:F1} ms after onset");
+        Assert.InRange(latency, 0, 150);
     }
 
     [Fact]
@@ -236,7 +254,7 @@ public class TunerEngineTests(ITestOutputHelper output)
         TunerTestSignals.MixClicks(signal, 500, 0.5);
         var pcm = signal.Select(f => (short)Math.Round(f * 32767)).ToArray();
         var emitted = 0;
-        var engine = new TunerEngine(TunerTestSignals.SampleRate, null, _ => emitted++);
+        var engine = new TunerEngine(TunerTestSignals.SampleRate, _ => emitted++);
         Feed(engine, signal, pcm);
 
         var before = GC.GetAllocatedBytesForCurrentThread();

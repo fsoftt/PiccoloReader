@@ -18,7 +18,4 @@ public interface ITunerInput
     TunerStartResult Start();
 
     void Stop();
-
-    /// <summary>Safe from any thread, also while running.</summary>
-    void UpdateSettings(TunerSettings settings);
 }

@@ -178,7 +178,7 @@ public class TunerViewModelTests
     }
 
     [Fact]
-    public void A4_ClampsAndForwardsToInput()
+    public void A4_Clamps()
     {
         _prefs.Stored = new TunerSettings { A4Hz = 450 };
         var sut = Create();
@@ -188,11 +188,9 @@ public class TunerViewModelTests
 
         sut.DecreaseA4Command.Execute(null);
         Assert.Equal(449, sut.A4Hz);
-        Assert.Equal(449, _input.Updates[^1].A4Hz);
 
         sut.A4Hz = 100;
         Assert.Equal(430, sut.A4Hz);
-        Assert.Equal(430, _input.Updates[^1].A4Hz);
     }
 
     [Theory]
@@ -209,7 +207,7 @@ public class TunerViewModelTests
     }
 
     [Fact]
-    public void Constructor_LoadsStoredSettingsAndPushesThemToInput()
+    public void Constructor_LoadsStoredSettings()
     {
         _prefs.Stored = new TunerSettings { A4Hz = 443, ShowAsWritten = true, NoteNaming = NoteNaming.Solfege };
 
@@ -218,7 +216,6 @@ public class TunerViewModelTests
         Assert.Equal(443, sut.A4Hz);
         Assert.True(sut.ShowAsWritten);
         Assert.Equal(NoteNaming.Solfege, sut.NoteNaming);
-        Assert.Equal(_prefs.Stored, _input.Updates[^1]);
         Assert.Equal(0, _prefs.SaveCount);
     }
 
@@ -231,7 +228,7 @@ public class TunerViewModelTests
 
         sut.ShowAsWritten = true;
         Assert.Equal(4, sut.Octave);
-        Assert.True(_input.Updates[^1].ShowAsWritten);
+        Assert.True(sut.Settings.ShowAsWritten);
 
         sut.NoteNaming = NoteNaming.Solfege;
         Assert.Equal("La", sut.NoteName);
@@ -270,5 +267,47 @@ public class TunerViewModelTests
         sut.OpenSettingsCommand.Execute(null);
 
         Assert.Equal(1, _permission.OpenSettingsCount);
+    }
+
+    [Fact]
+    public async Task DetachThenAttach_DoesNotShowStaleNote()
+    {
+        var queue = new List<Action>();
+        var sut = Create(queue.Add);
+        await sut.AttachAsync();
+        _input.Raise(Reading(880));
+        sut.Detach();
+
+        await sut.AttachAsync();
+        foreach (var action in queue)
+        {
+            action();
+        }
+
+        Assert.Equal(TunerState.Silent, sut.State);
+        Assert.Equal(string.Empty, sut.NoteName);
+        Assert.Equal(0f, sut.FrequencyHz);
+    }
+
+    [Theory]
+    [InlineData(TunerSettings.MaxA4Hz, true)]
+    [InlineData(TunerSettings.MinA4Hz, false)]
+    public void A4AtBoundary_IsNoOpAndNotDirty(int stored, bool increase)
+    {
+        _prefs.Stored = new TunerSettings { A4Hz = stored };
+        var sut = Create();
+
+        if (increase)
+        {
+            sut.IncreaseA4Command.Execute(null);
+        }
+        else
+        {
+            sut.DecreaseA4Command.Execute(null);
+        }
+        sut.PersistIfDirty();
+
+        Assert.Equal(stored, sut.A4Hz);
+        Assert.Equal(0, _prefs.SaveCount);
     }
 }

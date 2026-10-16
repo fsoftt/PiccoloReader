@@ -39,6 +39,8 @@ public partial class TunerViewModel : ObservableObject
     private bool _attached;
     private int _attachVersion;
     private float _lastHz;
+    private TunerSettings _settings;
+    private NoteNaming _resolvedNaming;
 
     [ObservableProperty]
     private TunerState _state = TunerState.Idle;
@@ -72,7 +74,9 @@ public partial class TunerViewModel : ObservableObject
 
     /// <param name="post">
     /// Runs an action on the UI thread. The input raises readings on the audio
-    /// thread; the default runs inline, which suits tests.
+    /// thread; the default runs inline, which suits tests. It must be
+    /// fire-and-forget and never invoke-and-wait: Detach stops the input
+    /// synchronously, so blocking on the UI thread could deadlock.
     /// </param>
     public TunerViewModel(
         ITunerInput input,
@@ -92,21 +96,25 @@ public partial class TunerViewModel : ObservableObject
         _a4Hz = settings.A4Hz;
         _showAsWritten = settings.ShowAsWritten;
         _noteNaming = settings.NoteNaming;
-        input.UpdateSettings(settings);
+        _settings = settings;
+        _resolvedNaming = NoteNames.Resolve(settings.NoteNaming, CultureInfo.CurrentUICulture);
     }
 
-    public TunerSettings Settings => new()
-    {
-        A4Hz = A4Hz,
-        ShowAsWritten = ShowAsWritten,
-        NoteNaming = NoteNaming
-    };
+    /// <summary>Current settings snapshot; rebuilt only when a setting changes.</summary>
+    public TunerSettings Settings => _settings;
 
     /// <summary>Starts listening. Call when the tuner UI becomes visible.</summary>
     public async Task AttachAsync()
     {
         var version = ++_attachVersion;
         _attached = true;
+        _resolvedNaming = NoteNames.Resolve(NoteNaming, CultureInfo.CurrentUICulture);
+        lock (_latestLock)
+        {
+            _applyPending = false;
+            _latest = default;
+        }
+
         ShowAdsBanner = _adsPreferenceService.GetSupportWithAdsEnabled();
 
         var granted = await _permission.EnsureGrantedAsync();
@@ -163,10 +171,22 @@ public partial class TunerViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void IncreaseA4() => A4Hz++;
+    private void IncreaseA4()
+    {
+        if (A4Hz < TunerSettings.MaxA4Hz)
+        {
+            A4Hz++;
+        }
+    }
 
     [RelayCommand]
-    private void DecreaseA4() => A4Hz--;
+    private void DecreaseA4()
+    {
+        if (A4Hz > TunerSettings.MinA4Hz)
+        {
+            A4Hz--;
+        }
+    }
 
     [RelayCommand]
     private void SetA4Preset(int hz) => A4Hz = hz;
@@ -188,12 +208,27 @@ public partial class TunerViewModel : ObservableObject
 
     partial void OnShowAsWrittenChanged(bool value) => SettingsChanged();
 
-    partial void OnNoteNamingChanged(NoteNaming value) => SettingsChanged();
+    partial void OnNoteNamingChanged(NoteNaming value)
+    {
+        _resolvedNaming = NoteNames.Resolve(value, CultureInfo.CurrentUICulture);
+        SettingsChanged();
+    }
 
     private void SettingsChanged()
     {
+        var snapshot = new TunerSettings
+        {
+            A4Hz = A4Hz,
+            ShowAsWritten = ShowAsWritten,
+            NoteNaming = NoteNaming
+        };
+        if (snapshot == _settings)
+        {
+            return;
+        }
+
+        _settings = snapshot;
         _isDirty = true;
-        _input.UpdateSettings(Settings);
         if (_lastHz > 0f)
         {
             ShowNote(_lastHz);
@@ -247,9 +282,9 @@ public partial class TunerViewModel : ObservableObject
 
     private void ShowNote(float hz)
     {
-        var settings = Settings;
+        var settings = _settings;
         var note = NoteMapper.FromHz(hz, settings.A4Hz, settings.TransposeSemitones);
-        var naming = NoteNames.Resolve(settings.NoteNaming, CultureInfo.CurrentUICulture);
+        var naming = _resolvedNaming;
         NoteName = NoteNames.Get(note.PitchClass, naming);
         Octave = note.Octave;
         Cents = MathF.Round(note.Cents, 1);

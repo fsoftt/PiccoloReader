@@ -17,7 +17,9 @@ public sealed class PitchSmoother
     private const float EmaAlpha = 0.3f;
 
     // A click rings out within a few frames; a note being started does not fade that fast.
-    private const float MinRmsRatioForNewNote = 0.7f;
+    // The last frame is compared with the loudest candidate frame, so an accented
+    // attack that settles to a steady level still passes.
+    internal const float MinRmsRatioForNewNote = 0.5f;
 
     private readonly float _clarityGate;
     private readonly int _stableFrames;
@@ -32,7 +34,7 @@ public sealed class PitchSmoother
     private int _candidateCount;
     private float _candidateLast;
     private float _candidateSum;
-    private float _candidateFirstRms;
+    private float _candidatePeakRms;
 
     public PitchSmoother(float frameDurationMs, float clarityGate = DefaultClarityGate, int stableFrames = DefaultStableFrames, float holdMs = DefaultHoldMs)
     {
@@ -93,13 +95,18 @@ public sealed class PitchSmoother
         {
             _candidateCount = 1;
             _candidateSum = cents;
-            _candidateFirstRms = rms;
+            _candidatePeakRms = rms;
+        }
+
+        if (rms > _candidatePeakRms)
+        {
+            _candidatePeakRms = rms;
         }
 
         _candidateLast = cents;
         if (_candidateCount >= _stableFrames)
         {
-            if (rms < _candidateFirstRms * MinRmsRatioForNewNote)
+            if (rms < _candidatePeakRms * MinRmsRatioForNewNote)
             {
                 // Decaying burst: do not lock onto it.
                 _candidateCount = 0;

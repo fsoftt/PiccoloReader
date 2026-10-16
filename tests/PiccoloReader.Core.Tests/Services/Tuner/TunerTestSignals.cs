@@ -74,11 +74,11 @@ internal static class TunerTestSignals
 
     public static float[] Silence(double seconds) => new float[(int)(SampleRate * seconds)];
 
-    public static List<(double TimeMs, TunerReading Reading)> Run(float[] signal, TunerSettings? settings = null)
+    public static List<(double TimeMs, TunerReading Reading)> Run(float[] signal)
     {
         var results = new List<(double, TunerReading)>();
         var position = 0;
-        var engine = new TunerEngine(SampleRate, settings, r => results.Add((position * 1000.0 / SampleRate, r)));
+        var engine = new TunerEngine(SampleRate, r => results.Add((position * 1000.0 / SampleRate, r)));
         for (position = 0; position < signal.Length; position += BlockSize)
         {
             var count = Math.Min(BlockSize, signal.Length - position);

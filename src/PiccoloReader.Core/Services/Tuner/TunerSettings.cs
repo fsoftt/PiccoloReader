@@ -25,7 +25,9 @@ public sealed record TunerSettings
     /// <summary>Piccolo sounds one octave above written pitch.</summary>
     public const int WrittenTransposeSemitones = -12;
 
-    public static readonly int[] Presets = [PresetA4Standard, PresetA4Orchestra, PresetA4Bright];
+    private static readonly int[] PresetValues = [PresetA4Standard, PresetA4Orchestra, PresetA4Bright];
+
+    public static IReadOnlyList<int> Presets => PresetValues;
 
     private readonly int _a4Hz = DefaultA4Hz;
 

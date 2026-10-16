@@ -12,8 +12,6 @@ public class FakeTunerInput : ITunerInput
 
     public int StopCount { get; private set; }
 
-    public List<TunerSettings> Updates { get; } = [];
-
     public int SubscriberCount => ReadingChanged?.GetInvocationList().Length ?? 0;
 
     public event EventHandler<TunerReading>? ReadingChanged;
@@ -30,8 +28,6 @@ public class FakeTunerInput : ITunerInput
         StopCount++;
         IsRunning = false;
     }
-
-    public void UpdateSettings(TunerSettings settings) => Updates.Add(settings);
 
     public void Raise(TunerReading reading) => ReadingChanged?.Invoke(this, reading);
 }

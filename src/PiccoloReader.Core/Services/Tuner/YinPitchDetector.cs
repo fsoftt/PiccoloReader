@@ -109,8 +109,29 @@ public sealed class YinPitchDetector
             return PitchEstimate.None(rms);
         }
 
-        var offset = chosen < _tauMax ? Refine(chosen) : 0f;
-        var hz = _sampleRate / (chosen + offset);
+        // The CMNDF minimum can sit one lag off the minimum of d itself; refine
+        // around the lag with the smallest difference.
+        var lag = chosen;
+        if (chosen < _tauMax)
+        {
+            var low = Math.Max(1, chosen - 1);
+            var high = Math.Min(chosen + 1, _tauMax - 1);
+            for (var candidate = low; candidate <= high; candidate++)
+            {
+                if (d[candidate] < d[lag])
+                {
+                    lag = candidate;
+                }
+            }
+
+            if (lag + 1 > chosen + 1)
+            {
+                ComputeDifference(lag + 1);
+            }
+        }
+
+        var offset = lag < _tauMax ? Refine(lag) : 0f;
+        var hz = _sampleRate / (lag + offset);
         return new PitchEstimate(hz, 1f - cm[chosen], rms, true);
     }
 
@@ -145,7 +166,7 @@ public sealed class YinPitchDetector
             return 0f;
         }
 
-        var parabolic = (before - after) / (2f * curvature);
+        var parabolic = Math.Clamp((before - after) / (2f * curvature), -0.5f, 0.5f);
         var offset = parabolic;
         for (var iteration = 0; iteration < 3; iteration++)
         {
@@ -159,6 +180,6 @@ public sealed class YinPitchDetector
             offset = corrected;
         }
 
-        return offset;
+        return Math.Clamp(offset, -0.5f, 0.5f);
     }
 }

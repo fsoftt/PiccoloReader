@@ -3,7 +3,7 @@ namespace PiccoloReader.Core.Services.Tuner;
 /// <summary>
 /// Glue between a platform audio input and the pitch pipeline. Feed it blocks of
 /// mono samples from the audio thread; it decimates by 2, runs YIN every hop and
-/// invokes <see cref="Reading"/> (on the calling thread) when the smoothed reading
+/// invokes the reading callback (on the calling thread) when the smoothed reading
 /// meaningfully changes. Allocation-free after construction.
 /// </summary>
 public sealed class TunerEngine
@@ -29,28 +29,35 @@ public sealed class TunerEngine
     private int _sinceHop;
     private float _sinceEmitMs = MinEmitIntervalMs;
     private TunerReading _lastEmitted;
-    private TunerSettings _settings;
+    private readonly Action<TunerReading>? _onReading;
+    private volatile bool _resetPending;
 
-    public TunerEngine(int inputSampleRate, TunerSettings? settings = null, Action<TunerReading>? onReading = null)
+    /// <param name="inputSampleRate">Input rate in Hz; at least 32000.</param>
+    /// <param name="onReading">Invoked on the thread calling ProcessBlock.</param>
+    public TunerEngine(int inputSampleRate, Action<TunerReading>? onReading = null)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThan(inputSampleRate, 32000);
         var decimatedRate = inputSampleRate / 2f;
         _detector = new YinPitchDetector(decimatedRate, WindowSize);
         _hopMs = HopSize * 1000f / decimatedRate;
         _smoother = new PitchSmoother(_hopMs);
-        _settings = settings ?? new TunerSettings();
-        Reading = onReading;
+        _onReading = onReading;
     }
 
-    /// <summary>Invoked on the thread calling ProcessBlock. Assign once, before processing.</summary>
-    public Action<TunerReading>? Reading { get; set; }
+    /// <summary>
+    /// Safe from any thread. Only raises a flag; the audio thread clears the
+    /// state at the start of its next ProcessBlock.
+    /// </summary>
+    public void Reset() => _resetPending = true;
 
-    public TunerSettings Settings => Volatile.Read(ref _settings);
-
-    /// <summary>Safe from any thread; takes effect on the next block.</summary>
-    public void UpdateSettings(TunerSettings settings) => Volatile.Write(ref _settings, settings);
-
-    public void Reset()
+    private void ApplyPendingReset()
     {
+        if (!_resetPending)
+        {
+            return;
+        }
+
+        _resetPending = false;
         _decimator.Reset();
         _smoother.Reset();
         Array.Clear(_ring);
@@ -63,6 +70,8 @@ public sealed class TunerEngine
 
     public void ProcessBlock(ReadOnlySpan<float> samples)
     {
+        ApplyPendingReset();
+
         while (!samples.IsEmpty)
         {
             var take = Math.Min(samples.Length, InputChunk);
@@ -73,6 +82,8 @@ public sealed class TunerEngine
 
     public void ProcessBlock(ReadOnlySpan<short> samples)
     {
+        ApplyPendingReset();
+
         while (!samples.IsEmpty)
         {
             var take = Math.Min(samples.Length, InputChunk);
@@ -134,6 +145,6 @@ public sealed class TunerEngine
 
         _sinceEmitMs = 0f;
         _lastEmitted = reading;
-        Reading?.Invoke(reading);
+        _onReading?.Invoke(reading);
     }
 }
