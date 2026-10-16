@@ -88,11 +88,12 @@ public class SheetShareService
             name = name[..^4];
         }
 
-        var invalid = Path.GetInvalidFileNameChars();
+        // Fixed set (Windows-invalid chars) so the result is the same on every OS.
+        const string invalid = "\\/:*?\"<>|";
         var builder = new StringBuilder(name.Length);
         foreach (var c in name)
         {
-            builder.Append(Array.IndexOf(invalid, c) >= 0 || char.IsControl(c) || c == '/' ? '_' : c);
+            builder.Append(invalid.Contains(c) || char.IsControl(c) ? '_' : c);
         }
 
         name = builder.ToString().Trim().TrimEnd('.').Trim();
