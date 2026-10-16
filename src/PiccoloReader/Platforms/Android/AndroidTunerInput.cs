@@ -15,14 +15,14 @@ namespace PiccoloReader.Platforms.Android;
 /// only signals, and the audio thread releases everything and exits by itself
 /// (never blocking the UI thread). The read loop reuses one direct ByteBuffer
 /// and one float[] (no allocations) and feeds <see cref="TunerEngine"/>, which
-/// decimates to half the input rate (24 kHz) and analyses 1024-sample windows
+/// decimates to half the input rate (24 kHz) and analyses 640-sample windows
 /// every 512 samples.
 /// </summary>
 public sealed class AndroidTunerInput : ITunerInput
 {
     private const int PreferredSampleRate = 48000;
     private const int FallbackSampleRate = 44100;
-    private const int ChunkSamples = 1024;
+    private const int ChunkSamples = 2048;
     private const int BytesPerSample = 4;
     private const int PreviousReleaseWaitMilliseconds = 500;
     private const int ReadBlocking = 0; // AudioRecord.READ_BLOCKING
@@ -208,7 +208,7 @@ public sealed class AndroidTunerInput : ITunerInput
         }
 
         /// <summary>
-        /// Never blocks. The blocking Read returns within one chunk (about 21 ms),
+        /// Never blocks. The blocking Read returns within one chunk (about 43 ms),
         /// then the audio thread stops, releases the record and signals.
         /// </summary>
         public void RequestStop() => _stopRequested = true;
