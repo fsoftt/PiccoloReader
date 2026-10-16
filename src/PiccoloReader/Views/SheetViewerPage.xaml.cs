@@ -336,7 +336,8 @@ public partial class SheetViewerPage : ContentPage
         _pageTurnInput.Requested -= OnPageTurnRequested;
         _pageTurnInput.Requested += OnPageTurnRequested;
         UpdateMetronomeButton();
-        AttachWindow(Window);
+        // Window can still be null here on a freshly pushed page; this is a single-window app.
+        AttachWindow(Window ?? Application.Current?.Windows.FirstOrDefault());
         _tunerStrip.StateChanged -= OnTunerStripStateChanged;
         _tunerStrip.StateChanged += OnTunerStripStateChanged;
 
