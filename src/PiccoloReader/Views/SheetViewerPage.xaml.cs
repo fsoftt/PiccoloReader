@@ -3,6 +3,7 @@ using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Services.Metronome;
+using PiccoloReader.Core.Services.PageTurn;
 using PiccoloReader.Core.ViewModels;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
@@ -56,14 +57,16 @@ public partial class SheetViewerPage : ContentPage
 
     private readonly PiccoloReader.Services.SheetShareFlow _shareFlow;
     private readonly LibraryService _libraryService;
+    private readonly IPageTurnInput _pageTurnInput;
 
-    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService)
+    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _metronome = metronome;
         _shareFlow = shareFlow;
         _libraryService = libraryService;
+        _pageTurnInput = pageTurnInput;
         BindingContext = _viewModel;
 
         _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => InvalidateAnnotations();
@@ -184,6 +187,7 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnDisappearing();
         _metronome.PropertyChanged -= OnMetronomePropertyChanged;
+        _pageTurnInput.Requested -= OnPageTurnRequested;
     }
 
     private void OnMetronomePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -217,6 +221,8 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnAppearing();
         _metronome.PropertyChanged += OnMetronomePropertyChanged;
+        _pageTurnInput.Requested -= OnPageTurnRequested;
+        _pageTurnInput.Requested += OnPageTurnRequested;
         UpdateMetronomeButton();
 
 
@@ -1733,6 +1739,46 @@ public partial class SheetViewerPage : ContentPage
         }
 
         EraseAt(point.X, point.Y);
+    }
+
+    // Bluetooth pedal / keyboard page turn (see IPageTurnInput). Paged modes
+    // reuse the tap/swipe path, which also resets any zoom; the continuous
+    // list scrolls by a viewport (or to the next page) instead.
+    private void OnPageTurnRequested(PageTurnIntent intent)
+    {
+        if (_viewModel.IsContinuousEditing)
+        {
+            return;
+        }
+
+        if (!_viewModel.IsContinuousReading)
+        {
+            if (intent == PageTurnIntent.Next)
+            {
+                TryGoToNextPage();
+            }
+            else
+            {
+                TryGoToPreviousPage();
+            }
+
+            return;
+        }
+
+        var width = ContinuousPagesView.Width;
+        var height = ContinuousPagesView.Height;
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        var scroll = ContinuousScrollOffset();
+        var target = ContinuousPageTurn.TargetOffset(
+            _viewModel.ContinuousPages, width, ContinuousPageView.Spacing, scroll, height / _continuousZoom, intent);
+        if (target is { } offset)
+        {
+            ScrollContinuousBy(offset - scroll);
+        }
     }
 
     private void TryGoToNextPage()

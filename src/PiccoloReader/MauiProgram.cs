@@ -10,6 +10,7 @@ using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Services.ExternalLibrary;
 using PiccoloReader.Core.Services.Metronome;
+using PiccoloReader.Core.Services.PageTurn;
 using PiccoloReader.Core.Services.Tuner;
 using PiccoloReader.Core.ViewModels;
 using PiccoloReader.Services;
@@ -90,6 +91,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IAdsPreferenceService, MauiAdsPreferenceService>();
 		builder.Services.AddSingleton<ITutorialPreferenceService, MauiTutorialPreferenceService>();
 		builder.Services.AddSingleton<IReadingPreferenceService, MauiReadingPreferenceService>();
+		builder.Services.AddSingleton<IPageTurnInput, PageTurnInput>();
 		builder.Services.AddSingleton<IMetronomePreferenceService, MauiMetronomePreferenceService>();
 		builder.Services.AddSingleton<ITunerPreferenceService, MauiTunerPreferenceService>();
 		builder.Services.AddSingleton<IMicrophonePermissionService, MauiMicrophonePermissionService>();

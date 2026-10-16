@@ -1,6 +1,8 @@
 ﻿using Android.App;
 using Android.Content.PM;
 using Android.OS;
+using Android.Views;
+using PiccoloReader.Core.Services.PageTurn;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace PiccoloReader;
@@ -95,6 +97,85 @@ public class MainActivity : MauiAppCompatActivity
             };
         }
     }
+
+    // Bluetooth page-turn pedals and keyboards. Handled here rather than in
+    // a view so a focused child (list, scroll view) can't swallow the key.
+    // A key we took is swallowed through its repeats and its key-up, so
+    // holding a pedal turns exactly one page and nothing else reacts to it.
+    private Keycode _swallowedKey = Keycode.Unknown;
+
+    public override bool DispatchKeyEvent(KeyEvent? e)
+    {
+        if (e is null)
+        {
+            return base.DispatchKeyEvent(e);
+        }
+
+        var code = e.KeyCode;
+        if (e.Action == KeyEventActions.Up)
+        {
+            if (code == _swallowedKey)
+            {
+                _swallowedKey = Keycode.Unknown;
+                return true;
+            }
+
+            return base.DispatchKeyEvent(e);
+        }
+
+        if (e.Action != KeyEventActions.Down)
+        {
+            return base.DispatchKeyEvent(e);
+        }
+
+        if (code == _swallowedKey)
+        {
+            return true; // auto-repeat of a key already consumed
+        }
+
+        var key = ToPageTurnKey(code);
+        if (key == PageTurnKey.Other || e.RepeatCount != 0 || !CanTurnPagesWithKeys())
+        {
+            return base.DispatchKeyEvent(e);
+        }
+
+        var input = IPlatformApplication.Current?.Services.GetService<IPageTurnInput>();
+        if (input is not null && input.Handle(key, e.IsShiftPressed))
+        {
+            _swallowedKey = code;
+            return true;
+        }
+
+        return base.DispatchKeyEvent(e);
+    }
+
+    // Not while typing, and not over a modal page (dialogs have their own
+    // window and never reach the activity).
+    private bool CanTurnPagesWithKeys()
+    {
+        if (CurrentFocus is Android.Widget.EditText)
+        {
+            return false;
+        }
+
+        return Microsoft.Maui.Controls.Shell.Current?.Navigation.ModalStack.Count is null or 0;
+    }
+
+    private static PageTurnKey ToPageTurnKey(Keycode code) => code switch
+    {
+        Keycode.PageDown => PageTurnKey.PageDown,
+        Keycode.PageUp => PageTurnKey.PageUp,
+        Keycode.DpadRight => PageTurnKey.DpadRight,
+        Keycode.DpadLeft => PageTurnKey.DpadLeft,
+        Keycode.DpadDown => PageTurnKey.DpadDown,
+        Keycode.DpadUp => PageTurnKey.DpadUp,
+        Keycode.Space => PageTurnKey.Space,
+        Keycode.Enter => PageTurnKey.Enter,
+        Keycode.NumpadEnter => PageTurnKey.NumpadEnter,
+        Keycode.MediaNext => PageTurnKey.MediaNext,
+        Keycode.MediaPrevious => PageTurnKey.MediaPrevious,
+        _ => PageTurnKey.Other
+    };
 
     // Result of the library folder picker (reinstall recovery).
     protected override void OnActivityResult(int requestCode, Result resultCode, Android.Content.Intent? data)
