@@ -3,9 +3,12 @@ namespace PiccoloReader.Core.Services.PageTurn;
 // Seam between the platform key handling and the visible viewer page.
 // The page subscribes while it is on screen; with no subscriber a key is
 // not handled, so it passes through to the rest of the app untouched.
+// The page decides: its handler returns true when it took the press
+// (including a no-op at the first/last page) and false to let the key
+// through (editing, an overlay is open, not laid out yet).
 public interface IPageTurnInput
 {
-    event Action<PageTurnIntent>? Requested;
+    event Func<PageTurnIntent, bool>? Requested;
 
     bool HasListener { get; }
 
@@ -15,7 +18,7 @@ public interface IPageTurnInput
 
 public sealed class PageTurnInput : IPageTurnInput
 {
-    public event Action<PageTurnIntent>? Requested;
+    public event Func<PageTurnIntent, bool>? Requested;
 
     public bool HasListener => Requested is not null;
 
@@ -27,7 +30,6 @@ public sealed class PageTurnInput : IPageTurnInput
             return false;
         }
 
-        handler(intent);
-        return true;
+        return handler(intent);
     }
 }

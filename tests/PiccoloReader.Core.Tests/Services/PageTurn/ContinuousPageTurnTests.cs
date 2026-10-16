@@ -36,7 +36,7 @@ public class ContinuousPageTurnTests
     {
         var pages = Pages(3, 1);
         Assert.Equal(308, Target(pages, 200, 100, PageTurnIntent.Next));
-        Assert.Equal(308, Target(pages, 270, 100, PageTurnIntent.Next));
+        Assert.Equal(316, Target(pages, 270, 100, PageTurnIntent.Next)); // sliver left: full chunk, clamped to the end
     }
 
     [Fact]
@@ -112,5 +112,68 @@ public class ContinuousPageTurnTests
         Assert.Null(Target(new List<ContinuousPage>(), 0, 100, PageTurnIntent.Next));
         Assert.Null(Target(Pages(1), 0, 0, PageTurnIntent.Next));
         Assert.Null(Target(Pages(1, 1), 0, 100, PageTurnIntent.None));
+    }
+
+    [Fact]
+    public void Offset_in_the_gap_below_a_page_counts_as_the_next_page()
+    {
+        var pages = Pages(1, 1, 1); // page 0 ends at 100, page 1 starts at 108
+        // Next is a real chunk, not a 4dp hop to the page top.
+        Assert.Equal(194, Target(pages, 104, 100, PageTurnIntent.Next));
+        Assert.Equal(0, Target(pages, 104, 100, PageTurnIntent.Previous));
+    }
+
+    [Fact]
+    public void Next_with_only_a_sliver_of_the_page_left_scrolls_a_full_chunk()
+    {
+        var pages = Pages(3, 1, 1); // tops 0,308,416; max offset 524-100
+        Assert.Equal(380, Target(pages, 290, 100, PageTurnIntent.Next));
+    }
+
+    [Fact]
+    public void Next_reaches_the_true_end_including_the_trailing_spacing_and_stops()
+    {
+        var pages = Pages(1, 1); // content 216 (trailing spacing included), viewport 150
+        Assert.Equal(66, Target(pages, 0, 150, PageTurnIntent.Next));
+        Assert.Null(Target(pages, 66, 150, PageTurnIntent.Next));
+    }
+
+    [Fact]
+    public void Zoomed_in_next_walks_the_whole_list_in_overlapping_chunks()
+    {
+        // Zoom 2 on a 400 list: 200 of content visible, pages 250 tall.
+        var pages = Pages(2.5, 2.5, 2.5); // tops 0,258,516; content 774; max offset 574
+        const double visible = 200;
+        double scroll = 0;
+        var presses = 0;
+        while (Target(pages, scroll, visible, PageTurnIntent.Next) is { } next && presses < 20)
+        {
+            Assert.True(next - scroll >= visible * 0.9 / 2 || next == 574, $"dead move {scroll}->{next}");
+            Assert.True(next <= scroll + visible + Spacing, $"skipped content {scroll}->{next}");
+            scroll = next;
+            presses++;
+        }
+
+        Assert.Equal(574, scroll);
+        Assert.True(presses < 20);
+    }
+
+    [Fact]
+    public void Zoomed_in_previous_walks_back_to_the_top_without_skipping()
+    {
+        var pages = Pages(2.5, 2.5, 2.5);
+        const double visible = 200;
+        double scroll = 574;
+        var presses = 0;
+        while (Target(pages, scroll, visible, PageTurnIntent.Previous) is { } prev && presses < 20)
+        {
+            Assert.True(prev < scroll);
+            Assert.True(prev >= scroll - visible - Spacing, $"skipped content {scroll}->{prev}");
+            scroll = prev;
+            presses++;
+        }
+
+        Assert.Equal(0, scroll);
+        Assert.True(presses < 20);
     }
 }

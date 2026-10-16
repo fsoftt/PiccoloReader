@@ -43,7 +43,7 @@ public class PedalKeyMapTests
     {
         var input = new PageTurnInput();
         var seen = new List<PageTurnIntent>();
-        input.Requested += seen.Add;
+        input.Requested += i => { seen.Add(i); return true; };
 
         Assert.True(input.Handle(PageTurnKey.PageUp, false));
         Assert.False(input.Handle(PageTurnKey.Other, false));
@@ -54,10 +54,41 @@ public class PedalKeyMapTests
     public void Unsubscribed_input_passes_keys_through()
     {
         var input = new PageTurnInput();
-        void Handler(PageTurnIntent _) { }
+        bool Handler(PageTurnIntent _) => true;
         input.Requested += Handler;
         input.Requested -= Handler;
         Assert.False(input.HasListener);
         Assert.False(input.Handle(PageTurnKey.Space, false));
     }
+
+    [Fact]
+    public void Key_passes_through_when_page_declines()
+    {
+        var input = new PageTurnInput();
+        input.Requested += _ => false;
+        Assert.False(input.Handle(PageTurnKey.PageDown, false));
+    }
+
+    [Fact]
+    public void Key_is_consumed_when_page_accepts_even_as_noop()
+    {
+        var input = new PageTurnInput();
+        input.Requested += _ => true;
+        Assert.True(input.Handle(PageTurnKey.PageDown, false));
+    }
+
+    [Theory]
+    [InlineData(PageTurnKey.Enter, true)]
+    [InlineData(PageTurnKey.NumpadEnter, true)]
+    [InlineData(PageTurnKey.DpadLeft, true)]
+    [InlineData(PageTurnKey.DpadRight, true)]
+    [InlineData(PageTurnKey.DpadUp, true)]
+    [InlineData(PageTurnKey.DpadDown, true)]
+    [InlineData(PageTurnKey.PageDown, false)]
+    [InlineData(PageTurnKey.PageUp, false)]
+    [InlineData(PageTurnKey.Space, false)]
+    [InlineData(PageTurnKey.MediaNext, false)]
+    [InlineData(PageTurnKey.MediaPrevious, false)]
+    public void Focus_navigation_keys_are_enter_and_dpad_only(PageTurnKey key, bool expected) =>
+        Assert.Equal(expected, PedalKeyMap.IsFocusNavigationKey(key));
 }

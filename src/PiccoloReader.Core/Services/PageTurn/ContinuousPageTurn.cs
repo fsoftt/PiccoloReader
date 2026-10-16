@@ -27,16 +27,28 @@ public static class ContinuousPageTurn
         }
 
         var step = visibleHeight * (1 - overlap);
+        // Next must move a meaningful distance, never a few dp of dead
+        // travel, unless the end of the list is what stops it.
+        var minMove = step / 2;
         // Platform scroll offsets are rounded to whole pixels, so an offset
         // a hair above a page top still counts as being on that page.
         var current = ContinuousLayout.PageAt(pages, scrollTop + Epsilon, width, spacing);
         var top = ContinuousLayout.PageTop(pages, current, width, spacing);
+        var pageBottom = top + ContinuousLayout.PageHeight(pages[current], width);
+        if (current < pages.Count - 1 && scrollTop + Epsilon >= pageBottom)
+        {
+            // The viewport top sits in the gap below this page: it is
+            // looking at the next one.
+            current++;
+            top = ContinuousLayout.PageTop(pages, current, width, spacing);
+            pageBottom = top + ContinuousLayout.PageHeight(pages[current], width);
+        }
+
         double target;
 
         if (intent == PageTurnIntent.Next)
         {
-            var bottom = top + ContinuousLayout.PageHeight(pages[current], width);
-            if (bottom > scrollTop + visibleHeight + Epsilon)
+            if (pageBottom > scrollTop + visibleHeight + Epsilon)
             {
                 // The rest of this page is below the viewport: next chunk.
                 target = scrollTop + step;
@@ -44,6 +56,13 @@ public static class ContinuousPageTurn
             else if (current < pages.Count - 1)
             {
                 target = ContinuousLayout.PageTop(pages, current + 1, width, spacing);
+                if (target - scrollTop < minMove)
+                {
+                    // Only a sliver of this page is left: scroll a full
+                    // chunk instead (the content is continuous, so nothing
+                    // is skipped).
+                    target = scrollTop + step;
+                }
             }
             else
             {
@@ -57,8 +76,8 @@ public static class ContinuousPageTurn
         }
         else if (current > 0)
         {
-            // At the top of this page: show the end of the previous one
-            // (its top when it fits on screen).
+            // At the top of this page: show the end of the
+            // previous one (its top when it fits on screen).
             var previousTop = ContinuousLayout.PageTop(pages, current - 1, width, spacing);
             var previousBottom = previousTop + ContinuousLayout.PageHeight(pages[current - 1], width);
             target = Math.Max(previousTop, previousBottom - visibleHeight);
@@ -72,6 +91,9 @@ public static class ContinuousPageTurn
         // (rather than a phantom one) when already at it.
         if (intent == PageTurnIntent.Next)
         {
+            // Content ends after the last page's trailing spacing (and, zoomed, the
+            // list footer that makes room for the scaled-away viewport part), so
+            // the last scroll position is total - visibleHeight.
             var maxOffset = Math.Max(0, ContinuousLayout.PageTop(pages, pages.Count, width, spacing) - visibleHeight);
             target = Math.Min(target, maxOffset);
         }

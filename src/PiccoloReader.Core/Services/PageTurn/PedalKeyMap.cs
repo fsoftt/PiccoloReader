@@ -36,4 +36,13 @@ public static class PedalKeyMap
             or PageTurnKey.MediaPrevious => PageTurnIntent.Previous,
         _ => PageTurnIntent.None
     };
+
+    // Keys that also drive focus navigation / activation of the focused
+    // control (D-pad, Enter). The platform lets these through while an
+    // actionable control has focus; Page keys, Space and media keys always
+    // go to the page.
+    public static bool IsFocusNavigationKey(PageTurnKey key) => key is
+        PageTurnKey.Enter or PageTurnKey.NumpadEnter
+        or PageTurnKey.DpadRight or PageTurnKey.DpadLeft
+        or PageTurnKey.DpadDown or PageTurnKey.DpadUp;
 }

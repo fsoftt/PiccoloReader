@@ -62,6 +62,7 @@ public partial class SheetViewerPage : ContentPage
     public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput)
     {
         InitializeComponent();
+        Unloaded += (_, _) => _pageTurnInput.Requested -= OnPageTurnRequested;
         _viewModel = viewModel;
         _metronome = metronome;
         _shareFlow = shareFlow;
@@ -1743,16 +1744,19 @@ public partial class SheetViewerPage : ContentPage
 
     // Bluetooth pedal / keyboard page turn (see IPageTurnInput). Paged modes
     // reuse the tap/swipe path, which also resets any zoom; the continuous
-    // list scrolls by a viewport (or to the next page) instead.
-    private void OnPageTurnRequested(PageTurnIntent intent)
+    // list scrolls by a viewport (or to the next page) instead. Returns
+    // false to let the key through to whatever else is on screen.
+    private bool OnPageTurnRequested(PageTurnIntent intent)
     {
-        if (_viewModel.IsContinuousEditing)
+        if (!CanAcceptPageTurn)
         {
-            return;
+            return false;
         }
 
         if (!_viewModel.IsContinuousReading)
         {
+            // At the first/last page this is a consumed no-op, so a pedal
+            // press never activates a focused control.
             if (intent == PageTurnIntent.Next)
             {
                 TryGoToNextPage();
@@ -1762,16 +1766,17 @@ public partial class SheetViewerPage : ContentPage
                 TryGoToPreviousPage();
             }
 
-            return;
+            return true;
         }
 
         var width = ContinuousPagesView.Width;
         var height = ContinuousPagesView.Height;
         if (width <= 0 || height <= 0)
         {
-            return;
+            return false; // list not laid out yet
         }
 
+        _continuousScrollRemainderPx = 0;
         var scroll = ContinuousScrollOffset();
         var target = ContinuousPageTurn.TargetOffset(
             _viewModel.ContinuousPages, width, ContinuousPageView.Spacing, scroll, height / _continuousZoom, intent);
@@ -1779,7 +1784,20 @@ public partial class SheetViewerPage : ContentPage
         {
             ScrollContinuousBy(offset - scroll);
         }
+
+        return true;
     }
+
+    // False while something else owns the keys: annotation editing (the tool
+    // sheet included), the add-bookmark sheet, the crop overlay, or no
+    // document loaded. (Dialogs, action sheets and the tutorial are separate
+    // windows/pages and never reach the viewer.)
+    private bool CanAcceptPageTurn =>
+        !_viewModel.IsContinuousEditing
+        && !IsEditing
+        && _viewModel.PageCount > 0
+        && !AddBookmarkOverlay.IsVisible
+        && !CropOverlay.IsVisible;
 
     private void TryGoToNextPage()
     {

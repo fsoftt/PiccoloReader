@@ -100,9 +100,69 @@ public class MainActivity : MauiAppCompatActivity
 
     // Bluetooth page-turn pedals and keyboards. Handled here rather than in
     // a view so a focused child (list, scroll view) can't swallow the key.
-    // A key we took is swallowed through its repeats and its key-up, so
+    // A key the page took is swallowed through its repeats and its key-up, so
     // holding a pedal turns exactly one page and nothing else reacts to it.
-    private Keycode _swallowedKey = Keycode.Unknown;
+    // Swallowed keys are tracked per (device, key) in a small fixed set, so
+    // two overlapping keys work and a press allocates nothing.
+    private const int MaxSwallowedKeys = 8;
+    private readonly long[] _swallowed = new long[MaxSwallowedKeys];
+    private int _swallowedCount;
+
+    private static long SwallowKey(KeyEvent e) => ((long)e.DeviceId << 32) | (uint)(int)e.KeyCode;
+
+    private bool IsSwallowed(long key)
+    {
+        for (var i = 0; i < _swallowedCount; i++)
+        {
+            if (_swallowed[i] == key)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool RemoveSwallowed(long key)
+    {
+        for (var i = 0; i < _swallowedCount; i++)
+        {
+            if (_swallowed[i] == key)
+            {
+                _swallowed[i] = _swallowed[--_swallowedCount];
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void AddSwallowed(long key)
+    {
+        if (_swallowedCount < MaxSwallowedKeys)
+        {
+            _swallowed[_swallowedCount++] = key;
+        }
+    }
+
+    // A lost key-up (focus change, pause) must never leave a key stuck.
+    private void ClearSwallowed() => _swallowedCount = 0;
+
+    protected override void OnPause()
+    {
+        ClearSwallowed();
+        base.OnPause();
+    }
+
+    public override void OnWindowFocusChanged(bool hasFocus)
+    {
+        if (!hasFocus)
+        {
+            ClearSwallowed();
+        }
+
+        base.OnWindowFocusChanged(hasFocus);
+    }
 
     public override bool DispatchKeyEvent(KeyEvent? e)
     {
@@ -111,49 +171,67 @@ public class MainActivity : MauiAppCompatActivity
             return base.DispatchKeyEvent(e);
         }
 
-        var code = e.KeyCode;
-        if (e.Action == KeyEventActions.Up)
+        try
         {
-            if (code == _swallowedKey)
+            var swallowKey = SwallowKey(e);
+            if (e.Action == KeyEventActions.Up)
             {
-                _swallowedKey = Keycode.Unknown;
-                return true;
+                return RemoveSwallowed(swallowKey) || base.DispatchKeyEvent(e);
             }
 
-            return base.DispatchKeyEvent(e);
-        }
+            if (e.Action != KeyEventActions.Down)
+            {
+                return base.DispatchKeyEvent(e);
+            }
 
-        if (e.Action != KeyEventActions.Down)
-        {
-            return base.DispatchKeyEvent(e);
-        }
+            if (e.RepeatCount > 0)
+            {
+                // Auto-repeat of a key we already consumed; anything else is
+                // not ours.
+                return IsSwallowed(swallowKey) || base.DispatchKeyEvent(e);
+            }
 
-        if (code == _swallowedKey)
-        {
-            return true; // auto-repeat of a key already consumed
-        }
+            // A fresh press always starts clean, whatever happened to the
+            // previous key-up.
+            RemoveSwallowed(swallowKey);
 
-        var key = ToPageTurnKey(code);
-        if (key == PageTurnKey.Other || e.RepeatCount != 0 || !CanTurnPagesWithKeys())
-        {
-            return base.DispatchKeyEvent(e);
-        }
+            var key = ToPageTurnKey(e.KeyCode);
+            if (key == PageTurnKey.Other || !CanTurnPagesWithKeys(key))
+            {
+                return base.DispatchKeyEvent(e);
+            }
 
-        var input = IPlatformApplication.Current?.Services.GetService<IPageTurnInput>();
-        if (input is not null && input.Handle(key, e.IsShiftPressed))
+            var input = IPlatformApplication.Current?.Services.GetService<IPageTurnInput>();
+            if (input is not null && input.Handle(key, e.IsShiftPressed))
+            {
+                AddSwallowed(swallowKey);
+                return true;
+            }
+        }
+        catch (Exception ex)
         {
-            _swallowedKey = code;
-            return true;
+            Android.Util.Log.Warn("PiccoloReader", $"Pedal page turn failed: {ex}");
         }
 
         return base.DispatchKeyEvent(e);
     }
 
-    // Not while typing, and not over a modal page (dialogs have their own
-    // window and never reach the activity).
-    private bool CanTurnPagesWithKeys()
+    // Not while typing, not over a modal page (dialogs have their own window
+    // and never reach the activity), and - for the keys that also drive
+    // focus navigation (Enter, D-pad) - not while a button or similar
+    // actionable view holds focus, so a hardware keyboard, D-pad or
+    // TalkBack can still operate it.
+    private bool CanTurnPagesWithKeys(PageTurnKey key)
     {
-        if (CurrentFocus is Android.Widget.EditText)
+        var focus = CurrentFocus;
+        if (focus is Android.Widget.EditText)
+        {
+            return false;
+        }
+
+        if (PedalKeyMap.IsFocusNavigationKey(key) && focus is { Clickable: true, IsFocused: true }
+            && focus is not Microsoft.Maui.Platform.ContentViewGroup
+            && focus is not AndroidX.RecyclerView.Widget.RecyclerView)
         {
             return false;
         }
@@ -187,6 +265,7 @@ public class MainActivity : MauiAppCompatActivity
     public override void OnConfigurationChanged(Android.Content.Res.Configuration newConfig)
     {
         base.OnConfigurationChanged(newConfig);
+        ClearSwallowed();
         UpdateSystemBarAppearance();
     }
 
