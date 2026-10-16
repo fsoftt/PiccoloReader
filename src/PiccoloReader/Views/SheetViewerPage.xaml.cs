@@ -2,6 +2,7 @@ using CommunityToolkit.Maui.Core;
 using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
+using PiccoloReader.Core.Services.Metronome;
 using PiccoloReader.Core.ViewModels;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
@@ -23,6 +24,7 @@ public partial class SheetViewerPage : ContentPage
     private const double SideTapZoneFraction = 0.3;
 
     private readonly SheetViewerViewModel _viewModel;
+    private readonly MetronomeViewModel _metronome;
 
     private double _currentScale = 1;
     private double _xOffset;
@@ -52,10 +54,11 @@ public partial class SheetViewerPage : ContentPage
 
     private readonly AnnotationPainter _annotationPainter = new();
 
-    public SheetViewerPage(SheetViewerViewModel viewModel)
+    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome)
     {
         InitializeComponent();
         _viewModel = viewModel;
+        _metronome = metronome;
         BindingContext = _viewModel;
 
         _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => InvalidateAnnotations();
@@ -172,9 +175,45 @@ public partial class SheetViewerPage : ContentPage
     }
 #endif
 
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _metronome.PropertyChanged -= OnMetronomePropertyChanged;
+    }
+
+    private void OnMetronomePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MetronomeViewModel.IsPlaying))
+        {
+            UpdateMetronomeButton();
+        }
+    }
+
+    private void OnMetronomeClicked(object? sender, EventArgs e) =>
+        _metronome.TogglePlayCommand.Execute(null);
+
+    // Timer icon, primary-tinted with a crossed timer while the metronome plays.
+    private void UpdateMetronomeButton()
+    {
+        var playing = _metronome.IsPlaying;
+        var source = new FontImageSource
+        {
+            Glyph = playing ? "" : "",
+            FontFamily = "MaterialOutlined",
+            Size = 24
+        };
+        source.SetAppThemeColor(FontImageSource.ColorProperty,
+            (Color)Application.Current!.Resources[playing ? "PrimaryLight" : "TextPrimaryLight"],
+            (Color)Application.Current!.Resources[playing ? "PrimaryDark" : "TextPrimaryDark"]);
+        MetronomeButton.Source = source;
+    }
+
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _metronome.PropertyChanged += OnMetronomePropertyChanged;
+        UpdateMetronomeButton();
+
 
         // The view model is reused across openings: start outside any editing
         // state so the reading bar (not the editing bar) is what shows.

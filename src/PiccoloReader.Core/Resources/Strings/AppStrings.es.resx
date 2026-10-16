@@ -252,4 +252,19 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="SharedPdfImportedMultipleFormat" xml:space="preserve"><value>Se importaron {0} PDF</value></data>
   <data name="SharedPdfImportFailedMessage" xml:space="preserve"><value>No se pudo importar el PDF. Comprueba que sea un archivo válido y legible.</value></data>
   <data name="SharedPdfImportPartialFormat" xml:space="preserve"><value>Importados: {0}. No se pudieron importar: {1}.</value></data>
+  <data name="Metronome" xml:space="preserve"><value>Metrónomo</value></data>
+  <data name="MetronomeBeatsPerBar" xml:space="preserve"><value>Pulsos por compás</value></data>
+  <data name="MetronomeSubdivision" xml:space="preserve"><value>Subdivisión</value></data>
+  <data name="MetronomeAccentFirstBeat" xml:space="preserve"><value>Acentuar primer pulso</value></data>
+  <data name="MetronomeTap" xml:space="preserve"><value>Marcar tempo</value></data>
+  <data name="MetronomeStart" xml:space="preserve"><value>Iniciar metrónomo</value></data>
+  <data name="MetronomeStop" xml:space="preserve"><value>Detener metrónomo</value></data>
+  <data name="MetronomeBpmUnit" xml:space="preserve"><value>BPM</value></data>
+  <data name="MetronomeDecreaseBpm" xml:space="preserve"><value>Disminuir tempo</value></data>
+  <data name="MetronomeIncreaseBpm" xml:space="preserve"><value>Aumentar tempo</value></data>
+  <data name="SubdivisionNone" xml:space="preserve"><value>Ninguna</value></data>
+  <data name="SubdivisionEighths" xml:space="preserve"><value>Corcheas (2)</value></data>
+  <data name="SubdivisionTriplets" xml:space="preserve"><value>Tresillos (3)</value></data>
+  <data name="SubdivisionSixteenths" xml:space="preserve"><value>Semicorcheas (4)</value></data>
+  <data name="MetronomeStartFailed" xml:space="preserve"><value>No se pudo iniciar el audio del metrónomo.</value></data>
 </root>

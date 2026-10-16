@@ -90,5 +90,25 @@ freehand pencil strokes).
 - Undo/redo is in scope for the annotation workflow, scoped to the current
   viewing session (resets when the sheet is closed and reopened)
 
+## Metronome
+A built-in metronome for practicing while reading.
+
+- Own **Metronome** tab in the bottom tab bar (before Settings); Android only
+  for now
+- Controls: BPM (30–250, default 100) with −/+ buttons and a slider, tap
+  tempo, beats per bar (1–12, default 4), accent on the first beat
+  (default on), subdivision (none / 2 / 3 / 4 clicks per beat; subdivision
+  clicks are quieter), and a big Play/Stop button
+- A row of dots highlights the current beat (the accented beat is
+  distinct)
+- Settings are remembered; the playing state is not
+- It keeps playing while navigating anywhere in the app, and stops when the
+  app goes to the background
+- The Sheet Viewer toolbar has a small metronome button to start/stop it
+  without leaving the sheet
+- Must cost nothing when stopped and stay light on CPU/battery when running
+- A **tuner** is planned as a second stage (active only inside its own
+  screen)
+
 ## Open Questions / Not Yet Decided
 - Exact music icon set and category groupings (dynamics, articulations, etc.)
