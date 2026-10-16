@@ -30,6 +30,13 @@ public class FakeTunerInput : ITunerInput
     }
 
     public void Raise(TunerReading reading) => ReadingChanged?.Invoke(this, reading);
+
+    /// <summary>The input died mid-session: no longer running, reports silence.</summary>
+    public void SimulateLoss()
+    {
+        IsRunning = false;
+        Raise(default);
+    }
 }
 
 public class FakeTunerPreferenceService : ITunerPreferenceService
@@ -72,4 +79,22 @@ public class FakeMicrophonePermissionService : IMicrophonePermissionService
     public bool IsGranted() => Granted;
 
     public void OpenAppSettings() => OpenSettingsCount++;
+}
+
+/// <summary>An input whose Start blocks until the test releases it, to model a pooled Start that runs late.</summary>
+public sealed class GatedFakeTunerInput : FakeTunerInput
+{
+    private readonly ManualResetEventSlim _gate = new(false);
+    private readonly ManualResetEventSlim _entered = new(false);
+
+    public void WaitUntilStartEntered() => _entered.Wait(TimeSpan.FromSeconds(5));
+
+    public void ReleaseStart() => _gate.Set();
+
+    public override TunerStartResult Start()
+    {
+        _entered.Set();
+        _gate.Wait(TimeSpan.FromSeconds(5));
+        return base.Start();
+    }
 }

@@ -316,4 +316,161 @@ public class TunerStripControllerTests
         Assert.False(_stripPreferences.IsEnabled);
         Assert.Equal(1, _input.StopCount);
     }
+
+    private sealed class PromptPermission : IMicrophonePermissionService
+    {
+        public TaskCompletionSource<bool> Prompt { get; } = new();
+
+        public bool Granted { get; set; }
+
+        public int EnsureCount { get; private set; }
+
+        public Task<bool> EnsureGrantedAsync()
+        {
+            EnsureCount++;
+            return Prompt.Task;
+        }
+
+        public bool IsGranted() => Granted;
+
+        public void OpenAppSettings()
+        {
+        }
+    }
+
+    private TunerStripController Create(ITunerInput input, IMicrophonePermissionService permission, bool enabled = true)
+    {
+        var controller = new TunerStripController(input, _tunerPreferences, new FakeStripPreferences { IsEnabled = enabled }, permission, _posted.Add);
+        controller.Bind(_view);
+        controller.SetTravel(100f);
+        return controller;
+    }
+
+    [Fact]
+    public async Task Detach_during_a_pending_start_gives_the_microphone_back()
+    {
+        var input = new GatedFakeTunerInput();
+        var controller = Create(input, _permission);
+
+        var attach = controller.AttachAsync();
+        input.WaitUntilStartEntered();
+        controller.Detach();
+        input.ReleaseStart();
+        await attach;
+
+        Assert.False(controller.IsOn);
+        Assert.False(input.IsRunning);
+        Assert.Equal(2, input.StopCount);
+        Assert.Equal(0, input.SubscriberCount);
+    }
+
+    [Fact]
+    public async Task Reattach_during_a_pending_start_keeps_the_microphone()
+    {
+        var input = new GatedFakeTunerInput();
+        var controller = Create(input, _permission);
+
+        var first = controller.AttachAsync();
+        input.WaitUntilStartEntered();
+        controller.Detach();
+        var second = controller.AttachAsync();
+        input.ReleaseStart();
+        await Task.WhenAll(first, second);
+
+        Assert.True(controller.IsOn);
+        Assert.True(input.IsRunning);
+        Assert.Equal(1, input.SubscriberCount);
+    }
+
+    [Fact]
+    public async Task Attach_while_already_listening_is_a_no_op()
+    {
+        await _controller.AttachAsync();
+        _input.Raise(Pitch(10f));
+        Flush();
+        _view.Calls.Clear();
+
+        await _controller.AttachAsync();
+
+        Assert.Equal(1, _input.StartCount);
+        Assert.Equal(1, _input.SubscriberCount);
+        Assert.Empty(_view.Calls);
+        _input.Raise(Pitch(10f));
+        Assert.Empty(_posted);
+    }
+
+    [Fact]
+    public async Task Detach_during_the_permission_prompt_saves_the_preference_but_does_not_start()
+    {
+        var permission = new PromptPermission();
+        var input = new FakeTunerInput();
+        var preferences = new FakeStripPreferences();
+        var controller = new TunerStripController(input, _tunerPreferences, preferences, permission, _posted.Add);
+
+        var toggle = controller.ToggleAsync();
+        controller.Detach();
+        permission.Prompt.SetResult(true);
+        var on = await toggle;
+
+        Assert.False(on);
+        Assert.True(preferences.IsEnabled);
+        Assert.Equal(0, input.StartCount);
+    }
+
+    [Fact]
+    public async Task Resume_during_the_permission_prompt_still_starts_after_the_grant()
+    {
+        var permission = new PromptPermission();
+        var input = new FakeTunerInput();
+        var preferences = new FakeStripPreferences();
+        var controller = new TunerStripController(input, _tunerPreferences, preferences, permission, _posted.Add);
+
+        var toggle = controller.ToggleAsync();
+        controller.Detach();
+        await controller.AttachAsync();
+        permission.Granted = true;
+        permission.Prompt.SetResult(true);
+        var on = await toggle;
+
+        Assert.True(on);
+        Assert.Equal(1, input.StartCount);
+    }
+
+    [Fact]
+    public async Task Second_tap_while_the_first_is_in_flight_is_ignored()
+    {
+        var permission = new PromptPermission();
+        var input = new FakeTunerInput();
+        var preferences = new FakeStripPreferences();
+        var controller = new TunerStripController(input, _tunerPreferences, preferences, permission, _posted.Add);
+
+        var first = controller.ToggleAsync();
+        var second = await controller.ToggleAsync();
+        permission.Granted = true;
+        permission.Prompt.SetResult(true);
+        await first;
+
+        Assert.False(second);
+        Assert.Equal(1, permission.EnsureCount);
+        Assert.Equal(1, input.StartCount);
+        Assert.True(controller.IsOn);
+    }
+
+    [Fact]
+    public async Task Input_lost_mid_session_turns_the_strip_off_and_notifies()
+    {
+        var changed = 0;
+        _controller.StateChanged += (_, _) => changed++;
+        await StartAsync();
+
+        _input.SimulateLoss();
+        _input.SimulateLoss();
+        Flush();
+
+        Assert.False(_controller.IsOn);
+        Assert.Equal(1, changed);
+        Assert.Equal(0, _input.SubscriberCount);
+        Assert.True(_stripPreferences.IsEnabled);
+        Assert.False(_view.Calls[^1].Visible);
+    }
 }

@@ -194,12 +194,8 @@ public partial class SheetViewerPage : ContentPage
         base.OnDisappearing();
         _metronome.PropertyChanged -= OnMetronomePropertyChanged;
         _pageTurnInput.Requested -= OnPageTurnRequested;
-        if (_window is not null)
-        {
-            _window.Stopped -= OnWindowStopped;
-            _window.Resumed -= OnWindowResumed;
-            _window = null;
-        }
+        AttachWindow(null);
+        _tunerStrip.StateChanged -= OnTunerStripStateChanged;
 
         _tunerStrip.Detach();
         UpdateTunerStripButton();
@@ -225,6 +221,27 @@ public partial class SheetViewerPage : ContentPage
     }
 
     private void OnWindowResumed(object? sender, EventArgs e) => AttachTunerStrip();
+
+    private void AttachWindow(Window? window)
+    {
+        if (ReferenceEquals(_window, window))
+        {
+            return;
+        }
+
+        if (_window is not null)
+        {
+            _window.Stopped -= OnWindowStopped;
+            _window.Resumed -= OnWindowResumed;
+        }
+
+        _window = window;
+        if (_window is not null)
+        {
+            _window.Stopped += OnWindowStopped;
+            _window.Resumed += OnWindowResumed;
+        }
+    }
 
     private async void AttachTunerStrip()
     {
@@ -257,22 +274,34 @@ public partial class SheetViewerPage : ContentPage
         UpdateTunerStripButton();
     }
 
-    // Same look as the metronome button: primary-tinted while the strip is on.
+    // Same look as the metronome button: primary-tinted while the strip is on. The
+    // two sources are built once; the strip's row stays laid out so toggling it
+    // never resizes the page.
+    private FontImageSource? _tunerIconOn;
+    private FontImageSource? _tunerIconOff;
+
     private void UpdateTunerStripButton()
     {
-        var on = _tunerStrip.IsOn;
-        TunerStripHost.IsVisible = on;
+        TunerStripButton.Source = _tunerStrip.IsOn
+            ? _tunerIconOn ??= CreateTunerIcon("PrimaryLight", "PrimaryDark")
+            : _tunerIconOff ??= CreateTunerIcon("TextPrimaryLight", "TextPrimaryDark");
+    }
+
+    private static FontImageSource CreateTunerIcon(string lightKey, string darkKey)
+    {
         var source = new FontImageSource
         {
-            Glyph = "E405",
+            Glyph = "",
             FontFamily = "MaterialOutlined",
             Size = 24
         };
         source.SetAppThemeColor(FontImageSource.ColorProperty,
-            (Color)Application.Current!.Resources[on ? "PrimaryLight" : "TextPrimaryLight"],
-            (Color)Application.Current!.Resources[on ? "PrimaryDark" : "TextPrimaryDark"]);
-        TunerStripButton.Source = source;
+            (Color)Application.Current!.Resources[lightKey],
+            (Color)Application.Current!.Resources[darkKey]);
+        return source;
     }
+
+    private void OnTunerStripStateChanged(object? sender, EventArgs e) => UpdateTunerStripButton();
 
     // Android: the strip is a native view inside TunerStripHost, driven by the controller.
     private void SetUpTunerStripView()
@@ -307,12 +336,9 @@ public partial class SheetViewerPage : ContentPage
         _pageTurnInput.Requested -= OnPageTurnRequested;
         _pageTurnInput.Requested += OnPageTurnRequested;
         UpdateMetronomeButton();
-        _window = Window;
-        if (_window is not null)
-        {
-            _window.Stopped += OnWindowStopped;
-            _window.Resumed += OnWindowResumed;
-        }
+        AttachWindow(Window);
+        _tunerStrip.StateChanged -= OnTunerStripStateChanged;
+        _tunerStrip.StateChanged += OnTunerStripStateChanged;
 
         UpdateTunerStripButton();
         AttachTunerStrip();

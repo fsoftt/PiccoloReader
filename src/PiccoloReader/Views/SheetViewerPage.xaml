@@ -756,8 +756,8 @@
         <views:CropOverlayView x:Name="CropOverlay" Applied="OnCropApplied" Cancelled="OnCropCancelled" />
     </Grid>
 
-    <!-- Native tuner strip (Android view added in code); collapsed unless the strip is on. -->
-    <Grid x:Name="TunerStripHost" Grid.Row="1" HeightRequest="2" IsVisible="False" />
+    <!-- Native tuner strip (Android view added in code); always laid out so toggling it never resizes the page. -->
+    <Grid x:Name="TunerStripHost" Grid.Row="1" HeightRequest="2" IsVisible="{x:Static local:PlatformInfo.IsAndroid}" />
 
     <Grid Grid.Row="2" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
         <admob:BannerAd IsVisible="{Binding ShowAdsBanner}" />
