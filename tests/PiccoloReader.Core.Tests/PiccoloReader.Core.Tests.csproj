@@ -24,4 +24,8 @@
     <ProjectReference Include="..\..\src\PiccoloReader.Core\PiccoloReader.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Fixtures/*.wav" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

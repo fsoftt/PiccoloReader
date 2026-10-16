@@ -10,6 +10,42 @@ public class PitchSmootherTests
 
     private static readonly PitchEstimate Nothing = PitchEstimate.None(0f);
 
+    private static float Cents(float c) => 440f * MathF.Pow(2f, c / 1200f);
+
+    [Fact]
+    public void ShortDeviation_OfAHeldNote_IsIgnored()
+    {
+        var sut = new PitchSmoother(FrameMs);
+        for (var i = 0; i < 6; i++)
+        {
+            sut.Update(Pitch(440));
+        }
+
+        var shown = sut.Update(Pitch(Cents(18)));
+        shown = sut.Update(Pitch(Cents(12)));
+
+        Assert.True(shown.HasPitch);
+        Assert.Equal(0f, shown.CentsFromA4, 0.01f);
+    }
+
+    [Fact]
+    public void PersistentBend_OfAHeldNote_IsFollowed()
+    {
+        var sut = new PitchSmoother(FrameMs);
+        for (var i = 0; i < 6; i++)
+        {
+            sut.Update(Pitch(440));
+        }
+
+        var shown = default(TunerReading);
+        for (var i = 0; i < 20; i++)
+        {
+            shown = sut.Update(Pitch(Cents(15)));
+        }
+
+        Assert.InRange(shown.CentsFromA4, 13f, 15.1f);
+    }
+
     [Fact]
     public void NewPitch_NeedsThreeConsecutiveFrames()
     {

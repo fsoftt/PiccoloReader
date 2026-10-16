@@ -15,6 +15,8 @@ public sealed class PitchSmoother
 
     private const float ToleranceCents = 50f;
     private const float EmaAlpha = 0.3f;
+    private const float OutlierCents = 3f;
+    private const int OutlierPersistFrames = 3;
 
     // Replacing a note being shown needs more evidence than showing the first one.
     private const int ReplaceExtraFrames = 2;
@@ -34,6 +36,7 @@ public sealed class PitchSmoother
     private float _lastAccepted;
     private float _ema;
     private int _misses;
+    private int _outlierRun;
     private int _candidateCount;
     private float _candidateLast;
     private float _candidateSum;
@@ -53,30 +56,43 @@ public sealed class PitchSmoother
         _locked = false;
         _misses = 0;
         _candidateCount = 0;
+        _outlierRun = 0;
     }
 
     public TunerReading Update(in PitchEstimate estimate)
     {
+        var heldOutlier = false;
         if (estimate.HasPitch && estimate.Clarity >= _clarityGate)
         {
             var cents = 1200f * MathF.Log2(estimate.Hz / ReferenceHz);
             if (_locked && MathF.Abs(cents - _lastAccepted) <= ToleranceCents)
             {
                 _candidateCount = 0;
-                Accept(cents, newNote: false);
+                if (IsHeldOutlier(cents))
+                {
+                    // Neither a miss nor evidence: the shown note stays as it is.
+                    heldOutlier = true;
+                }
+                else
+                {
+                    _outlierRun = 0;
+                    Accept(cents, newNote: false);
+                }
             }
             else
             {
+                _outlierRun = 0;
                 TrackCandidate(cents, estimate.Rms);
             }
         }
         else
         {
+            _outlierRun = 0;
             _candidateCount = 0;
             Miss();
         }
 
-        if (_locked && _misses >= _holdFrames)
+        if (!heldOutlier && _locked && _misses >= _holdFrames)
         {
             _locked = false;
             _recentCount = 0;
@@ -85,6 +101,22 @@ public sealed class PitchSmoother
         return _locked
             ? new TunerReading(true, ReferenceHz * MathF.Pow(2f, _ema / 1200f), _ema)
             : default;
+    }
+
+    /// <summary>
+    /// A click ringing in the room bends one or two analysis windows by 5 to 60 cents
+    /// while the held note is steady. A frame that strays more than
+    /// <see cref="OutlierCents"/> from the settled value is ignored unless it keeps
+    /// straying for <see cref="OutlierPersistFrames"/> frames in a row (a real bend).
+    /// </summary>
+    private bool IsHeldOutlier(float cents)
+    {
+        if (MathF.Abs(cents - _ema) <= OutlierCents)
+        {
+            return false;
+        }
+
+        return ++_outlierRun < OutlierPersistFrames;
     }
 
     private void TrackCandidate(float cents, float rms)
