@@ -11,7 +11,14 @@ public partial class TunerPage : ContentPage
     private readonly TunerNeedleDrawable _needle = new();
     private Border[] _presetChips = [];
     private Label[] _presetLabels = [];
+    private static readonly string[] OctaveTexts = ["-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
     private Window? _window;
+    private string? _shownNote;
+    private string? _shownOctaveText;
+    private float _shownHz = -1f;
+    private TunerState? _shownState;
+    private float _density = 1f;
 
     public TunerPage(TunerViewModel viewModel)
     {
@@ -28,6 +35,8 @@ public partial class TunerPage : ContentPage
     {
         base.OnAppearing();
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        Application.Current!.RequestedThemeChanged += OnRequestedThemeChanged;
+        _density = (float)DeviceDisplay.Current.MainDisplayInfo.Density;
         _window = Window;
         if (_window is not null)
         {
@@ -43,6 +52,7 @@ public partial class TunerPage : ContentPage
     {
         base.OnDisappearing();
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        Application.Current!.RequestedThemeChanged -= OnRequestedThemeChanged;
         if (_window is not null)
         {
             _window.Stopped -= OnWindowStopped;
@@ -93,6 +103,8 @@ public partial class TunerPage : ContentPage
 
     private void UpdateAll()
     {
+        _needle.TickColor = Themed("OutlineLight", "OutlineDark");
+        NeedleView.Invalidate();
         UpdateReading();
         UpdateNotationValue();
         UpdatePresets();
@@ -101,36 +113,68 @@ public partial class TunerPage : ContentPage
     private static Color Themed(string lightKey, string darkKey) =>
         (Color)Application.Current!.Resources[Application.Current.RequestedTheme == AppTheme.Dark ? darkKey : lightKey];
 
+    private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs e) => UpdateAll();
+
+    // Called on every VM change (about 20 Hz while a note is playing, never while
+    // silent). Every setter is guarded by a cached value so unchanged data
+    // costs a few comparisons and no layout pass, allocation or redraw.
     private void UpdateReading()
     {
         var state = _viewModel.State;
         var hasPitch = state == TunerState.Listening;
 
-        NoteLabel.Text = hasPitch ? _viewModel.NoteName : "-";
-        OctaveLabel.Text = hasPitch ? _viewModel.Octave.ToString() : string.Empty;
-        HzLabel.Text = hasPitch ? $"{_viewModel.FrequencyHz:0.0} Hz" : string.Empty;
-        NoteLabel.Opacity = hasPitch ? 1 : 0.4;
+        SetText(NoteLabel, ref _shownNote, hasPitch ? _viewModel.NoteName : "-");
+        SetText(OctaveLabel, ref _shownOctaveText, hasPitch ? OctaveText(_viewModel.Octave) : string.Empty);
 
-        StatusLabel.Text = state switch
+        var hz = hasPitch ? _viewModel.FrequencyHz : 0f;
+        if (hz != _shownHz)
         {
-            TunerState.NoPermission => AppStrings.TunerNoPermission,
-            TunerState.Unsupported => AppStrings.TunerUnsupported,
-            TunerState.Error => AppStrings.TunerError,
-            TunerState.Silent => AppStrings.TunerListening,
-            _ => string.Empty
-        };
-        StatusLabel.IsVisible = StatusLabel.Text.Length > 0;
-        OpenSettingsButton.IsVisible = state == TunerState.NoPermission;
+            _shownHz = hz;
+            HzLabel.Text = hasPitch ? $"{hz:0.0} Hz" : string.Empty;
+        }
+
+        var opacity = hasPitch ? 1d : 0.4d;
+        if (NoteLabel.Opacity != opacity)
+        {
+            NoteLabel.Opacity = opacity;
+        }
+
+        if (_shownState != state)
+        {
+            _shownState = state;
+            StatusLabel.Text = state switch
+            {
+                TunerState.NoPermission => AppStrings.TunerNoPermission,
+                TunerState.Unsupported => AppStrings.TunerUnsupported,
+                TunerState.Error => AppStrings.TunerError,
+                TunerState.Silent => AppStrings.TunerListening,
+                _ => string.Empty
+            };
+            OpenSettingsButton.IsVisible = state == TunerState.NoPermission;
+        }
 
         UpdateNeedle();
     }
 
+    private static void SetText(Label label, ref string? shown, string text)
+    {
+        if (!string.Equals(shown, text, StringComparison.Ordinal))
+        {
+            shown = text;
+            label.Text = text;
+        }
+    }
+
+    private static string OctaveText(int octave) =>
+        (uint)(octave + 1) < OctaveTexts.Length ? OctaveTexts[octave + 1] : octave.ToString();
+
     private void UpdateNeedle()
     {
-        _needle.HasPitch = _viewModel.State == TunerState.Listening;
-        _needle.Cents = _viewModel.Cents;
-        _needle.TickColor = Themed("OutlineLight", "OutlineDark");
-        NeedleView.Invalidate();
+        var hasPitch = _viewModel.State == TunerState.Listening;
+        if (_needle.SetReading(hasPitch, _viewModel.Cents, (float)NeedleView.Width, _density))
+        {
+            NeedleView.Invalidate();
+        }
     }
 
     private void UpdateNotationValue() => NotationValueLabel.Text = GetNotationName(_viewModel.NoteNaming);

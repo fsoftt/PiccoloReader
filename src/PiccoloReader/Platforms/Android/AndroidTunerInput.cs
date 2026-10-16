@@ -11,8 +11,9 @@ namespace PiccoloReader.Platforms.Android;
 /// <summary>
 /// Microphone capture for the tuner: one AudioRecord (PCM float, mono) read by a
 /// dedicated audio-priority thread. Nothing exists while stopped: the record,
-/// the buffers and the thread are created by <see cref="Start"/> and fully
-/// released by <see cref="Stop"/>. The read loop reuses one direct ByteBuffer
+/// the buffers and the thread are created by <see cref="Start"/>; <see cref="Stop"/>
+/// only signals, and the audio thread releases everything and exits by itself
+/// (never blocking the UI thread). The read loop reuses one direct ByteBuffer
 /// and one float[] (no allocations) and feeds <see cref="TunerEngine"/>, which
 /// decimates to half the input rate (24 kHz) and analyses 1024-sample windows
 /// every 512 samples.
@@ -23,11 +24,14 @@ public sealed class AndroidTunerInput : ITunerInput
     private const int FallbackSampleRate = 44100;
     private const int ChunkSamples = 1024;
     private const int BytesPerSample = 4;
-    private const int StopJoinMilliseconds = 1000;
+    private const int PreviousReleaseWaitMilliseconds = 500;
     private const int ReadBlocking = 0; // AudioRecord.READ_BLOCKING
 
     private readonly object _gate = new();
     private Session? _session;
+    private Session? _releasing;
+    private bool _starting;
+    private bool _wanted;
 
     public bool IsRunning => _session is not null;
 
@@ -35,46 +39,56 @@ public sealed class AndroidTunerInput : ITunerInput
 
     public TunerStartResult Start()
     {
+        Session? previous;
         lock (_gate)
         {
-            if (_session is not null)
+            _wanted = true;
+            if (_session is not null || _starting)
             {
                 return TunerStartResult.Started;
             }
 
-            var context = global::Android.App.Application.Context;
-            if (ContextCompat.CheckSelfPermission(context, global::Android.Manifest.Permission.RecordAudio) != Permission.Granted)
-            {
-                return TunerStartResult.PermissionDenied;
-            }
+            _starting = true;
+            previous = _releasing;
+        }
 
-            var source = SupportsUnprocessed(context) ? AudioSource.Unprocessed : AudioSource.VoiceRecognition;
-            var record = TryCreateRecord(source, PreferredSampleRate) ?? TryCreateRecord(source, FallbackSampleRate);
-            if (record is null)
+        // Slow work (waiting for a record that is still being released, creating
+        // and starting the AudioRecord) runs outside the lock so Stop never waits
+        // for it. The caller runs this off the UI thread.
+        AudioRecord? record = null;
+        var result = TunerStartResult.Failed;
+        try
+        {
+            // A quick Stop/Start: the previous thread releases its AudioRecord on
+            // its own; never keep two records alive at once.
+            if (previous is null || previous.WaitUntilReleased(PreviousReleaseWaitMilliseconds))
             {
-                return TunerStartResult.Failed;
+                (record, result) = OpenRecord();
             }
-
-            try
+        }
+        finally
+        {
+            lock (_gate)
             {
-                record.StartRecording();
-                if (record.RecordingState != RecordState.Recording)
+                _starting = false;
+                if (record is not null)
                 {
-                    record.Release();
-                    record.Dispose();
-                    return TunerStartResult.Failed;
+                    if (_wanted)
+                    {
+                        _releasing = null;
+                        _session = new Session(this, record);
+                    }
+                    else
+                    {
+                        // Stopped while opening: give the microphone straight back.
+                        record.Release();
+                        record.Dispose();
+                    }
                 }
             }
-            catch (Exception)
-            {
-                record.Release();
-                record.Dispose();
-                return TunerStartResult.Failed;
-            }
-
-            _session = new Session(this, record);
-            return TunerStartResult.Started;
         }
+
+        return result;
     }
 
     public void Stop()
@@ -82,11 +96,46 @@ public sealed class AndroidTunerInput : ITunerInput
         Session? session;
         lock (_gate)
         {
+            _wanted = false;
             session = _session;
             _session = null;
+            _releasing = session ?? _releasing;
         }
 
-        session?.Stop();
+        session?.RequestStop();
+    }
+
+    private static (AudioRecord? Record, TunerStartResult Result) OpenRecord()
+    {
+        var context = global::Android.App.Application.Context;
+        if (ContextCompat.CheckSelfPermission(context, global::Android.Manifest.Permission.RecordAudio) != Permission.Granted)
+        {
+            return (null, TunerStartResult.PermissionDenied);
+        }
+
+        var source = SupportsUnprocessed(context) ? AudioSource.Unprocessed : AudioSource.VoiceRecognition;
+        var record = TryCreateRecord(source, PreferredSampleRate) ?? TryCreateRecord(source, FallbackSampleRate);
+        if (record is null)
+        {
+            return (null, TunerStartResult.Failed);
+        }
+
+        try
+        {
+            record.StartRecording();
+            if (record.RecordingState == RecordState.Recording)
+            {
+                return (record, TunerStartResult.Started);
+            }
+        }
+        catch (Exception)
+        {
+            // Falls through to release.
+        }
+
+        record.Release();
+        record.Dispose();
+        return (null, TunerStartResult.Failed);
     }
 
     private static bool SupportsUnprocessed(Context context)
@@ -147,6 +196,7 @@ public sealed class AndroidTunerInput : ITunerInput
         private readonly AndroidTunerInput _owner;
         private readonly AudioRecord _record;
         private readonly Thread _thread;
+        private readonly ManualResetEventSlim _released = new(false);
         private volatile bool _stopRequested;
 
         public Session(AndroidTunerInput owner, AudioRecord record)
@@ -157,24 +207,13 @@ public sealed class AndroidTunerInput : ITunerInput
             _thread.Start();
         }
 
-        public void Stop()
-        {
-            _stopRequested = true;
-            try
-            {
-                // Makes a blocked Read return so the thread can exit.
-                _record.Stop();
-            }
-            catch (Exception)
-            {
-                // The thread releases the record anyway.
-            }
+        /// <summary>
+        /// Never blocks. The blocking Read returns within one chunk (about 21 ms),
+        /// then the audio thread stops, releases the record and signals.
+        /// </summary>
+        public void RequestStop() => _stopRequested = true;
 
-            if (Thread.CurrentThread != _thread)
-            {
-                _thread.Join(StopJoinMilliseconds);
-            }
-        }
+        public bool WaitUntilReleased(int milliseconds) => _released.Wait(milliseconds);
 
         private void Run()
         {
@@ -226,6 +265,7 @@ public sealed class AndroidTunerInput : ITunerInput
                 _record.Release();
                 _record.Dispose();
                 buffer?.Dispose();
+                _released.Set();
             }
 
             if (failed && !_stopRequested)

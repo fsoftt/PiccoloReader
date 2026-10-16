@@ -44,11 +44,16 @@
             <!-- Reading -->
             <Border Style="{StaticResource Card}" Margin="20,0" Padding="20,16">
                 <VerticalStackLayout Spacing="4">
-                    <HorizontalStackLayout x:Name="NoteRow" HorizontalOptions="Center" Spacing="2">
+                    <HorizontalStackLayout x:Name="NoteRow" HorizontalOptions="Center" Spacing="2" WidthRequest="232" HeightRequest="124">
                         <Label
                             x:Name="NoteLabel"
                             AutomationId="TunerNoteLabel"
                             FontSize="88"
+                            WidthRequest="194"
+                            HeightRequest="124"
+                            HorizontalTextAlignment="End"
+                            VerticalTextAlignment="End"
+                            LineBreakMode="NoWrap"
                             FontFamily="OpenSansSemibold"
                             VerticalOptions="End"
                             TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
@@ -56,6 +61,9 @@
                             x:Name="OctaveLabel"
                             AutomationId="TunerOctaveLabel"
                             FontSize="28"
+                            WidthRequest="36"
+                            HeightRequest="40"
+                            LineBreakMode="NoWrap"
                             FontFamily="OpenSansSemibold"
                             VerticalOptions="End"
                             Margin="0,0,0,14"
@@ -67,7 +75,7 @@
                         AutomationId="TunerStatusLabel"
                         Style="{StaticResource Caption}"
                         FontSize="14"
-                        HorizontalOptions="Center"
+                        MinimumHeightRequest="20"
                         HorizontalTextAlignment="Center" />
 
                     <GraphicsView
@@ -81,6 +89,9 @@
                         x:Name="HzLabel"
                         AutomationId="TunerHzLabel"
                         FontSize="18"
+                        WidthRequest="120"
+                        HeightRequest="26"
+                        HorizontalTextAlignment="Center"
                         HorizontalOptions="Center"
                         TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
 
