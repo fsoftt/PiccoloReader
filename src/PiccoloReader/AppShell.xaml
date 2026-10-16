@@ -42,6 +42,13 @@
             <ShellContent ContentTemplate="{DataTemplate views:MetronomePage}" />
         </Tab>
 
+        <Tab AutomationId="TabTuner" Title="{x:Static strings:AppStrings.Tuner}" Route="tuner" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
+            <Tab.Icon>
+                <FontImageSource Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+            </Tab.Icon>
+            <ShellContent ContentTemplate="{DataTemplate views:TunerPage}" />
+        </Tab>
+
         <Tab AutomationId="TabSettings" Title="{x:Static strings:AppStrings.Settings}" Route="settings">
             <Tab.Icon>
                 <FontImageSource Glyph="&#xE429;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />

@@ -6,6 +6,9 @@
 	<!-- Required by the Google Mobile Ads SDK to load ads (Donate page only). -->
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+	<!-- Tuner: microphone is only opened while the tuner page is visible. -->
+	<uses-permission android:name="android.permission.RECORD_AUDIO" />
+	<uses-feature android:name="android.hardware.microphone" android:required="false" />
 	<!-- Android 6-9 only: writing the library to Documents/PiccoloReader. Android 10+
 	     uses MediaStore (no permission) and the folder picker for recovery. -->
 	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />

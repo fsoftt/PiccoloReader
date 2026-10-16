@@ -10,6 +10,7 @@ using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Services.ExternalLibrary;
 using PiccoloReader.Core.Services.Metronome;
+using PiccoloReader.Core.Services.Tuner;
 using PiccoloReader.Core.ViewModels;
 using PiccoloReader.Services;
 using PiccoloReader.Views;
@@ -90,12 +91,16 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ITutorialPreferenceService, MauiTutorialPreferenceService>();
 		builder.Services.AddSingleton<IReadingPreferenceService, MauiReadingPreferenceService>();
 		builder.Services.AddSingleton<IMetronomePreferenceService, MauiMetronomePreferenceService>();
+		builder.Services.AddSingleton<ITunerPreferenceService, MauiTunerPreferenceService>();
+		builder.Services.AddSingleton<IMicrophonePermissionService, MauiMicrophonePermissionService>();
 #if ANDROID
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.Android.PdfPageRenderer>();
 		builder.Services.AddSingleton<IMetronomePlayer, PiccoloReader.Platforms.Android.AndroidMetronomePlayer>();
+		builder.Services.AddSingleton<ITunerInput, PiccoloReader.Platforms.Android.AndroidTunerInput>();
 #elif IOS
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.iOS.PdfPageRenderer>();
 		builder.Services.AddSingleton<IMetronomePlayer, UnsupportedMetronomePlayer>();
+		builder.Services.AddSingleton<ITunerInput, UnsupportedTunerInput>();
 #endif
 		builder.Services.AddSingleton(sp =>
 		{
@@ -143,6 +148,13 @@ public static class MauiProgram
 		builder.Services.AddSingleton<PageCropService>();
 
 		builder.Services.AddSingleton<MetronomeViewModel>();
+		// Readings come from the audio thread: hand them to the UI thread fire-and-forget.
+		builder.Services.AddSingleton(sp => new TunerViewModel(
+			sp.GetRequiredService<ITunerInput>(),
+			sp.GetRequiredService<ITunerPreferenceService>(),
+			sp.GetRequiredService<IMicrophonePermissionService>(),
+			sp.GetRequiredService<IAdsPreferenceService>(),
+			static action => MainThread.BeginInvokeOnMainThread(action)));
 		builder.Services.AddTransient<LibraryViewModel>();
 		builder.Services.AddTransient<FolderViewModel>();
 		builder.Services.AddTransient<SheetViewerViewModel>();
@@ -156,6 +168,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<SettingsPage>();
 		builder.Services.AddTransient<DonatePage>();
 		builder.Services.AddTransient<MetronomePage>();
+		builder.Services.AddTransient<TunerPage>();
 		builder.Services.AddTransient<TutorialPage>();
 
 		return builder.Build();

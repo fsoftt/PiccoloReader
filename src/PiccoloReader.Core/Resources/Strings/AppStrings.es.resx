@@ -267,4 +267,18 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="SubdivisionTriplets" xml:space="preserve"><value>Tresillos (3)</value></data>
   <data name="SubdivisionSixteenths" xml:space="preserve"><value>Semicorcheas (4)</value></data>
   <data name="MetronomeStartFailed" xml:space="preserve"><value>No se pudo iniciar el audio del metrónomo.</value></data>
+  <data name="Tuner" xml:space="preserve"><value>Afinador</value></data>
+  <data name="TunerListening" xml:space="preserve"><value>Toca una nota</value></data>
+  <data name="TunerNoPermission" xml:space="preserve"><value>Se necesita acceso al micrófono para afinar. Actívalo en los ajustes de la app.</value></data>
+  <data name="TunerOpenSettings" xml:space="preserve"><value>Abrir ajustes</value></data>
+  <data name="TunerUnsupported" xml:space="preserve"><value>El afinador no está disponible en este dispositivo.</value></data>
+  <data name="TunerError" xml:space="preserve"><value>No se pudo iniciar el micrófono.</value></data>
+  <data name="TunerNotation" xml:space="preserve"><value>Nombres de notas</value></data>
+  <data name="TunerNotationAuto" xml:space="preserve"><value>Automático</value></data>
+  <data name="TunerNotationLetter" xml:space="preserve"><value>C D E</value></data>
+  <data name="TunerNotationSolfege" xml:space="preserve"><value>Do Re Mi</value></data>
+  <data name="TunerReferencePitch" xml:space="preserve"><value>Referencia La4</value></data>
+  <data name="TunerDecreaseA4" xml:space="preserve"><value>Bajar La4</value></data>
+  <data name="TunerIncreaseA4" xml:space="preserve"><value>Subir La4</value></data>
+  <data name="TunerShowWritten" xml:space="preserve"><value>Altura escrita (una octava abajo)</value></data>
 </root>

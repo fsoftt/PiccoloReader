@@ -303,6 +303,20 @@ public static class AppStrings
     public static string SubdivisionTriplets => Get(nameof(SubdivisionTriplets));
     public static string SubdivisionSixteenths => Get(nameof(SubdivisionSixteenths));
     public static string MetronomeStartFailed => Get(nameof(MetronomeStartFailed));
+    public static string Tuner => Get(nameof(Tuner));
+    public static string TunerListening => Get(nameof(TunerListening));
+    public static string TunerNoPermission => Get(nameof(TunerNoPermission));
+    public static string TunerOpenSettings => Get(nameof(TunerOpenSettings));
+    public static string TunerUnsupported => Get(nameof(TunerUnsupported));
+    public static string TunerError => Get(nameof(TunerError));
+    public static string TunerNotation => Get(nameof(TunerNotation));
+    public static string TunerNotationAuto => Get(nameof(TunerNotationAuto));
+    public static string TunerNotationLetter => Get(nameof(TunerNotationLetter));
+    public static string TunerNotationSolfege => Get(nameof(TunerNotationSolfege));
+    public static string TunerReferencePitch => Get(nameof(TunerReferencePitch));
+    public static string TunerDecreaseA4 => Get(nameof(TunerDecreaseA4));
+    public static string TunerIncreaseA4 => Get(nameof(TunerIncreaseA4));
+    public static string TunerShowWritten => Get(nameof(TunerShowWritten));
 
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;
