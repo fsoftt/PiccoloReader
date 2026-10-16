@@ -33,6 +33,12 @@ public partial class TunerPage : ContentPage
     private readonly Action _applyNeedle;
     private bool _needleQueued;
 
+    // Needle redraws are capped at one per NeedleIntervalMs while a note is
+    // held; one timer (created once) delivers the trailing update.
+    private const int NeedleIntervalMs = 100;
+    private readonly IDispatcherTimer _needleTimer;
+    private long _lastNeedleMs;
+
     public TunerPage(TunerViewModel viewModel)
     {
         InitializeComponent();
@@ -44,6 +50,9 @@ public partial class TunerPage : ContentPage
         _hzTimer.Interval = TimeSpan.FromMilliseconds(HzIntervalMs);
         _hzTimer.IsRepeating = false;
         _hzTimer.Tick += OnHzTimerTick;
+        _needleTimer = Dispatcher.CreateTimer();
+        _needleTimer.IsRepeating = false;
+        _needleTimer.Tick += OnNeedleTimerTick;
         BuildPresets();
     }
 
@@ -70,6 +79,7 @@ public partial class TunerPage : ContentPage
     {
         base.OnDisappearing();
         _hzTimer.Stop();
+        _needleTimer.Stop();
         _hzPending = false;
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         Application.Current!.RequestedThemeChanged -= OnRequestedThemeChanged;
@@ -248,13 +258,38 @@ public partial class TunerPage : ContentPage
             return;
         }
 
+        // Clearing (silence, errors) and the first reading of a note apply at once;
+        // while a note is held, redraws are spaced NeedleIntervalMs apart.
+        if (_viewModel.State == TunerState.Listening)
+        {
+            var wait = NeedleIntervalMs - (Environment.TickCount64 - _lastNeedleMs);
+            if (wait > 0)
+            {
+                if (!_needleTimer.IsRunning)
+                {
+                    _needleTimer.Interval = TimeSpan.FromMilliseconds(wait);
+                    _needleTimer.Start();
+                }
+
+                return;
+            }
+        }
+
+        _needleTimer.Stop();
         _needleQueued = true;
         Dispatcher.Dispatch(_applyNeedle);
+    }
+
+    private void OnNeedleTimerTick(object? sender, EventArgs e)
+    {
+        _needleTimer.Stop();
+        ApplyNeedle();
     }
 
     private void ApplyNeedle()
     {
         _needleQueued = false;
+        _lastNeedleMs = Environment.TickCount64;
         var hasPitch = _viewModel.State == TunerState.Listening;
         if (_needle.SetReading(hasPitch, _viewModel.Cents, (float)NeedleView.Width, _density))
         {
