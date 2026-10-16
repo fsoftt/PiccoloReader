@@ -31,6 +31,9 @@ public static class MauiProgram
 			.UseAdMob(
 				androidDefaultBannerAdUnitId: "ca-app-pub-5615495156288390/6193524124",
 				androidDefaultRewardedAdUnitId: "ca-app-pub-5615495156288390/3206424820")
+#if ANDROID
+			.ConfigureMauiHandlers(handlers => handlers.AddHandler<TunerStripView, PiccoloReader.Platforms.Android.TunerStripHandler>())
+#endif
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -95,6 +98,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IMetronomePreferenceService, MauiMetronomePreferenceService>();
 		builder.Services.AddSingleton<ITunerPreferenceService, MauiTunerPreferenceService>();
 		builder.Services.AddSingleton<IMicrophonePermissionService, MauiMicrophonePermissionService>();
+		builder.Services.AddSingleton<ITunerStripPreferenceService, MauiTunerStripPreferenceService>();
 #if ANDROID
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.Android.PdfPageRenderer>();
 		builder.Services.AddSingleton<IMetronomePlayer, PiccoloReader.Platforms.Android.AndroidMetronomePlayer>();
@@ -165,6 +169,13 @@ public static class MauiProgram
 			sp.GetRequiredService<ITunerPreferenceService>(),
 			sp.GetRequiredService<IMicrophonePermissionService>(),
 			sp.GetRequiredService<IAdsPreferenceService>(),
+			static action => MainThread.BeginInvokeOnMainThread(action)));
+		// One controller per viewer; it posts audio-thread readings to the UI thread fire-and-forget.
+		builder.Services.AddTransient(sp => new TunerStripController(
+			sp.GetRequiredService<ITunerInput>(),
+			sp.GetRequiredService<ITunerPreferenceService>(),
+			sp.GetRequiredService<ITunerStripPreferenceService>(),
+			sp.GetRequiredService<IMicrophonePermissionService>(),
 			static action => MainThread.BeginInvokeOnMainThread(action)));
 		builder.Services.AddTransient<LibraryViewModel>();
 		builder.Services.AddTransient<FolderViewModel>();

@@ -21,7 +21,7 @@
         <converters:StringNotEmptyConverter x:Key="StringNotEmpty" />
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="*,Auto,Auto">
     <Grid Grid.Row="0" BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
 
         <Grid
@@ -556,7 +556,7 @@
             Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
             <Grid>
-            <Grid x:Name="ReadingBarContent" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="2">
+            <Grid x:Name="ReadingBarContent" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="2">
                 <ImageButton
                     x:Name="BackButton"
                     Grid.Column="0"
@@ -594,8 +594,17 @@
                     Clicked="OnMetronomeClicked" />
 
                 <ImageButton
-                    x:Name="ReadingModeButton"
+                    x:Name="TunerStripButton"
                     Grid.Column="3"
+                    Style="{StaticResource IconButton}"
+                    IsVisible="{x:Static local:PlatformInfo.IsAndroid}"
+                    AutomationId="ViewerTunerStripButton"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.TunerStrip}"
+                    Clicked="OnTunerStripClicked" />
+
+                <ImageButton
+                    x:Name="ReadingModeButton"
+                    Grid.Column="4"
                     Style="{StaticResource IconButton}"
                     AutomationId="ViewerModeButton"
                     SemanticProperties.Description="{x:Static strings:AppStrings.ReadingModeLabel}"
@@ -607,7 +616,7 @@
 
                 <ImageButton
                     x:Name="BookmarkButton"
-                    Grid.Column="4"
+                    Grid.Column="5"
                     Style="{StaticResource IconButton}"
                     AutomationId="ViewerBookmarkButton"
                     SemanticProperties.Description="{x:Static strings:AppStrings.BookmarksTitle}"
@@ -615,7 +624,7 @@
 
                 <ImageButton
                     x:Name="MoreButton"
-                    Grid.Column="5"
+                    Grid.Column="6"
                     Style="{StaticResource IconButton}"
                     AutomationId="ViewerMoreButton"
                     SemanticProperties.Description="{x:Static strings:AppStrings.MoreOptions}"
@@ -747,7 +756,10 @@
         <views:CropOverlayView x:Name="CropOverlay" Applied="OnCropApplied" Cancelled="OnCropCancelled" />
     </Grid>
 
-    <Grid Grid.Row="1" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
+    <!-- Native tuner strip (Android view added in code); collapsed unless the strip is on. -->
+    <Grid x:Name="TunerStripHost" Grid.Row="1" HeightRequest="2" IsVisible="False" />
+
+    <Grid Grid.Row="2" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
         <admob:BannerAd IsVisible="{Binding ShowAdsBanner}" />
     </Grid>
     </Grid>

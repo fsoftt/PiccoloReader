@@ -291,6 +291,7 @@ public static class AppStrings
     public static string IconRest16th => Get(nameof(IconRest16th));
     public static string IconRest32nd => Get(nameof(IconRest32nd));
     public static string AppVersionFormat => Get(nameof(AppVersionFormat));
+    public static string TunerStrip => Get(nameof(TunerStrip));
     public static string Metronome => Get(nameof(Metronome));
     public static string MetronomeBeatsPerBar => Get(nameof(MetronomeBeatsPerBar));
     public static string MetronomeSubdivision => Get(nameof(MetronomeSubdivision));

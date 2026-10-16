@@ -252,6 +252,7 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="SharedPdfImportedMultipleFormat" xml:space="preserve"><value>Se importaron {0} PDF</value></data>
   <data name="SharedPdfImportFailedMessage" xml:space="preserve"><value>No se pudo importar el PDF. Comprueba que sea un archivo válido y legible.</value></data>
   <data name="SharedPdfImportPartialFormat" xml:space="preserve"><value>Importados: {0}. No se pudieron importar: {1}.</value></data>
+  <data name="TunerStrip" xml:space="preserve"><value>Barra del afinador</value></data>
   <data name="Metronome" xml:space="preserve"><value>Metrónomo</value></data>
   <data name="MetronomeBeatsPerBar" xml:space="preserve"><value>Pulsos por compás</value></data>
   <data name="MetronomeSubdivision" xml:space="preserve"><value>Subdivisión</value></data>

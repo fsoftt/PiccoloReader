@@ -21,5 +21,16 @@ public class MauiMicrophonePermissionService : IMicrophonePermissionService
         return status == PermissionStatus.Granted;
     }
 
+    public bool IsGranted()
+    {
+#if ANDROID
+        return AndroidX.Core.Content.ContextCompat.CheckSelfPermission(
+            global::Android.App.Application.Context, global::Android.Manifest.Permission.RecordAudio)
+            == global::Android.Content.PM.Permission.Granted;
+#else
+        return true;
+#endif
+    }
+
     public void OpenAppSettings() => AppInfo.ShowSettingsUI();
 }

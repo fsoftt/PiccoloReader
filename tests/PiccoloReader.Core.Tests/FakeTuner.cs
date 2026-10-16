@@ -53,7 +53,23 @@ public class FakeMicrophonePermissionService : IMicrophonePermissionService
 
     public int OpenSettingsCount { get; private set; }
 
-    public Task<bool> EnsureGrantedAsync() => Task.FromResult(Granted);
+    public int EnsureCount { get; private set; }
+
+    /// <summary>When true, a prompt grants the permission.</summary>
+    public bool GrantOnPrompt { get; set; }
+
+    public Task<bool> EnsureGrantedAsync()
+    {
+        EnsureCount++;
+        if (GrantOnPrompt)
+        {
+            Granted = true;
+        }
+
+        return Task.FromResult(Granted);
+    }
+
+    public bool IsGranted() => Granted;
 
     public void OpenAppSettings() => OpenSettingsCount++;
 }
