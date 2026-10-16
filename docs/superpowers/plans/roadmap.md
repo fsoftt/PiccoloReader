@@ -206,4 +206,4 @@ Android-only click track (tempo, beats per bar, accent, subdivision, tap tempo, 
 
 | Item | Status | PR |
 |---|---|---|
-| Metronome engine (scheduler, click synth, tap tempo), view model, Android player, Metronome tab, viewer toggle | In progress | #128 |
+| Metronome engine (scheduler, click synth, tap tempo), view model, Android player, Metronome tab, viewer toggle | Merged | [#128](https://github.com/fsoftt/PiccoloReader/pull/128) |

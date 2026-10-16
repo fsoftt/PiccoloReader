@@ -7,9 +7,37 @@ public class MetronomeViewModelTests
 {
     private readonly FakeMetronomePlayer _player = new();
     private readonly FakeMetronomePreferenceService _prefs = new();
+    private readonly FakeAdsPreferenceService _ads = new();
     private long _now;
 
-    private MetronomeViewModel Create() => new(_player, _prefs, () => _now);
+    private MetronomeViewModel Create() => new(_player, _prefs, _ads, () => _now);
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Attach_SetsShowAdsBannerFromPreference(bool enabled)
+    {
+        _ads.Enabled = enabled;
+        var sut = Create();
+
+        sut.Attach();
+
+        Assert.Equal(enabled, sut.ShowAdsBanner);
+    }
+
+    [Fact]
+    public void Attach_RefreshesShowAdsBannerWhenPreferenceChanges()
+    {
+        _ads.Enabled = true;
+        var sut = Create();
+        sut.Attach();
+        Assert.True(sut.ShowAdsBanner);
+
+        _ads.Enabled = false;
+        sut.Attach();
+
+        Assert.False(sut.ShowAdsBanner);
+    }
 
     [Fact]
     public void Constructor_LoadsStoredSettingsAndPushesThemToPlayer()

@@ -3,6 +3,8 @@
     x:Class="PiccoloReader.Views.MetronomePage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:admob="clr-namespace:Plugin.AdMob;assembly=Plugin.AdMob"
+    xmlns:local="clr-namespace:PiccoloReader"
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
     Shell.NavBarIsVisible="False"
     BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource BackgroundDark}}"
@@ -22,6 +24,7 @@
         </Style>
     </ContentPage.Resources>
 
+    <Grid RowDefinitions="*,Auto">
     <ScrollView>
         <VerticalStackLayout Spacing="20" Padding="0,0,0,24">
 
@@ -192,4 +195,9 @@
 
         </VerticalStackLayout>
     </ScrollView>
+
+        <Grid Grid.Row="1" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
+            <admob:BannerAd IsVisible="{Binding ShowAdsBanner}" />
+        </Grid>
+    </Grid>
 </ContentPage>
