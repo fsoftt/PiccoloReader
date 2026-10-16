@@ -11,12 +11,14 @@ public partial class LibraryPage : ContentPage
 {
     private readonly LibraryViewModel _viewModel;
     private readonly LibraryService _libraryService;
+    private readonly PiccoloReader.Services.SheetShareFlow _shareFlow;
     private readonly LibraryRecoveryFlow _recoveryFlow;
     private readonly SharedPdfImportFlow _sharedImportFlow;
 
-    public LibraryPage(LibraryViewModel viewModel, LibraryService libraryService, LibraryRecoveryFlow recoveryFlow, SharedPdfImportFlow sharedImportFlow)
+    public LibraryPage(LibraryViewModel viewModel, LibraryService libraryService, LibraryRecoveryFlow recoveryFlow, SharedPdfImportFlow sharedImportFlow, PiccoloReader.Services.SheetShareFlow shareFlow)
     {
         InitializeComponent();
+        _shareFlow = shareFlow;
         _viewModel = viewModel;
         _libraryService = libraryService;
         _recoveryFlow = recoveryFlow;
@@ -294,9 +296,17 @@ public partial class LibraryPage : ContentPage
         await ShowSheetMenuAsync(sheet);
     }
 
+    private bool ShareSupported => _shareFlow.IsSupported;
+
     private async Task ShowSheetMenuAsync(Sheet sheet)
     {
-        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, AppStrings.Move, AppStrings.Delete);
+        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, ShareSupported ? new[] { AppStrings.Share, AppStrings.Move, AppStrings.Delete } : new[] { AppStrings.Move, AppStrings.Delete });
+
+        if (choice == AppStrings.Share)
+        {
+            await _shareFlow.ShareAsync(this, sheet, SheetViewerPage.LegacyPortraitReadingArea());
+            return;
+        }
 
         if (choice == AppStrings.Delete)
         {
