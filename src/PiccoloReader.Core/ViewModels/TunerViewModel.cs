@@ -75,8 +75,8 @@ public partial class TunerViewModel : ObservableObject
     /// <param name="post">
     /// Runs an action on the UI thread. The input raises readings on the audio
     /// thread; the default runs inline, which suits tests. It must be
-    /// fire-and-forget and never invoke-and-wait: Detach stops the input
-    /// synchronously, so blocking on the UI thread could deadlock.
+    /// fire-and-forget and never invoke-and-wait: Detach asks the input to stop
+    /// without waiting, but blocking on the UI thread could deadlock.
     /// </param>
     public TunerViewModel(
         ITunerInput input,
@@ -131,7 +131,14 @@ public partial class TunerViewModel : ObservableObject
 
         _input.ReadingChanged -= OnReadingChanged;
         _input.ReadingChanged += OnReadingChanged;
-        var result = _input.Start();
+        var result = await Task.Run(_input.Start);
+        if (version != _attachVersion || !_attached)
+        {
+            // Detached (or re-attached) while the microphone was opening: Detach
+            // already unsubscribed and stopped the input.
+            return;
+        }
+
         if (result != TunerStartResult.Started)
         {
             _input.ReadingChanged -= OnReadingChanged;
@@ -166,8 +173,16 @@ public partial class TunerViewModel : ObservableObject
             return;
         }
 
-        _isDirty = false;
-        _preferences.Save(Settings);
+        try
+        {
+            _preferences.Save(Settings);
+            _isDirty = false;
+        }
+        catch (Exception)
+        {
+            // A failed write must not break the UI; it stays dirty and the next
+            // change or Detach retries.
+        }
     }
 
     [RelayCommand]
@@ -229,6 +244,7 @@ public partial class TunerViewModel : ObservableObject
 
         _settings = snapshot;
         _isDirty = true;
+        PersistIfDirty();
         if (_lastHz > 0f)
         {
             ShowNote(_lastHz);

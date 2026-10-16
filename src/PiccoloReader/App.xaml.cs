@@ -25,5 +25,6 @@ public partial class App : Application
 		var services = IPlatformApplication.Current?.Services;
 		services?.GetService<IMetronomePlayer>()?.Stop();
 		services?.GetService<MetronomeViewModel>()?.PersistIfDirty();
+		services?.GetService<TunerViewModel>()?.PersistIfDirty();
 	}
 }

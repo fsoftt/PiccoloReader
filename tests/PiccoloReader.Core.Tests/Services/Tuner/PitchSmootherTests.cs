@@ -75,7 +75,7 @@ public class PitchSmootherTests
     }
 
     [Fact]
-    public void NewStableNote_ReplacesHeldOneAfterThreeFrames()
+    public void NewStableNote_ReplacesHeldOneAfterFiveFrames()
     {
         var sut = new PitchSmoother(FrameMs);
         for (var i = 0; i < 6; i++)
@@ -83,8 +83,11 @@ public class PitchSmootherTests
             sut.Update(Pitch(880));
         }
 
-        sut.Update(Pitch(1000));
-        sut.Update(Pitch(1000));
+        for (var i = 0; i < 4; i++)
+        {
+            Assert.Equal(880f, sut.Update(Pitch(1000)).Hz, 1f);
+        }
+
         var reading = sut.Update(Pitch(1000));
 
         Assert.Equal(1000f, reading.Hz, 1f);

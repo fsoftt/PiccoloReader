@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="PiccoloReader.Views.TunerPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:admob="clr-namespace:Plugin.AdMob;assembly=Plugin.AdMob"
+    xmlns:local="clr-namespace:PiccoloReader"
+    xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource BackgroundDark}}"
+    Title="{x:Static strings:AppStrings.Tuner}">
+
+    <ContentPage.Resources>
+        <Style x:Key="RowGrid" TargetType="Grid">
+            <Setter Property="MinimumHeightRequest" Value="56" />
+            <Setter Property="Padding" Value="16,0,14,0" />
+            <Setter Property="ColumnSpacing" Value="14" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+        </Style>
+        <Style x:Key="RowDivider" TargetType="BoxView">
+            <Setter Property="HeightRequest" Value="1" />
+            <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" />
+        </Style>
+        <Style x:Key="PresetChip" TargetType="Border">
+            <Setter Property="HeightRequest" Value="40" />
+            <Setter Property="MinimumWidthRequest" Value="64" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 20" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="*,Auto">
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="0,0,0,24">
+
+            <Label
+                Style="{StaticResource PageTitle}"
+                Text="{x:Static strings:AppStrings.Tuner}"
+                Padding="20,16,20,0"
+                SemanticProperties.HeadingLevel="Level1"
+                TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+            <!-- Reading -->
+            <Border Style="{StaticResource Card}" Margin="20,0" Padding="20,16">
+                <VerticalStackLayout Spacing="4">
+                    <HorizontalStackLayout x:Name="NoteRow" HorizontalOptions="Center" Spacing="2" WidthRequest="232" HeightRequest="124">
+                        <Label
+                            x:Name="NoteLabel"
+                            AutomationId="TunerNoteLabel"
+                            FontSize="88"
+                            WidthRequest="194"
+                            HeightRequest="124"
+                            HorizontalTextAlignment="End"
+                            VerticalTextAlignment="End"
+                            LineBreakMode="NoWrap"
+                            FontFamily="OpenSansSemibold"
+                            VerticalOptions="End"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Label
+                            x:Name="OctaveLabel"
+                            AutomationId="TunerOctaveLabel"
+                            FontSize="28"
+                            WidthRequest="36"
+                            HeightRequest="40"
+                            LineBreakMode="NoWrap"
+                            FontFamily="OpenSansSemibold"
+                            VerticalOptions="End"
+                            Margin="0,0,0,14"
+                            TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                    </HorizontalStackLayout>
+
+                    <Label
+                        x:Name="StatusLabel"
+                        AutomationId="TunerStatusLabel"
+                        Style="{StaticResource Caption}"
+                        FontSize="14"
+                        MinimumHeightRequest="20"
+                        HorizontalTextAlignment="Center" />
+
+                    <GraphicsView
+                        x:Name="NeedleView"
+                        AutomationId="TunerNeedle"
+                        HeightRequest="96"
+                        Margin="0,8,0,0"
+                        SemanticProperties.Description="{x:Static strings:AppStrings.Tuner}" />
+
+                    <Label
+                        x:Name="HzLabel"
+                        AutomationId="TunerHzLabel"
+                        FontSize="18"
+                        WidthRequest="120"
+                        HeightRequest="26"
+                        HorizontalTextAlignment="Center"
+                        HorizontalOptions="Center"
+                        TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+
+                    <!-- Denied microphone permission -->
+                    <Button
+                        x:Name="OpenSettingsButton"
+                        AutomationId="TunerOpenSettingsButton"
+                        Text="{x:Static strings:AppStrings.TunerOpenSettings}"
+                        Command="{Binding OpenSettingsCommand}"
+                        HorizontalOptions="Center"
+                        Margin="0,8,0,0"
+                        IsVisible="False" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Options -->
+            <Border Style="{StaticResource Card}" Margin="20,0" Padding="0">
+                <VerticalStackLayout>
+                    <Grid Style="{StaticResource RowGrid}" AutomationId="TunerNotationRow" ColumnDefinitions="*,Auto,20"
+                          SemanticProperties.Description="{x:Static strings:AppStrings.TunerNotation}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnNotationRowTapped" />
+                        </Grid.GestureRecognizers>
+                        <Label Grid.Column="0" Style="{StaticResource RowTitle}" VerticalOptions="Center"
+                               Text="{x:Static strings:AppStrings.TunerNotation}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Label Grid.Column="1" x:Name="NotationValueLabel" Style="{StaticResource Caption}" FontSize="14" VerticalOptions="Center"
+                               AutomationId="TunerNotationValue" />
+                        <Image Grid.Column="2" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE5CC;" FontFamily="MaterialOutlined" Size="20"
+                                    Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                            </Image.Source>
+                        </Image>
+                    </Grid>
+                    <BoxView Style="{StaticResource RowDivider}" />
+
+                    <Grid Style="{StaticResource RowGrid}" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="4">
+                        <Label Grid.Column="0" Style="{StaticResource RowTitle}" VerticalOptions="Center"
+                               Text="{x:Static strings:AppStrings.TunerReferencePitch}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <ImageButton
+                            Grid.Column="1"
+                            Style="{StaticResource IconButton}"
+                            AutomationId="TunerA4MinusButton"
+                            SemanticProperties.Description="{x:Static strings:AppStrings.TunerDecreaseA4}"
+                            Command="{Binding DecreaseA4Command}">
+                            <ImageButton.Source>
+                                <FontImageSource Glyph="&#xE15B;" FontFamily="MaterialOutlined" Size="24"
+                                    Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                            </ImageButton.Source>
+                        </ImageButton>
+                        <Label Grid.Column="2" AutomationId="TunerA4Value" Text="{Binding A4Hz, StringFormat='{0} Hz'}"
+                               Style="{StaticResource RowTitle}" VerticalOptions="Center" HorizontalTextAlignment="Center"
+                               WidthRequest="64"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <ImageButton
+                            Grid.Column="3"
+                            Style="{StaticResource IconButton}"
+                            AutomationId="TunerA4PlusButton"
+                            SemanticProperties.Description="{x:Static strings:AppStrings.TunerIncreaseA4}"
+                            Command="{Binding IncreaseA4Command}">
+                            <ImageButton.Source>
+                                <FontImageSource Glyph="&#xE145;" FontFamily="MaterialOutlined" Size="24"
+                                    Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                            </ImageButton.Source>
+                        </ImageButton>
+                    </Grid>
+
+                    <!-- Presets, built in code-behind from TunerSettings.Presets. -->
+                    <HorizontalStackLayout x:Name="PresetsLayout" Spacing="12" Padding="16,0,16,12" />
+                    <BoxView Style="{StaticResource RowDivider}" />
+
+                    <Grid Style="{StaticResource RowGrid}" ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Style="{StaticResource RowTitle}" VerticalOptions="Center"
+                               Text="{x:Static strings:AppStrings.TunerShowWritten}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Switch Grid.Column="1" AutomationId="TunerWrittenSwitch" VerticalOptions="Center"
+                                SemanticProperties.Description="{x:Static strings:AppStrings.TunerShowWritten}"
+                                OnColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                                IsToggled="{Binding ShowAsWritten}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+        <Grid Grid.Row="1" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
+            <admob:BannerAd IsVisible="{Binding ShowAdsBanner}" />
+        </Grid>
+    </Grid>
+</ContentPage>

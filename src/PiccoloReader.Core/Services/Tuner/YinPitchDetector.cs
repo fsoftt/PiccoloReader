@@ -1,12 +1,19 @@
 namespace PiccoloReader.Core.Services.Tuner;
 
 /// <summary>
-/// YIN pitch detector tuned for a cheap per-frame cost: an RMS gate skips silent
-/// windows, the difference function is only computed up to the first dip under
-/// the threshold, and every buffer is preallocated.
+/// YIN pitch detector tuned for a cheap per-frame cost on slow devices:
+/// an RMS gate skips silent windows before any lag is evaluated; the lag range
+/// covers the piccolo (400 Hz to 4.5 kHz) and the integration length is the
+/// window minus the longest lag; a full search stops at the first dip under the
+/// threshold; and once a pitch is found, the next frames only verify five lags
+/// around it (about 10x cheaper) and fall back to the full search when the
+/// check fails. Every buffer is preallocated.
 /// </summary>
 public sealed class YinPitchDetector
 {
+    private const int TrackRadius = 2;
+    private const int MaxSubMultiple = 4;
+
     private readonly float _sampleRate;
     private readonly int _windowSize;
     private readonly int _integrationLength;
@@ -17,8 +24,10 @@ public sealed class YinPitchDetector
     private readonly float[] _centered;
     private readonly float[] _difference;
     private readonly float[] _cmndf;
+    private int _trackedLag;
+    private int _trackCount;
 
-    public YinPitchDetector(float sampleRate, int windowSize = 1024, float minHz = 250f, float maxHz = 4500f, float threshold = 0.13f, float rmsGate = 0.005f)
+    public YinPitchDetector(float sampleRate, int windowSize = 640, float minHz = 400f, float maxHz = 4500f, float threshold = 0.13f, float rmsGate = 0.005f)
     {
         _sampleRate = sampleRate;
         _windowSize = windowSize;
@@ -27,7 +36,7 @@ public sealed class YinPitchDetector
         _tauMax = (int)(sampleRate / minHz);
         _tauMin = Math.Max(2, (int)(sampleRate / maxHz));
         _integrationLength = windowSize - _tauMax;
-        if (_integrationLength <= 0 || _tauMin >= _tauMax)
+        if (_integrationLength <= 0 || _tauMin >= _tauMax - TrackRadius)
         {
             throw new ArgumentException("Window too short for the requested pitch range.");
         }
@@ -39,14 +48,21 @@ public sealed class YinPitchDetector
 
     public int WindowSize => _windowSize;
 
-    public PitchEstimate Detect(ReadOnlySpan<float> window)
+    /// <summary>Number of lags evaluated so far (each costs one integration length of multiply-adds).</summary>
+    public long LagEvaluations { get; private set; }
+
+    public void Reset() => _trackedLag = 0;
+
+    public PitchEstimate Detect(ReadOnlySpan<float> window) => Estimate(Prepare(window));
+
+    /// <summary>Removes DC from the window and returns its RMS. Call before <see cref="Estimate"/>.</summary>
+    public float Prepare(ReadOnlySpan<float> window)
     {
         if (window.Length < _windowSize)
         {
-            return PitchEstimate.None(0f);
+            return 0f;
         }
 
-        // Remove DC so it counts neither toward the RMS gate nor the difference function.
         var sum = 0f;
         for (var i = 0; i < _windowSize; i++)
         {
@@ -63,12 +79,88 @@ public sealed class YinPitchDetector
             energy += v * v;
         }
 
-        var rms = MathF.Sqrt(energy / _windowSize);
+        return MathF.Sqrt(energy / _windowSize);
+    }
+
+    /// <summary>Pitch of the window last passed to <see cref="Prepare"/>, which returned <paramref name="rms"/>.</summary>
+    public PitchEstimate Estimate(float rms)
+    {
         if (rms < _rmsGate)
         {
+            _trackedLag = 0;
             return PitchEstimate.None(rms);
         }
 
+        if (_trackedLag > 0 && TryTrack(rms, out var tracked))
+        {
+            return tracked;
+        }
+
+        return FullSearch(rms);
+    }
+
+    private bool TryTrack(float rms, out PitchEstimate estimate)
+    {
+        estimate = default;
+        var low = _trackedLag - TrackRadius;
+        var high = _trackedLag + TrackRadius;
+        if (low <= _tauMin || high >= _tauMax)
+        {
+            return false;
+        }
+
+        var best = low;
+        for (var tau = low; tau <= high; tau++)
+        {
+            ComputeDifference(tau);
+            if (_difference[tau] < _difference[best])
+            {
+                best = tau;
+            }
+        }
+
+        // A minimum on the edge of the range is not a minimum: the pitch moved.
+        if (best == low || best == high)
+        {
+            return false;
+        }
+
+        var normalised = Normalised(best);
+        if (normalised >= _threshold)
+        {
+            return false;
+        }
+
+        var clarity = 1f - normalised;
+        if ((++_trackCount & 3) == 0)
+        {
+            best = ShortestSubMultiple(best, ref clarity);
+        }
+
+        _trackedLag = best;
+        estimate = new PitchEstimate(_sampleRate / (best + Refine(best)), clarity, rms, true);
+        return true;
+    }
+
+    /// <summary>Difference at the lag relative to the energy of both compared segments: 0 for a perfectly periodic signal, about 1 for noise.</summary>
+    private float Normalised(int lag)
+    {
+        var x = _centered;
+        float e0 = 0f, eLag = 0f;
+        for (var j = 0; j < _integrationLength; j++)
+        {
+            var a = x[j];
+            var b = x[lag + j];
+            e0 += a * a;
+            eLag += b * b;
+        }
+
+        var denominator = e0 + eLag;
+        return denominator > 0f ? _difference[lag] / denominator : 1f;
+    }
+
+    private PitchEstimate FullSearch(float rms)
+    {
         var d = _difference;
         var cm = _cmndf;
         var running = 0f;
@@ -106,6 +198,7 @@ public sealed class YinPitchDetector
 
         if (chosen == 0)
         {
+            _trackedLag = 0;
             return PitchEstimate.None(rms);
         }
 
@@ -130,20 +223,67 @@ public sealed class YinPitchDetector
             }
         }
 
+        var clarity = 1f - cm[chosen];
+        lag = ShortestSubMultiple(lag, ref clarity);
+
+
+        _trackedLag = lag;
         var offset = lag < _tauMax ? Refine(lag) : 0f;
         var hz = _sampleRate / (lag + offset);
-        return new PitchEstimate(hz, 1f - cm[chosen], rms, true);
+        return new PitchEstimate(hz, clarity, rms, true);
+    }
+
+    /// <summary>
+    /// A window damaged by a click can dip first at a multiple of the period (a
+    /// sine repeats at 2x, 3x...). Looks for a clean dip at 1/2, 1/3 and 1/4 of the
+    /// lag and returns the shortest one found, or the lag itself.
+    /// </summary>
+    private int ShortestSubMultiple(int lag, ref float clarity)
+    {
+        var result = lag;
+        for (var k = 2; k <= MaxSubMultiple; k++)
+        {
+            var sub = (int)MathF.Round(lag / (float)k);
+            if (sub - TrackRadius <= _tauMin || sub + TrackRadius >= lag)
+            {
+                break;
+            }
+
+            var best = sub - TrackRadius;
+            for (var tau = best; tau <= sub + TrackRadius; tau++)
+            {
+                ComputeDifference(tau);
+                if (_difference[tau] < _difference[best])
+                {
+                    best = tau;
+                }
+            }
+
+            if (best == sub - TrackRadius || best == sub + TrackRadius)
+            {
+                continue;
+            }
+
+            var normalised = Normalised(best);
+            if (normalised < _threshold)
+            {
+                result = best;
+                clarity = 1f - normalised;
+            }
+        }
+
+        return result;
     }
 
     private void ComputeDifference(int tau)
     {
+        LagEvaluations++;
         var x = _centered;
+        var n = _integrationLength;
         var acc = 0f;
-        var lagged = x.AsSpan(tau, _integrationLength);
-        var head = x.AsSpan(0, _integrationLength);
-        for (var j = 0; j < head.Length; j++)
+        for (var j = 0; j < n; j++)
         {
-            var diff = head[j] - lagged[j];
+            var diff = x[j] - x[j + tau];
             acc += diff * diff;
         }
 

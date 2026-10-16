@@ -267,6 +267,20 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="SubdivisionTriplets" xml:space="preserve"><value>Triplets (3)</value></data>
   <data name="SubdivisionSixteenths" xml:space="preserve"><value>Sixteenths (4)</value></data>
   <data name="MetronomeStartFailed" xml:space="preserve"><value>Could not start the metronome audio.</value></data>
+  <data name="Tuner" xml:space="preserve"><value>Tuner</value></data>
+  <data name="TunerListening" xml:space="preserve"><value>Play a note</value></data>
+  <data name="TunerNoPermission" xml:space="preserve"><value>Microphone access is needed to tune. Allow it in the app settings.</value></data>
+  <data name="TunerOpenSettings" xml:space="preserve"><value>Open settings</value></data>
+  <data name="TunerUnsupported" xml:space="preserve"><value>The tuner is not available on this device.</value></data>
+  <data name="TunerError" xml:space="preserve"><value>Could not start the microphone.</value></data>
+  <data name="TunerNotation" xml:space="preserve"><value>Note names</value></data>
+  <data name="TunerNotationAuto" xml:space="preserve"><value>Automatic</value></data>
+  <data name="TunerNotationLetter" xml:space="preserve"><value>C D E</value></data>
+  <data name="TunerNotationSolfege" xml:space="preserve"><value>Do Re Mi</value></data>
+  <data name="TunerReferencePitch" xml:space="preserve"><value>Reference A4</value></data>
+  <data name="TunerDecreaseA4" xml:space="preserve"><value>Decrease A4</value></data>
+  <data name="TunerIncreaseA4" xml:space="preserve"><value>Increase A4</value></data>
+  <data name="TunerShowWritten" xml:space="preserve"><value>Written pitch (one octave lower)</value></data>
   <data name="Share" xml:space="preserve"><value>Share</value></data>
   <data name="PreparingPdf" xml:space="preserve"><value>Preparing PDF…</value></data>
   <data name="SharePdfFailed" xml:space="preserve"><value>Could not prepare the PDF to share.</value></data>

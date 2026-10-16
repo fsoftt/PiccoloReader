@@ -16,6 +16,9 @@ public sealed class PitchSmoother
     private const float ToleranceCents = 50f;
     private const float EmaAlpha = 0.3f;
 
+    // Replacing a note being shown needs more evidence than showing the first one.
+    private const int ReplaceExtraFrames = 2;
+
     // A click rings out within a few frames; a note being started does not fade that fast.
     // The last frame is compared with the loudest candidate frame, so an accented
     // attack that settles to a steady level still passes.
@@ -104,7 +107,7 @@ public sealed class PitchSmoother
         }
 
         _candidateLast = cents;
-        if (_candidateCount >= _stableFrames)
+        if (_candidateCount >= (_locked ? _stableFrames + ReplaceExtraFrames : _stableFrames))
         {
             if (rms < _candidatePeakRms * MinRmsRatioForNewNote)
             {

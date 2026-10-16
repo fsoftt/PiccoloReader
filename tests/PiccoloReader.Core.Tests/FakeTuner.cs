@@ -16,7 +16,7 @@ public class FakeTunerInput : ITunerInput
 
     public event EventHandler<TunerReading>? ReadingChanged;
 
-    public TunerStartResult Start()
+    public virtual TunerStartResult Start()
     {
         StartCount++;
         IsRunning = StartResult == TunerStartResult.Started;

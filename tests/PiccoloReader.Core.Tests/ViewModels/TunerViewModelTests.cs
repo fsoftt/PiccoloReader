@@ -70,7 +70,7 @@ public class TunerViewModelTests
     }
 
     [Fact]
-    public async Task Detach_StopsInputUnsubscribesAndPersistsWhenDirty()
+    public async Task Detach_StopsInputAndUnsubscribes()
     {
         var sut = Create();
         await sut.AttachAsync();
@@ -83,6 +83,91 @@ public class TunerViewModelTests
         Assert.Equal(TunerState.Idle, sut.State);
         Assert.Equal(1, _prefs.SaveCount);
         Assert.Equal(442, _prefs.Stored.A4Hz);
+    }
+
+    [Fact]
+    public async Task SettingChange_IsSavedImmediately_AndDetachDoesNotSaveAgain()
+    {
+        var sut = Create();
+        await sut.AttachAsync();
+
+        sut.A4Hz = 442;
+        Assert.Equal(1, _prefs.SaveCount);
+        Assert.Equal(442, _prefs.Stored.A4Hz);
+
+        sut.ShowAsWritten = true;
+        Assert.Equal(2, _prefs.SaveCount);
+        Assert.True(_prefs.Stored.ShowAsWritten);
+
+        sut.NoteNaming = NoteNaming.Solfege;
+        Assert.Equal(3, _prefs.SaveCount);
+        Assert.Equal(NoteNaming.Solfege, _prefs.Stored.NoteNaming);
+
+        sut.Detach();
+        Assert.Equal(3, _prefs.SaveCount);
+    }
+
+    [Fact]
+    public void PersistIfDirty_RetriesAfterAFailedSave()
+    {
+        var failing = new ThrowingOncePreferenceService();
+        var sut = new TunerViewModel(_input, failing, _permission, _ads);
+
+        sut.A4Hz = 442;
+        Assert.NotEqual(442, failing.Stored.A4Hz);
+
+        sut.PersistIfDirty();
+        Assert.Equal(442, failing.Stored.A4Hz);
+    }
+
+    private sealed class ThrowingOncePreferenceService : ITunerPreferenceService
+    {
+        private bool _thrown;
+
+        public TunerSettings Stored { get; private set; } = new();
+
+        public TunerSettings Load() => Stored;
+
+        public void Save(TunerSettings settings)
+        {
+            if (!_thrown)
+            {
+                _thrown = true;
+                throw new InvalidOperationException();
+            }
+
+            Stored = settings;
+        }
+    }
+
+    [Fact]
+    public async Task Detach_WhileInputIsOpening_KeepsTheViewModelIdle()
+    {
+        using var release = new ManualResetEventSlim(false);
+        using var entered = new ManualResetEventSlim(false);
+        var input = new BlockingStartInput(entered, release);
+        var sut = new TunerViewModel(input, _prefs, _permission, _ads);
+
+        var attach = sut.AttachAsync();
+        Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));
+
+        sut.Detach();
+        release.Set();
+        await attach;
+
+        Assert.Equal(TunerState.Idle, sut.State);
+        Assert.Equal(0, input.SubscriberCount);
+        Assert.Equal(1, input.StopCount);
+    }
+
+    private sealed class BlockingStartInput(ManualResetEventSlim entered, ManualResetEventSlim release) : FakeTunerInput
+    {
+        public override TunerStartResult Start()
+        {
+            entered.Set();
+            release.Wait(TimeSpan.FromSeconds(5));
+            return base.Start();
+        }
     }
 
     [Fact]
@@ -220,7 +305,7 @@ public class TunerViewModelTests
     }
 
     [Fact]
-    public async Task SettingChanges_RemapTheCurrentNoteAndMarkDirty()
+    public async Task SettingChanges_RemapTheCurrentNoteAndPersistImmediately()
     {
         var sut = Create();
         await sut.AttachAsync();
@@ -233,10 +318,9 @@ public class TunerViewModelTests
         sut.NoteNaming = NoteNaming.Solfege;
         Assert.Equal("La", sut.NoteName);
 
+        Assert.Equal(2, _prefs.SaveCount);
         sut.PersistIfDirty();
-        Assert.Equal(1, _prefs.SaveCount);
-        sut.PersistIfDirty();
-        Assert.Equal(1, _prefs.SaveCount);
+        Assert.Equal(2, _prefs.SaveCount);
     }
 
     [Fact]
