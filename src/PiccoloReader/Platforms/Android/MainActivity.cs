@@ -152,9 +152,21 @@ public class MainActivity : MauiAppCompatActivity
 
             if (decision == PedalKeyDecision.TryTurn)
             {
-                var handled = CanTurnPagesWithKeys(key)
-                    && IPlatformApplication.Current?.Services.GetService<IPageTurnInput>() is { } input
-                    && input.Handle(key, e.IsShiftPressed);
+                // Every Down that does not turn (typing, focused button,
+                // overlay, no viewer yet, an exception) is recorded as passed
+                // through, so its repeats and Up never look like a new press.
+                var handled = false;
+                try
+                {
+                    handled = CanTurnPagesWithKeys(key)
+                        && IPlatformApplication.Current?.Services.GetService<IPageTurnInput>() is { } input
+                        && input.Handle(key, e.IsShiftPressed);
+                }
+                catch (Exception ex)
+                {
+                    Android.Util.Log.Warn("PiccoloReader", $"Pedal page turn failed: {ex}");
+                }
+
                 if (isDown)
                 {
                     _pedalKeys.Record(id, handled);

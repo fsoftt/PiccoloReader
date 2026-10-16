@@ -109,4 +109,43 @@ public class PedalKeyTrackerTests
         Assert.Equal(PedalKeyDecision.TryTurn, t.OnUp(PedalKeyTracker.IdOf(1, 100)));
         Assert.Equal(PedalKeyDecision.Swallow, t.OnUp(PedalKeyTracker.IdOf(1, 108)));
     }
+
+    [Fact]
+    public void Down_passed_through_by_a_guard_does_not_turn_on_its_up_after_the_guard_clears()
+    {
+        // Enter in a text field: the Down passes through, the field's action
+        // closes the overlay, then the Up arrives with every guard now open.
+        var t = new PedalKeyTracker();
+        Assert.Equal(PedalKeyDecision.TryTurn, t.OnDown(A, 0));
+        t.Record(A, handled: false);
+        // (guards change here)
+        Assert.Equal(PedalKeyDecision.PassThrough, t.OnUp(A));
+    }
+
+    [Fact]
+    public void Down_before_the_viewer_subscribed_does_not_turn_on_its_up_after_it_did()
+    {
+        // Enter on the Library opens a sheet; the viewer subscribes before
+        // the Up arrives.
+        var input = new PageTurnInput();
+        var t = new PedalKeyTracker();
+
+        Assert.Equal(PedalKeyDecision.TryTurn, t.OnDown(A, 0));
+        t.Record(A, input.Handle(PageTurnKey.Enter, false)); // no listener: false
+
+        input.Requested += _ => true; // viewer appears
+
+        Assert.Equal(PedalKeyDecision.PassThrough, t.OnUp(A));
+    }
+
+    [Fact]
+    public void Repeats_of_a_passed_through_down_pass_through_too()
+    {
+        var t = new PedalKeyTracker();
+        t.OnDown(A, 0);
+        t.Record(A, false);
+        Assert.Equal(PedalKeyDecision.PassThrough, t.OnDown(A, 1));
+        Assert.Equal(PedalKeyDecision.PassThrough, t.OnDown(A, 2));
+        Assert.Equal(PedalKeyDecision.PassThrough, t.OnUp(A));
+    }
 }
