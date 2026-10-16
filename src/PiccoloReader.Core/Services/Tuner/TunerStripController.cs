@@ -10,6 +10,10 @@ public enum TunerStripBucket
 /// <summary>Applies strip values to the native view. Always called on the UI thread; must only move the marker and recolor it.</summary>
 public interface ITunerStripView
 {
+    /// <summary>Strip on (faint track shown) or off (fully transparent). Called only when listening starts or stops.</summary>
+    void SetActive(bool active);
+
+    /// <summary>Marker state while on: visibility, offset and color.</summary>
     void Apply(bool visible, int offsetPx, TunerStripBucket bucket);
 }
 
@@ -100,6 +104,7 @@ public sealed class TunerStripController
         }
 
         IsOn = true;
+        _view?.SetActive(true);
         _a4Hz = _tunerPreferences.Load().A4Hz;
         ResetTarget();
         _input.ReadingChanged += _onReading;
@@ -123,6 +128,7 @@ public sealed class TunerStripController
         {
             Unsubscribe();
             IsOn = false;
+            _view?.SetActive(false);
             _view?.Apply(false, 0, TunerStripBucket.Far);
             StateChanged?.Invoke(this, EventArgs.Empty);
             return;
@@ -149,6 +155,7 @@ public sealed class TunerStripController
         }
 
         ResetTarget();
+        _view?.SetActive(false);
         _view?.Apply(false, 0, TunerStripBucket.Far);
     }
 
@@ -282,6 +289,7 @@ public sealed class TunerStripController
         Unsubscribe();
         _input.Stop();
         ResetTarget();
+        _view?.SetActive(false);
         _view?.Apply(false, 0, TunerStripBucket.Far);
         StateChanged?.Invoke(this, EventArgs.Empty);
     }

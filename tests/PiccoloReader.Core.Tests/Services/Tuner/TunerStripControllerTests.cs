@@ -8,6 +8,10 @@ public class TunerStripControllerTests
     {
         public List<(bool Visible, int Offset, TunerStripBucket Bucket)> Calls { get; } = [];
 
+        public bool Active { get; private set; }
+
+        public void SetActive(bool active) => Active = active;
+
         public void Apply(bool visible, int offsetPx, TunerStripBucket bucket) => Calls.Add((visible, offsetPx, bucket));
     }
 
@@ -472,5 +476,17 @@ public class TunerStripControllerTests
         Assert.Equal(0, _input.SubscriberCount);
         Assert.True(_stripPreferences.IsEnabled);
         Assert.False(_view.Calls[^1].Visible);
+    }
+
+    [Fact]
+    public async Task Track_is_shown_only_while_the_strip_is_on()
+    {
+        Assert.False(_view.Active);
+
+        await _controller.AttachAsync();
+        Assert.True(_view.Active);
+
+        _controller.Detach();
+        Assert.False(_view.Active);
     }
 }

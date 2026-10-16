@@ -36,9 +36,10 @@ public class TunerStripHandler : ViewHandler<TunerStripView, TunerStripNativeVie
 }
 
 /// <summary>
-/// A faint track with a small marker child. Updates only change the marker's
-/// TranslationX and background color and the strip's visibility: no layout pass,
-/// no invalidation of anything else. Invisible (not Gone) keeps the layout stable.
+/// A faint track (only while the strip is on; transparent when off) with a small
+/// marker child. Per reading, updates only change the marker's visibility,
+/// TranslationX and background color: no layout pass, no invalidation of anything
+/// else. Invisible (not Gone) keeps the layout stable.
 /// </summary>
 public class TunerStripNativeView : FrameLayout, ITunerStripView
 {
@@ -56,21 +57,28 @@ public class TunerStripNativeView : FrameLayout, ITunerStripView
     public TunerStripNativeView(Context? context) : base(context!)
     {
         _markerWidthPx = (int)Math.Round(MarkerWidthDp * context!.Resources!.DisplayMetrics!.Density);
-        SetBackgroundColor(TrackColor);
-        _marker = new View(context);
+        _marker = new View(context) { Visibility = ViewStates.Invisible };
         AddView(_marker, new LayoutParams(_markerWidthPx, ViewGroup.LayoutParams.MatchParent, GravityFlags.Start));
-        Visibility = ViewStates.Invisible;
     }
 
     internal Action<float>? TravelChanged { get; set; }
+
+    public void SetActive(bool active)
+    {
+        SetBackgroundColor(active ? TrackColor : Color.Transparent);
+        if (!active)
+        {
+            _marker.Visibility = ViewStates.Invisible;
+        }
+    }
 
     public void Apply(bool visible, int offsetPx, TunerStripBucket bucket)
     {
         if (!visible)
         {
-            if (Visibility != ViewStates.Invisible)
+            if (_marker.Visibility != ViewStates.Invisible)
             {
-                Visibility = ViewStates.Invisible;
+                _marker.Visibility = ViewStates.Invisible;
             }
 
             return;
@@ -88,9 +96,9 @@ public class TunerStripNativeView : FrameLayout, ITunerStripView
         }
 
         _marker.TranslationX = offsetPx;
-        if (Visibility != ViewStates.Visible)
+        if (_marker.Visibility != ViewStates.Visible)
         {
-            Visibility = ViewStates.Visible;
+            _marker.Visibility = ViewStates.Visible;
         }
     }
 
