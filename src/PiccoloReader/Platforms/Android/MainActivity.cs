@@ -102,51 +102,14 @@ public class MainActivity : MauiAppCompatActivity
     // a view so a focused child (list, scroll view) can't swallow the key.
     // A key the page took is swallowed through its repeats and its key-up, so
     // holding a pedal turns exactly one page and nothing else reacts to it.
-    // Swallowed keys are tracked per (device, key) in a small fixed set, so
-    // two overlapping keys work and a press allocates nothing.
-    private const int MaxSwallowedKeys = 8;
-    private readonly long[] _swallowed = new long[MaxSwallowedKeys];
-    private int _swallowedCount;
-
-    private static long SwallowKey(KeyEvent e) => ((long)e.DeviceId << 32) | (uint)(int)e.KeyCode;
-
-    private bool IsSwallowed(long key)
-    {
-        for (var i = 0; i < _swallowedCount; i++)
-        {
-            if (_swallowed[i] == key)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private bool RemoveSwallowed(long key)
-    {
-        for (var i = 0; i < _swallowedCount; i++)
-        {
-            if (_swallowed[i] == key)
-            {
-                _swallowed[i] = _swallowed[--_swallowedCount];
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private void AddSwallowed(long key)
-    {
-        if (_swallowedCount < MaxSwallowedKeys)
-        {
-            _swallowed[_swallowedCount++] = key;
-        }
-    }
+    // The per-(device, key) bookkeeping lives in PedalKeyTracker. Android
+    // eats the key-down of a navigation key that leaves touch mode (the
+    // first Page/D-pad press after a screen touch) but still delivers its
+    // key-up; that unseen key-up turns the page instead.
+    private readonly PedalKeyTracker _pedalKeys = new();
 
     // A lost key-up (focus change, pause) must never leave a key stuck.
-    private void ClearSwallowed() => _swallowedCount = 0;
+    private void ClearSwallowed() => _pedalKeys.Clear();
 
     protected override void OnPause()
     {
@@ -166,46 +129,41 @@ public class MainActivity : MauiAppCompatActivity
 
     public override bool DispatchKeyEvent(KeyEvent? e)
     {
-        if (e is null)
+        if (e is null || (e.Action != KeyEventActions.Down && e.Action != KeyEventActions.Up))
         {
             return base.DispatchKeyEvent(e);
         }
 
         try
         {
-            var swallowKey = SwallowKey(e);
-            if (e.Action == KeyEventActions.Up)
-            {
-                return RemoveSwallowed(swallowKey) || base.DispatchKeyEvent(e);
-            }
-
-            if (e.Action != KeyEventActions.Down)
-            {
-                return base.DispatchKeyEvent(e);
-            }
-
-            if (e.RepeatCount > 0)
-            {
-                // Auto-repeat of a key we already consumed; anything else is
-                // not ours.
-                return IsSwallowed(swallowKey) || base.DispatchKeyEvent(e);
-            }
-
-            // A fresh press always starts clean, whatever happened to the
-            // previous key-up.
-            RemoveSwallowed(swallowKey);
-
             var key = ToPageTurnKey(e.KeyCode);
-            if (key == PageTurnKey.Other || !CanTurnPagesWithKeys(key))
+            if (key == PageTurnKey.Other)
             {
                 return base.DispatchKeyEvent(e);
             }
 
-            var input = IPlatformApplication.Current?.Services.GetService<IPageTurnInput>();
-            if (input is not null && input.Handle(key, e.IsShiftPressed))
+            var id = PedalKeyTracker.IdOf(e.DeviceId, (int)e.KeyCode);
+            var isDown = e.Action == KeyEventActions.Down;
+            var decision = isDown ? _pedalKeys.OnDown(id, e.RepeatCount) : _pedalKeys.OnUp(id);
+            if (decision == PedalKeyDecision.Swallow)
             {
-                AddSwallowed(swallowKey);
                 return true;
+            }
+
+            if (decision == PedalKeyDecision.TryTurn)
+            {
+                var handled = CanTurnPagesWithKeys(key)
+                    && IPlatformApplication.Current?.Services.GetService<IPageTurnInput>() is { } input
+                    && input.Handle(key, e.IsShiftPressed);
+                if (isDown)
+                {
+                    _pedalKeys.Record(id, handled);
+                }
+
+                if (handled)
+                {
+                    return true;
+                }
             }
         }
         catch (Exception ex)
