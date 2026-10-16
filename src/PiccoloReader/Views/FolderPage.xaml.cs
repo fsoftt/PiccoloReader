@@ -13,10 +13,12 @@ public partial class FolderPage : ContentPage
 {
     private readonly FolderViewModel _viewModel;
     private readonly LibraryService _libraryService;
+    private readonly PiccoloReader.Services.SheetShareFlow _shareFlow;
 
-    public FolderPage(FolderViewModel viewModel, LibraryService libraryService)
+    public FolderPage(FolderViewModel viewModel, LibraryService libraryService, PiccoloReader.Services.SheetShareFlow shareFlow)
     {
         InitializeComponent();
+        _shareFlow = shareFlow;
         _viewModel = viewModel;
         _libraryService = libraryService;
         BindingContext = _viewModel;
@@ -149,10 +151,18 @@ public partial class FolderPage : ContentPage
         await ShowSheetMenuAsync(sheet);
     }
 
+    private bool ShareSupported => _shareFlow.IsSupported;
+
     private async Task ShowSheetMenuAsync(Sheet sheet)
     {
 
-        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, AppStrings.Move, AppStrings.Delete);
+        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, ShareSupported ? new[] { AppStrings.Share, AppStrings.Move, AppStrings.Delete } : new[] { AppStrings.Move, AppStrings.Delete });
+
+        if (choice == AppStrings.Share)
+        {
+            await _shareFlow.ShareAsync(this, sheet, SheetViewerPage.LegacyPortraitReadingArea());
+            return;
+        }
 
         if (choice == AppStrings.Delete)
         {

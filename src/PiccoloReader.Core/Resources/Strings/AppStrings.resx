@@ -267,4 +267,7 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="SubdivisionTriplets" xml:space="preserve"><value>Triplets (3)</value></data>
   <data name="SubdivisionSixteenths" xml:space="preserve"><value>Sixteenths (4)</value></data>
   <data name="MetronomeStartFailed" xml:space="preserve"><value>Could not start the metronome audio.</value></data>
+  <data name="Share" xml:space="preserve"><value>Share</value></data>
+  <data name="PreparingPdf" xml:space="preserve"><value>Preparing PDF…</value></data>
+  <data name="SharePdfFailed" xml:space="preserve"><value>Could not prepare the PDF to share.</value></data>
 </root>

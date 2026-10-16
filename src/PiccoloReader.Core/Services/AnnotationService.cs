@@ -21,6 +21,9 @@ public class AnnotationService
             .Where(a => a.SheetId == sheetId && a.PageIndex == pageIndex)
             .ToListAsync();
 
+    public async Task<bool> HasAnnotationsAsync(int sheetId) =>
+        await _database.Connection.Table<Annotation>().Where(a => a.SheetId == sheetId).CountAsync() > 0;
+
     // Annotations are stored normalized to the page. Legacy rows (normalized
     // to the reading area container) are converted here, once, using a
     // stable portrait reference container, and written back so they are not
