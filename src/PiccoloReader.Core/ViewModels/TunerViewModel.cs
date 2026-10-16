@@ -134,8 +134,14 @@ public partial class TunerViewModel : ObservableObject
         var result = await Task.Run(_input.Start);
         if (version != _attachVersion || !_attached)
         {
-            // Detached (or re-attached) while the microphone was opening: Detach
-            // already unsubscribed and stopped the input.
+            // Detached (or re-attached) while the microphone was opening. Detach may
+            // have stopped before this late Start opened it, so when nothing newer
+            // owns the input, give it back.
+            if (!_attached)
+            {
+                _input.Stop();
+            }
+
             return;
         }
 

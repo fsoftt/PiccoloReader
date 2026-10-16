@@ -157,7 +157,9 @@ public class TunerViewModelTests
 
         Assert.Equal(TunerState.Idle, sut.State);
         Assert.Equal(0, input.SubscriberCount);
-        Assert.Equal(1, input.StopCount);
+        // Detach stops once; the late Start is then given the microphone back.
+        Assert.Equal(2, input.StopCount);
+        Assert.False(input.IsRunning);
     }
 
     private sealed class BlockingStartInput(ManualResetEventSlim entered, ManualResetEventSlim release) : FakeTunerInput
