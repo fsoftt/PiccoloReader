@@ -144,6 +144,15 @@ public static class MauiProgram
 		builder.Services.AddSingleton<SharedPdfImportService>();
 		builder.Services.AddSingleton<SharedPdfImportFlow>();
 		builder.Services.AddSingleton<AnnotationService>();
+#if ANDROID
+		builder.Services.AddSingleton<IAnnotatedPdfExporter, PiccoloReader.Platforms.Android.AndroidAnnotatedPdfExporter>();
+#endif
+		builder.Services.AddSingleton(sp => new SheetShareService(
+			sp.GetRequiredService<IAppStorageProvider>(),
+			sp.GetRequiredService<AnnotationService>(),
+			sp.GetService<IAnnotatedPdfExporter>(),
+			Path.Combine(FileSystem.CacheDirectory, "share")));
+		builder.Services.AddSingleton<PiccoloReader.Services.SheetShareFlow>();
 		builder.Services.AddSingleton<BookmarkService>();
 		builder.Services.AddSingleton<PageCropService>();
 

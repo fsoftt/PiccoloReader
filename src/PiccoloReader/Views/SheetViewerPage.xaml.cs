@@ -54,11 +54,16 @@ public partial class SheetViewerPage : ContentPage
 
     private readonly AnnotationPainter _annotationPainter = new();
 
-    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome)
+    private readonly PiccoloReader.Services.SheetShareFlow _shareFlow;
+    private readonly LibraryService _libraryService;
+
+    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _metronome = metronome;
+        _shareFlow = shareFlow;
+        _libraryService = libraryService;
         BindingContext = _viewModel;
 
         _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => InvalidateAnnotations();
@@ -144,7 +149,7 @@ public partial class SheetViewerPage : ContentPage
     // the status bar, the system navigation bar and the (visible) app bar, as
     // that is when annotations were authored. Derived from the display only,
     // in dp, so it is the same for every page, orientation and toolbar state.
-    private static (double Width, double Height) LegacyPortraitReadingArea()
+    internal static (double Width, double Height) LegacyPortraitReadingArea()
     {
         var info = DeviceDisplay.Current.MainDisplayInfo;
         if (info.Density <= 0)
@@ -1759,7 +1764,13 @@ public partial class SheetViewerPage : ContentPage
         var redo = AppStrings.RedoAction;
 
         var crop = AppStrings.CropPage;
+        var share = AppStrings.Share;
         var options = new List<string> { undo, redo, crop };
+        if (_shareFlow.IsSupported)
+        {
+            options.Add(share);
+        }
+
         var choice = await DisplayActionSheetAsync(AppStrings.MoreOptions, AppStrings.Cancel, null, options.ToArray());
         if (choice == undo)
         {
@@ -1778,6 +1789,11 @@ public partial class SheetViewerPage : ContentPage
         else if (choice == crop)
         {
             await BeginCropAsync();
+        }
+        else if (choice == share && int.TryParse(SheetId, out var shareSheetId))
+        {
+            var sheet = await _libraryService.GetSheetAsync(shareSheetId);
+            await _shareFlow.ShareAsync(this, sheet, LegacyPortraitReadingArea());
         }
     }
 

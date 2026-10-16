@@ -153,6 +153,9 @@ public static class AppStrings
     public static string ImportDestinationTitleMultipleFormat => Get(nameof(ImportDestinationTitleMultipleFormat));
     public static string NewFolder => Get(nameof(NewFolder));
     public static string MoreOptions => Get(nameof(MoreOptions));
+    public static string Share => Get(nameof(Share));
+    public static string PreparingPdf => Get(nameof(PreparingPdf));
+    public static string SharePdfFailed => Get(nameof(SharePdfFailed));
     public static string CropPage => Get(nameof(CropPage));
     public static string CropApply => Get(nameof(CropApply));
     public static string CropReset => Get(nameof(CropReset));

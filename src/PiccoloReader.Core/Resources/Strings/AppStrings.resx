@@ -281,4 +281,7 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="TunerDecreaseA4" xml:space="preserve"><value>Decrease A4</value></data>
   <data name="TunerIncreaseA4" xml:space="preserve"><value>Increase A4</value></data>
   <data name="TunerShowWritten" xml:space="preserve"><value>Written pitch (one octave lower)</value></data>
+  <data name="Share" xml:space="preserve"><value>Share</value></data>
+  <data name="PreparingPdf" xml:space="preserve"><value>Preparing PDF…</value></data>
+  <data name="SharePdfFailed" xml:space="preserve"><value>Could not prepare the PDF to share.</value></data>
 </root>
