@@ -20,12 +20,30 @@ public partial class TunerPage : ContentPage
     private TunerState? _shownState;
     private float _density = 1f;
 
+    // Hz readout is written at most every HzIntervalMs while a note is held;
+    // a single timer (created once) delivers the trailing update.
+    private const int HzIntervalMs = 250;
+    private readonly IDispatcherTimer _hzTimer;
+    private float _pendingHz;
+    private bool _hzPending;
+    private long _lastHzWriteMs;
+
+    // Needle updates are coalesced: property changes mark it dirty and one
+    // posted callback applies the latest reading.
+    private readonly Action _applyNeedle;
+    private bool _needleQueued;
+
     public TunerPage(TunerViewModel viewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;
         BindingContext = _viewModel;
         NeedleView.Drawable = _needle;
+        _applyNeedle = ApplyNeedle;
+        _hzTimer = Dispatcher.CreateTimer();
+        _hzTimer.Interval = TimeSpan.FromMilliseconds(HzIntervalMs);
+        _hzTimer.IsRepeating = false;
+        _hzTimer.Tick += OnHzTimerTick;
         BuildPresets();
     }
 
@@ -51,6 +69,8 @@ public partial class TunerPage : ContentPage
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
+        _hzTimer.Stop();
+        _hzPending = false;
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         Application.Current!.RequestedThemeChanged -= OnRequestedThemeChanged;
         if (_window is not null)
@@ -90,7 +110,7 @@ public partial class TunerPage : ContentPage
                 UpdateReading();
                 break;
             case nameof(TunerViewModel.Cents):
-                UpdateNeedle();
+                QueueNeedle();
                 break;
             case nameof(TunerViewModel.NoteNaming):
                 UpdateNotationValue();
@@ -123,15 +143,10 @@ public partial class TunerPage : ContentPage
         var state = _viewModel.State;
         var hasPitch = state == TunerState.Listening;
 
-        SetText(NoteLabel, ref _shownNote, hasPitch ? _viewModel.NoteName : "-");
-        SetText(OctaveLabel, ref _shownOctaveText, hasPitch ? OctaveText(_viewModel.Octave) : string.Empty);
+        var noteChanged = SetText(NoteLabel, ref _shownNote, hasPitch ? _viewModel.NoteName : "-");
+        noteChanged |= SetText(OctaveLabel, ref _shownOctaveText, hasPitch ? OctaveText(_viewModel.Octave) : string.Empty);
 
-        var hz = hasPitch ? _viewModel.FrequencyHz : 0f;
-        if (hz != _shownHz)
-        {
-            _shownHz = hz;
-            HzLabel.Text = hasPitch ? $"{hz:0.0} Hz" : string.Empty;
-        }
+        UpdateHz(hasPitch, hasPitch ? _viewModel.FrequencyHz : 0f, noteChanged);
 
         var opacity = hasPitch ? 1d : 0.4d;
         if (NoteLabel.Opacity != opacity)
@@ -153,23 +168,93 @@ public partial class TunerPage : ContentPage
             OpenSettingsButton.IsVisible = state == TunerState.NoPermission;
         }
 
-        UpdateNeedle();
+        QueueNeedle();
     }
 
-    private static void SetText(Label label, ref string? shown, string text)
+    private void UpdateHz(bool hasPitch, float hz, bool noteChanged)
     {
-        if (!string.Equals(shown, text, StringComparison.Ordinal))
+        if (!hasPitch)
         {
-            shown = text;
-            label.Text = text;
+            _hzTimer.Stop();
+            _hzPending = false;
+            if (_shownHz != 0f)
+            {
+                _shownHz = 0f;
+                HzLabel.Text = string.Empty;
+            }
+
+            return;
         }
+
+        if (hz == _shownHz)
+        {
+            _hzPending = false;
+            return;
+        }
+
+        var now = Environment.TickCount64;
+        if (noteChanged || _shownHz <= 0f || now - _lastHzWriteMs >= HzIntervalMs)
+        {
+            _hzTimer.Stop();
+            _hzPending = false;
+            WriteHz(hz, now);
+            return;
+        }
+
+        _pendingHz = hz;
+        _hzPending = true;
+        if (!_hzTimer.IsRunning)
+        {
+            _hzTimer.Start();
+        }
+    }
+
+    private void WriteHz(float hz, long now)
+    {
+        _shownHz = hz;
+        _lastHzWriteMs = now;
+        HzLabel.Text = $"{hz:0.0} Hz";
+    }
+
+    private void OnHzTimerTick(object? sender, EventArgs e)
+    {
+        _hzTimer.Stop();
+        if (_hzPending && _viewModel.State == TunerState.Listening)
+        {
+            _hzPending = false;
+            WriteHz(_pendingHz, Environment.TickCount64);
+        }
+    }
+
+    private static bool SetText(Label label, ref string? shown, string text)
+    {
+        if (string.Equals(shown, text, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        shown = text;
+        label.Text = text;
+        return true;
     }
 
     private static string OctaveText(int octave) =>
         (uint)(octave + 1) < OctaveTexts.Length ? OctaveTexts[octave + 1] : octave.ToString();
 
-    private void UpdateNeedle()
+    private void QueueNeedle()
     {
+        if (_needleQueued)
+        {
+            return;
+        }
+
+        _needleQueued = true;
+        Dispatcher.Dispatch(_applyNeedle);
+    }
+
+    private void ApplyNeedle()
+    {
+        _needleQueued = false;
         var hasPitch = _viewModel.State == TunerState.Listening;
         if (_needle.SetReading(hasPitch, _viewModel.Cents, (float)NeedleView.Width, _density))
         {

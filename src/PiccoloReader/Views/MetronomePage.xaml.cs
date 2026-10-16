@@ -12,6 +12,9 @@ public partial class MetronomePage : ContentPage
     private readonly MetronomeViewModel _viewModel;
     private Border[] _dots = [];
     private int _litDot = -1;
+    private Color _litColor = Colors.Transparent;
+    private Color _accentColor = Colors.Transparent;
+    private Color _idleColor = Colors.Transparent;
 
     public MetronomePage(MetronomeViewModel viewModel)
     {
@@ -26,6 +29,7 @@ public partial class MetronomePage : ContentPage
     {
         base.OnAppearing();
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        Application.Current!.RequestedThemeChanged += OnRequestedThemeChanged;
         _viewModel.Attach();
         RebuildDots();
         UpdatePlayButton();
@@ -36,7 +40,17 @@ public partial class MetronomePage : ContentPage
     {
         base.OnDisappearing();
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        Application.Current!.RequestedThemeChanged -= OnRequestedThemeChanged;
         _viewModel.Detach();
+    }
+
+    private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs e) => RebuildDots();
+
+    private void CacheColors()
+    {
+        _litColor = Themed("PrimaryLight", "PrimaryDark");
+        _accentColor = Themed("OnPrimaryContainerLight", "OnPrimaryContainerDark");
+        _idleColor = Themed("OutlineLight", "OutlineDark");
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -81,6 +95,7 @@ public partial class MetronomePage : ContentPage
 
     private void RebuildDots()
     {
+        CacheColors();
         var count = _viewModel.BeatsPerBar;
         if (_dots.Length != count)
         {
@@ -132,14 +147,14 @@ public partial class MetronomePage : ContentPage
         var isAccent = index == 0 && _viewModel.AccentFirstBeat;
         if (lit)
         {
-            dot.BackgroundColor = Themed("PrimaryLight", "PrimaryDark");
+            dot.BackgroundColor = _litColor;
             dot.Scale = isAccent ? 1.3 : 1;
         }
         else
         {
             dot.BackgroundColor = isAccent
-                ? Themed("OnPrimaryContainerLight", "OnPrimaryContainerDark")
-                : Themed("OutlineLight", "OutlineDark");
+                ? _accentColor
+                : _idleColor;
             dot.Scale = 1;
         }
     }
