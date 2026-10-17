@@ -24,12 +24,15 @@ public class TunerStripHandler : ViewHandler<TunerStripView, TunerStripNativeVie
     {
         base.ConnectHandler(platformView);
         platformView.HalfTrackChanged = VirtualView.HalfTrackChanged;
+        VirtualView.VerticalChanged = platformView.SetVertical;
+        platformView.SetVertical(VirtualView.IsVertical);
         VirtualView.Surface = platformView;
     }
 
     protected override void DisconnectHandler(TunerStripNativeView platformView)
     {
         platformView.HalfTrackChanged = null;
+        VirtualView.VerticalChanged = null;
         VirtualView.Surface = null;
         base.DisconnectHandler(platformView);
     }
@@ -41,7 +44,9 @@ public class TunerStripHandler : ViewHandler<TunerStripView, TunerStripNativeVie
 /// The fill is a 1 px wide child scaled horizontally from its left edge (negative
 /// scale mirrors it to the left), so per reading only ScaleX, TranslationX,
 /// background color and visibility change: no layout pass, no invalidation of
-/// anything else. Invisible (not Gone) keeps the layout stable.
+/// anything else. Invisible (not Gone) keeps the layout stable. In vertical mode
+/// (strip on the left or right edge) the same applies on the Y axis, with sharp
+/// growing upward and flat downward.
 /// </summary>
 public class TunerStripNativeView : FrameLayout, ITunerStripView
 {
@@ -58,18 +63,51 @@ public class TunerStripNativeView : FrameLayout, ITunerStripView
     private readonly View _fill;
     private readonly View _tick;
     private readonly float _inTuneSegmentPx;
+    private readonly int _tickPx;
     private float _centerPx;
+    private bool _vertical;
+    private bool _lastVisible;
+    private int _lastFillPx;
     private TunerStripBucket? _bucket;
 
     public TunerStripNativeView(Context? context) : base(context!)
     {
         var density = context!.Resources!.DisplayMetrics!.Density;
         _inTuneSegmentPx = InTuneSegmentDp * density;
+        _tickPx = (int)Math.Round(TickWidthDp * density);
         _fill = new View(context) { Visibility = ViewStates.Invisible, PivotX = 0f };
         AddView(_fill, new LayoutParams(1, ViewGroup.LayoutParams.MatchParent, GravityFlags.Start));
         _tick = new View(context) { Visibility = ViewStates.Invisible };
         _tick.SetBackgroundColor(TickColor);
-        AddView(_tick, new LayoutParams((int)Math.Round(TickWidthDp * density), ViewGroup.LayoutParams.MatchParent, GravityFlags.CenterHorizontal));
+        AddView(_tick, new LayoutParams(_tickPx, ViewGroup.LayoutParams.MatchParent, GravityFlags.CenterHorizontal));
+    }
+
+    /// <summary>Switches between a horizontal (top/bottom edge) and vertical (left/right edge) strip.</summary>
+    public void SetVertical(bool vertical)
+    {
+        if (_vertical == vertical)
+        {
+            return;
+        }
+
+        _vertical = vertical;
+        _fill.ScaleX = 1f;
+        _fill.ScaleY = 1f;
+        _fill.TranslationX = 0f;
+        _fill.TranslationY = 0f;
+        _fill.PivotX = vertical ? _fill.PivotX : 0f;
+        _fill.PivotY = vertical ? 0f : _fill.PivotY;
+        _fill.LayoutParameters = vertical
+            ? new LayoutParams(ViewGroup.LayoutParams.MatchParent, 1, GravityFlags.Top)
+            : new LayoutParams(1, ViewGroup.LayoutParams.MatchParent, GravityFlags.Start);
+        _tick.LayoutParameters = vertical
+            ? new LayoutParams(ViewGroup.LayoutParams.MatchParent, _tickPx, GravityFlags.CenterVertical)
+            : new LayoutParams(_tickPx, ViewGroup.LayoutParams.MatchParent, GravityFlags.CenterHorizontal);
+        UpdateCenter();
+        if (_lastVisible)
+        {
+            Apply(true, _lastFillPx, _bucket ?? TunerStripBucket.Far);
+        }
     }
 
     internal Action<float>? HalfTrackChanged { get; set; }
@@ -86,6 +124,8 @@ public class TunerStripNativeView : FrameLayout, ITunerStripView
 
     public void Apply(bool visible, int fillPx, TunerStripBucket bucket)
     {
+        _lastVisible = visible;
+        _lastFillPx = fillPx;
         if (!visible)
         {
             if (_fill.Visibility != ViewStates.Invisible)
@@ -107,7 +147,21 @@ public class TunerStripNativeView : FrameLayout, ITunerStripView
             });
         }
 
-        if (fillPx == 0)
+        if (_vertical)
+        {
+            // Screen Y grows downward, so a positive (sharp) fill is a negative scale.
+            if (fillPx == 0)
+            {
+                _fill.TranslationY = _centerPx - _inTuneSegmentPx / 2f;
+                _fill.ScaleY = _inTuneSegmentPx;
+            }
+            else
+            {
+                _fill.TranslationY = _centerPx;
+                _fill.ScaleY = -fillPx;
+            }
+        }
+        else if (fillPx == 0)
         {
             _fill.TranslationX = _centerPx - _inTuneSegmentPx / 2f;
             _fill.ScaleX = _inTuneSegmentPx;
@@ -127,7 +181,19 @@ public class TunerStripNativeView : FrameLayout, ITunerStripView
     protected override void OnSizeChanged(int w, int h, int oldw, int oldh)
     {
         base.OnSizeChanged(w, h, oldw, oldh);
-        _centerPx = w / 2f;
+        UpdateCenter();
+    }
+
+    // The marker travels along the long axis: half the width, or half the height when vertical.
+    private void UpdateCenter()
+    {
+        var length = _vertical ? Height : Width;
+        if (length <= 0)
+        {
+            return;
+        }
+
+        _centerPx = length / 2f;
         HalfTrackChanged?.Invoke(_centerPx);
     }
 }

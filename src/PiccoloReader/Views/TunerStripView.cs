@@ -23,6 +23,21 @@ public class TunerStripView : View, ITunerStripView
 
     private ITunerStripView? _surface;
     private bool _active;
+    private bool _vertical;
+
+    /// <summary>True when the strip sits on the left or right edge (marker moves along Y).</summary>
+    internal bool IsVertical
+    {
+        get => _vertical;
+        set
+        {
+            _vertical = value;
+            VerticalChanged?.Invoke(value);
+        }
+    }
+
+    /// <summary>Set by the platform handler while connected.</summary>
+    internal Action<bool>? VerticalChanged { get; set; }
 
     /// <summary>Raised by the handler when the track width changes; argument is the marker travel in pixels.</summary>
     internal Action<float>? HalfTrackChanged { get; set; }

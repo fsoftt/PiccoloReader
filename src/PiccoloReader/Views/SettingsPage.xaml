@@ -3,6 +3,7 @@
     x:Class="PiccoloReader.Views.SettingsPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:PiccoloReader"
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
     Shell.NavBarIsVisible="False"
     BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource BackgroundDark}}"
@@ -74,6 +75,30 @@
                                     SemanticProperties.Description="{x:Static strings:AppStrings.SupportWithAdsOption}"
                                     OnColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
                                     IsToggled="{Binding SupportWithAdsEnabled}" />
+                        </Grid>
+                        <BoxView Style="{StaticResource RowDivider}" IsVisible="{x:Static local:PlatformInfo.IsAndroid}" />
+                        <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsTunerStripPositionRow" ColumnDefinitions="20,*,Auto,20"
+                              IsVisible="{x:Static local:PlatformInfo.IsAndroid}"
+                              SemanticProperties.Description="{x:Static strings:AppStrings.TunerStripPositionLabel}">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnTunerStripPositionRowTapped" />
+                            </Grid.GestureRecognizers>
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE8D4;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <Label Grid.Column="1" Style="{StaticResource RowTitle}" VerticalOptions="Center"
+                                   Text="{x:Static strings:AppStrings.TunerStripPositionLabel}"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                            <Label Grid.Column="2" x:Name="TunerStripPositionValueLabel" AutomationId="SettingsTunerStripPositionValue" Style="{StaticResource Caption}" FontSize="14" VerticalOptions="Center" />
+                            <Image Grid.Column="3" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE5CC;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                                </Image.Source>
+                            </Image>
                         </Grid>
                     </VerticalStackLayout>
                 </Border>

@@ -292,6 +292,11 @@ public static class AppStrings
     public static string IconRest32nd => Get(nameof(IconRest32nd));
     public static string AppVersionFormat => Get(nameof(AppVersionFormat));
     public static string TunerStrip => Get(nameof(TunerStrip));
+    public static string TunerStripPositionLabel => Get(nameof(TunerStripPositionLabel));
+    public static string TunerStripPositionLeft => Get(nameof(TunerStripPositionLeft));
+    public static string TunerStripPositionRight => Get(nameof(TunerStripPositionRight));
+    public static string TunerStripPositionBottom => Get(nameof(TunerStripPositionBottom));
+    public static string TunerStripPositionTop => Get(nameof(TunerStripPositionTop));
     public static string Metronome => Get(nameof(Metronome));
     public static string MetronomeBeatsPerBar => Get(nameof(MetronomeBeatsPerBar));
     public static string MetronomeSubdivision => Get(nameof(MetronomeSubdivision));

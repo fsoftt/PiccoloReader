@@ -26,6 +26,7 @@ public partial class SettingsPage : ContentPage
     {
         base.OnAppearing();
         RefreshLanguageValue();
+        RefreshTunerStripPositionValue();
         RefreshAdPrivacyOptionsVisibility();
         await RefreshStorageStatusAsync();
         VersionLabel.Text = string.Format(CultureInfo.CurrentUICulture, AppStrings.AppVersionFormat, AppInfo.VersionString);
@@ -57,6 +58,26 @@ public partial class SettingsPage : ContentPage
     {
         var index = Array.IndexOf(_viewModel.LanguageCodes, _viewModel.SelectedLanguageCode);
         LanguageValueLabel.Text = index >= 0 ? _viewModel.LanguageDisplayNames[index] : string.Empty;
+    }
+
+    private void RefreshTunerStripPositionValue()
+    {
+        var index = Array.IndexOf(_viewModel.TunerStripPositions, _viewModel.TunerStripPosition);
+        TunerStripPositionValueLabel.Text = index >= 0 ? _viewModel.TunerStripPositionNames[index] : string.Empty;
+    }
+
+    private async void OnTunerStripPositionRowTapped(object? sender, TappedEventArgs e)
+    {
+        var names = _viewModel.TunerStripPositionNames;
+        var selected = await DisplayActionSheetAsync(AppStrings.TunerStripPositionLabel, AppStrings.Cancel, null, names);
+        var index = Array.IndexOf(names, selected);
+        if (index < 0)
+        {
+            return;
+        }
+
+        _viewModel.TunerStripPosition = _viewModel.TunerStripPositions[index];
+        RefreshTunerStripPositionValue();
     }
 
     private async void OnLanguageRowTapped(object? sender, TappedEventArgs e)

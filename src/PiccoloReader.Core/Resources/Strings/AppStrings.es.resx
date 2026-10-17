@@ -253,6 +253,11 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="SharedPdfImportFailedMessage" xml:space="preserve"><value>No se pudo importar el PDF. Comprueba que sea un archivo válido y legible.</value></data>
   <data name="SharedPdfImportPartialFormat" xml:space="preserve"><value>Importados: {0}. No se pudieron importar: {1}.</value></data>
   <data name="TunerStrip" xml:space="preserve"><value>Barra del afinador</value></data>
+  <data name="TunerStripPositionLabel" xml:space="preserve"><value>Posición de la barra de afinación</value></data>
+  <data name="TunerStripPositionLeft" xml:space="preserve"><value>Izquierda</value></data>
+  <data name="TunerStripPositionRight" xml:space="preserve"><value>Derecha</value></data>
+  <data name="TunerStripPositionBottom" xml:space="preserve"><value>Abajo</value></data>
+  <data name="TunerStripPositionTop" xml:space="preserve"><value>Arriba</value></data>
   <data name="Metronome" xml:space="preserve"><value>Metrónomo</value></data>
   <data name="MetronomeBeatsPerBar" xml:space="preserve"><value>Pulsos por compás</value></data>
   <data name="MetronomeSubdivision" xml:space="preserve"><value>Subdivisión</value></data>
