@@ -4,6 +4,7 @@ using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Services.Metronome;
 using PiccoloReader.Core.Services.PageTurn;
+using PiccoloReader.Core.Services.Tuner;
 using PiccoloReader.Core.ViewModels;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
@@ -58,8 +59,10 @@ public partial class SheetViewerPage : ContentPage
     private readonly PiccoloReader.Services.SheetShareFlow _shareFlow;
     private readonly LibraryService _libraryService;
     private readonly IPageTurnInput _pageTurnInput;
+    private readonly TunerStripController _tunerStrip;
+    private Window? _window;
 
-    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput)
+    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput, TunerStripController tunerStrip)
     {
         InitializeComponent();
         Unloaded += (_, _) => _pageTurnInput.Requested -= OnPageTurnRequested;
@@ -68,6 +71,8 @@ public partial class SheetViewerPage : ContentPage
         _shareFlow = shareFlow;
         _libraryService = libraryService;
         _pageTurnInput = pageTurnInput;
+        _tunerStrip = tunerStrip;
+        SetUpTunerStripView();
         BindingContext = _viewModel;
 
         _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => InvalidateAnnotations();
@@ -189,6 +194,11 @@ public partial class SheetViewerPage : ContentPage
         base.OnDisappearing();
         _metronome.PropertyChanged -= OnMetronomePropertyChanged;
         _pageTurnInput.Requested -= OnPageTurnRequested;
+        AttachWindow(null);
+        _tunerStrip.StateChanged -= OnTunerStripStateChanged;
+
+        _tunerStrip.Detach();
+        UpdateTunerStripButton();
     }
 
     private void OnMetronomePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -201,6 +211,107 @@ public partial class SheetViewerPage : ContentPage
 
     private void OnMetronomeClicked(object? sender, EventArgs e) =>
         _metronome.TogglePlayCommand.Execute(null);
+
+    // The microphone is only open while the viewer is visible and the strip is on:
+    // stop when hidden or the app goes to the background, restart on resume.
+    private void OnWindowStopped(object? sender, EventArgs e)
+    {
+        _tunerStrip.Detach();
+        UpdateTunerStripButton();
+    }
+
+    private void OnWindowResumed(object? sender, EventArgs e) => AttachTunerStrip();
+
+    private void AttachWindow(Window? window)
+    {
+        if (ReferenceEquals(_window, window))
+        {
+            return;
+        }
+
+        if (_window is not null)
+        {
+            _window.Stopped -= OnWindowStopped;
+            _window.Resumed -= OnWindowResumed;
+        }
+
+        _window = window;
+        if (_window is not null)
+        {
+            _window.Stopped += OnWindowStopped;
+            _window.Resumed += OnWindowResumed;
+        }
+    }
+
+    private async void AttachTunerStrip()
+    {
+        try
+        {
+            // IsOn is set before the microphone opens, so show the strip right away.
+            var attach = _tunerStrip.AttachAsync();
+            UpdateTunerStripButton();
+            await attach;
+        }
+        catch (Exception)
+        {
+            // A failed start leaves the strip off; nothing else to do.
+        }
+
+        UpdateTunerStripButton();
+    }
+
+    private async void OnTunerStripClicked(object? sender, EventArgs e)
+    {
+        try
+        {
+            await _tunerStrip.ToggleAsync();
+        }
+        catch (Exception)
+        {
+            // A failed start leaves the strip off; nothing else to do.
+        }
+
+        UpdateTunerStripButton();
+    }
+
+    // Same look as the metronome button: primary-tinted while the strip is on. The
+    // two sources are built once; the strip's row stays laid out so toggling it
+    // never resizes the page.
+    private FontImageSource? _tunerIconOn;
+    private FontImageSource? _tunerIconOff;
+
+    private void UpdateTunerStripButton()
+    {
+        TunerStripButton.Source = _tunerStrip.IsOn
+            ? _tunerIconOn ??= CreateTunerIcon("PrimaryLight", "PrimaryDark")
+            : _tunerIconOff ??= CreateTunerIcon("TextPrimaryLight", "TextPrimaryDark");
+    }
+
+    private static FontImageSource CreateTunerIcon(string lightKey, string darkKey)
+    {
+        var source = new FontImageSource
+        {
+            Glyph = "",
+            FontFamily = "MaterialOutlined",
+            Size = 24
+        };
+        source.SetAppThemeColor(FontImageSource.ColorProperty,
+            (Color)Application.Current!.Resources[lightKey],
+            (Color)Application.Current!.Resources[darkKey]);
+        return source;
+    }
+
+    private void OnTunerStripStateChanged(object? sender, EventArgs e) => UpdateTunerStripButton();
+
+    // Android: the strip is a native view inside TunerStripHost, driven by the controller.
+    private void SetUpTunerStripView()
+    {
+#if ANDROID
+        var strip = new TunerStripView { HeightRequest = 6, HalfTrackChanged = _tunerStrip.SetHalfTrack };
+        TunerStripHost.Children.Add(strip);
+        _tunerStrip.Bind(strip);
+#endif
+    }
 
     // Timer icon, primary-tinted with a crossed timer while the metronome plays.
     private void UpdateMetronomeButton()
@@ -225,6 +336,13 @@ public partial class SheetViewerPage : ContentPage
         _pageTurnInput.Requested -= OnPageTurnRequested;
         _pageTurnInput.Requested += OnPageTurnRequested;
         UpdateMetronomeButton();
+        // Window can still be null here on a freshly pushed page; this is a single-window app.
+        AttachWindow(Window ?? Application.Current?.Windows.FirstOrDefault());
+        _tunerStrip.StateChanged -= OnTunerStripStateChanged;
+        _tunerStrip.StateChanged += OnTunerStripStateChanged;
+
+        UpdateTunerStripButton();
+        AttachTunerStrip();
 
 
         // The view model is reused across openings: start outside any editing

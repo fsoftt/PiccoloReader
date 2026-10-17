@@ -252,6 +252,7 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="SharedPdfImportedMultipleFormat" xml:space="preserve"><value>Imported {0} PDFs</value></data>
   <data name="SharedPdfImportFailedMessage" xml:space="preserve"><value>Couldn't import the PDF. Make sure it is a valid, readable file.</value></data>
   <data name="SharedPdfImportPartialFormat" xml:space="preserve"><value>Imported {0}, couldn't import {1}.</value></data>
+  <data name="TunerStrip" xml:space="preserve"><value>Tuner strip</value></data>
   <data name="Metronome" xml:space="preserve"><value>Metronome</value></data>
   <data name="MetronomeBeatsPerBar" xml:space="preserve"><value>Beats per bar</value></data>
   <data name="MetronomeSubdivision" xml:space="preserve"><value>Subdivision</value></data>
