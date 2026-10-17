@@ -35,6 +35,14 @@
                 <PanGestureRecognizer PanUpdated="OnPanUpdated" />
             </Grid.GestureRecognizers>
 
+            <!-- The opening thumbnail stays under the page image until the full
+                 render has decoded: swapping PageImage's source blanks it. -->
+            <Image
+                x:Name="OpeningThumbnailImage"
+                InputTransparent="True"
+                Source="{Binding OpeningThumbnailBytes, Converter={StaticResource ByteArrayToImageSource}}"
+                Aspect="AspectFit" />
+
             <Image
                 x:Name="PageImage"
                 Source="{Binding CurrentPageImageBytes, Converter={StaticResource ByteArrayToImageSource}}"
@@ -177,8 +185,8 @@
 
 
         <ActivityIndicator
-            IsRunning="{Binding IsLoading}"
-            IsVisible="{Binding IsLoading}"
+            IsRunning="{Binding ShowLoadingSpinner}"
+            IsVisible="{Binding ShowLoadingSpinner}"
             HorizontalOptions="Center"
             VerticalOptions="Center" />
 

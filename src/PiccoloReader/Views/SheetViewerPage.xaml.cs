@@ -80,6 +80,20 @@ public partial class SheetViewerPage : ContentPage
         SetUpTunerStripView();
         BindingContext = _viewModel;
 
+        // The opening thumbnail under the page image goes once the full page
+        // has decoded; removing it earlier would blank the screen.
+        PageImage.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == Image.IsLoadingProperty.PropertyName
+                && !PageImage.IsLoading
+                && _viewModel.OpeningThumbnailBytes is not null
+                && !_viewModel.IsShowingThumbnail
+                && !ReferenceEquals(_viewModel.CurrentPageImageBytes, _viewModel.OpeningThumbnailBytes))
+            {
+                _viewModel.OpeningThumbnailBytes = null;
+            }
+        };
+
         _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => InvalidateAnnotations();
         _viewModel.PropertyChanged += (_, e) =>
         {
@@ -206,6 +220,7 @@ public partial class SheetViewerPage : ContentPage
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
+        _viewModel.SaveCurrentPageThumbnail();
         _metronome.PropertyChanged -= OnMetronomePropertyChanged;
         _pageTurnInput.Requested -= OnPageTurnRequested;
         AttachWindow(null);

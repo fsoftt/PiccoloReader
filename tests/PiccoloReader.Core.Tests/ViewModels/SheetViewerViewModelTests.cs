@@ -141,6 +141,98 @@ public class SheetViewerViewModelTests : IDisposable
         Assert.False(_sut.IsLoading);
     }
 
+
+    private sealed class StubThumbnailStore : IPageThumbnailStore
+    {
+        public byte[]? Thumbnail { get; init; }
+
+        public Task<byte[]?> TryLoadAsync(int sheetId, int pageIndex) => Task.FromResult(Thumbnail);
+
+        public Task SaveAsync(int sheetId, int pageIndex, byte[] pageImageBytes) => Task.CompletedTask;
+
+        public Task DeleteForSheetAsync(int sheetId) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task LoadAsync_KeepsOpeningThumbnailUntilViewClearsIt_AndNeverBlanksThePage()
+    {
+        var thumbnail = new byte[] { 9, 9, 9 };
+        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database), new StubThumbnailStore { Thumbnail = thumbnail });
+        var sheet = await InsertSheetAsync(pageCount: 3, lastViewedPageIndex: 1);
+        var blankedAfterThumbnail = false;
+        var thumbnailShown = false;
+        sut.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageImageBytes))
+            {
+                thumbnailShown |= sut.CurrentPageImageBytes == thumbnail;
+                blankedAfterThumbnail |= thumbnailShown && sut.CurrentPageImageBytes is null;
+            }
+        };
+
+        await sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.True(thumbnailShown);
+        Assert.False(blankedAfterThumbnail);
+        Assert.Equal(new byte[] { 1 }, sut.CurrentPageImageBytes);
+        Assert.False(sut.IsShowingThumbnail);
+        // Still under the page image: the view removes it once the full page has decoded.
+        Assert.Same(thumbnail, sut.OpeningThumbnailBytes);
+    }
+    private sealed class GatedThumbnailStore : IPageThumbnailStore
+    {
+        public TaskCompletionSource<byte[]?> Gate { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<byte[]?> TryLoadAsync(int sheetId, int pageIndex) => Gate.Task;
+
+        public Task SaveAsync(int sheetId, int pageIndex, byte[] pageImageBytes) => Task.CompletedTask;
+
+        public Task DeleteForSheetAsync(int sheetId) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task LoadAsync_RendersWithoutWaitingForThumbnail_AndLateThumbnailNeverReplacesFullPage()
+    {
+        var store = new GatedThumbnailStore();
+        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database), store);
+        var sheet = await InsertSheetAsync(pageCount: 3, lastViewedPageIndex: 1);
+
+        // The thumbnail never completes before the load: LoadAsync must still finish.
+        await sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(new byte[] { 1 }, sut.CurrentPageImageBytes);
+
+        store.Gate.SetResult(new byte[] { 9, 9, 9 });
+        await Task.Delay(100);
+
+        Assert.Equal(new byte[] { 1 }, sut.CurrentPageImageBytes);
+        Assert.Null(sut.OpeningThumbnailBytes);
+        Assert.False(sut.IsShowingThumbnail);
+    }
+
+    [Fact]
+    public async Task LoadAsync_ThumbnailArrivingBeforeFullRenderIsShown()
+    {
+        var store = new GatedThumbnailStore();
+        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database), store);
+        var sheet = await InsertSheetAsync(pageCount: 3, lastViewedPageIndex: 1);
+        _renderer.RenderGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var thumbnail = new byte[] { 9, 9, 9 };
+
+        var load = sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        while (_renderer.RenderedPageIndexes.Count == 0)
+        {
+            await Task.Delay(10);
+        }
+
+        store.Gate.SetResult(thumbnail);
+        await Task.Delay(100);
+        Assert.Same(thumbnail, sut.CurrentPageImageBytes);
+
+        _renderer.RenderGate.SetResult();
+        await load;
+        Assert.Equal(new byte[] { 1 }, sut.CurrentPageImageBytes);
+    }
+
     [Fact]
     public void ReadingMode_DefaultsToSavedPreference()
     {

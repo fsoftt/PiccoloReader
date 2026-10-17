@@ -9,12 +9,14 @@ public class LibraryService
     private readonly AppDatabase _database;
     private readonly IAppStorageProvider _storageProvider;
     private readonly ExternalLibrarySync? _externalSync;
+    private readonly IPageThumbnailStore? _thumbnails;
 
-    public LibraryService(AppDatabase database, IAppStorageProvider storageProvider, ExternalLibrarySync? externalSync = null)
+    public LibraryService(AppDatabase database, IAppStorageProvider storageProvider, ExternalLibrarySync? externalSync = null, IPageThumbnailStore? thumbnails = null)
     {
         _database = database;
         _storageProvider = storageProvider;
         _externalSync = externalSync;
+        _thumbnails = thumbnails;
     }
 
     public Task<List<Folder>> GetFoldersAsync() =>
@@ -118,6 +120,10 @@ public class LibraryService
     public async Task DeleteSheetAsync(Sheet sheet)
     {
         await _database.Connection.DeleteAsync(sheet);
+        if (_thumbnails is not null)
+        {
+            await _thumbnails.DeleteForSheetAsync(sheet.Id);
+        }
 
         var filePath = Path.Combine(_storageProvider.SheetsDirectory, sheet.FileName);
         if (File.Exists(filePath))
