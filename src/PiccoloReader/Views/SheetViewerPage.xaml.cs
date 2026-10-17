@@ -221,6 +221,7 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnDisappearing();
         _viewModel.SaveCurrentPageThumbnail();
+        _viewModel.StopSpinnerWatchdog();
         _metronome.PropertyChanged -= OnMetronomePropertyChanged;
         _pageTurnInput.Requested -= OnPageTurnRequested;
         AttachWindow(null);
@@ -430,6 +431,7 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnAppearing();
         _tunerStripPosition = _tunerStripPreferences.Position;
+        _viewModel.StartSpinnerWatchdog();
         _metronome.PropertyChanged += OnMetronomePropertyChanged;
         _pageTurnInput.Requested -= OnPageTurnRequested;
         _pageTurnInput.Requested += OnPageTurnRequested;

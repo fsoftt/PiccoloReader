@@ -112,9 +112,11 @@ public partial class SheetViewerViewModel : ObservableObject
         IAdsPreferenceService adsPreferenceService,
         IReadingPreferenceService readingPreferenceService,
         PageCropService pageCropService,
-        IPageThumbnailStore? thumbnails = null)
+        IPageThumbnailStore? thumbnails = null,
+        TimeProvider? timeProvider = null)
     {
         _pageCropService = pageCropService;
+        _timeProvider = timeProvider ?? TimeProvider.System;
         _thumbnails = thumbnails;
         _libraryService = libraryService;
         _storageProvider = storageProvider;
@@ -153,6 +155,91 @@ public partial class SheetViewerViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowLoadingSpinner))]
     private bool _isShowingThumbnail;
+
+    // Safety net: if IsLoading stays true although the current page is
+    // already on screen, the spinner is stuck over a rendered page.
+    private static readonly TimeSpan SpinnerWatchdogInitialDelay = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan SpinnerWatchdogRecheckDelay = TimeSpan.FromSeconds(1);
+    private readonly TimeProvider _timeProvider;
+    private CancellationTokenSource? _spinnerWatchdog;
+
+    partial void OnIsLoadingChanged(bool value)
+    {
+        if (value)
+        {
+            StartSpinnerWatchdog();
+        }
+        else
+        {
+            StopSpinnerWatchdog();
+        }
+    }
+
+    // Also called by the view when it is shown again while still loading.
+    public void StartSpinnerWatchdog()
+    {
+        if (_spinnerWatchdog is not null || !IsLoading)
+        {
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        _spinnerWatchdog = cts;
+        _ = RunSpinnerWatchdogAsync(cts.Token);
+    }
+
+    // Also called when leaving the viewer.
+    public void StopSpinnerWatchdog()
+    {
+        _spinnerWatchdog?.Cancel();
+        _spinnerWatchdog = null;
+    }
+
+    // Continuations stay on the calling (UI) context: they touch properties.
+    private async Task RunSpinnerWatchdogAsync(CancellationToken token)
+    {
+        var delay = SpinnerWatchdogInitialDelay;
+        while (true)
+        {
+            try
+            {
+                await Task.Delay(delay, _timeProvider, token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            if (token.IsCancellationRequested || !IsLoading)
+            {
+                return;
+            }
+
+            if (IsCurrentPageDisplayed())
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"SpinnerWatchdog: clearing stuck spinner (CurrentPageIndex={CurrentPageIndex}, ReadingMode={ReadingMode}, IsShowingThumbnail={IsShowingThumbnail})");
+                IsLoading = false;
+                return;
+            }
+
+            delay = SpinnerWatchdogRecheckDelay;
+        }
+    }
+
+    private bool IsCurrentPageDisplayed()
+    {
+        if (IsContinuousReading)
+        {
+            return CurrentPageIndex >= 0
+                && CurrentPageIndex < ContinuousPages.Count
+                && ContinuousPages[CurrentPageIndex].ImageBytes is not null;
+        }
+
+        return CurrentPageImageBytes is not null
+            && !IsShowingThumbnail
+            && !ReferenceEquals(CurrentPageImageBytes, OpeningThumbnailBytes);
+    }
 
     // The spinner would sit on top of the thumbnail, so it is hidden then.
     public bool ShowLoadingSpinner => IsLoading && !IsShowingThumbnail;
