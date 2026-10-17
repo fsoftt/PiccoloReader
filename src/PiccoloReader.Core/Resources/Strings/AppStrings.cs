@@ -141,6 +141,8 @@ public static class AppStrings
     public static string PrivacyPolicyDescription => Get(nameof(PrivacyPolicyDescription));
     public static string TermsOfServiceLabel => Get(nameof(TermsOfServiceLabel));
     public static string TermsOfServiceDescription => Get(nameof(TermsOfServiceDescription));
+    public static string AdPrivacyOptionsLabel => Get(nameof(AdPrivacyOptionsLabel));
+    public static string AdPrivacyOptionsDescription => Get(nameof(AdPrivacyOptionsDescription));
     public static string OpenPrivacyPolicy => Get(nameof(OpenPrivacyPolicy));
 
     public static string ImportPdf => Get(nameof(ImportPdf));

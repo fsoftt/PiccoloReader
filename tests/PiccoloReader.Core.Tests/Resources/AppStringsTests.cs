@@ -125,4 +125,19 @@ public class AppStringsTests
             CultureInfo.CurrentUICulture = original;
         }
     }
+
+    [Fact]
+    public void AdPrivacyOptionsLabel_SpanishCulture_ReturnsSpanishValue()
+    {
+        var original = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = new CultureInfo("es");
+            Assert.Equal("Opciones de privacidad de anuncios", AppStrings.AdPrivacyOptionsLabel);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
 }

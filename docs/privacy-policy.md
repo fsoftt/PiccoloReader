@@ -141,6 +141,7 @@ We use collected information for:
 - **Data Shared:** Device identifiers, IP address, browsing behavior
 - **Privacy Policy:** https://policies.google.com/privacy
 - **Opt-Out:** Settings → Toggle "Support with Ads" OFF
+- **Consent (EEA, UK, Switzerland):** On first launch, Google's consent form asks whether ads may be personalized. You can change your choice anytime in Settings → "Ad Privacy Options"
 
 ### 4.2 Google Play Services
 
