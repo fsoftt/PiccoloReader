@@ -62,6 +62,8 @@ public partial class SheetViewerPage : ContentPage
     private readonly IPageTurnInput _pageTurnInput;
     private readonly TunerStripController _tunerStrip;
     private readonly ITunerStripPreferenceService _tunerStripPreferences;
+    // Cached from the preference in OnAppearing so toolbar show/hide does not read it.
+    private TunerStripPosition _tunerStripPosition;
     private Window? _window;
 
     public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput, TunerStripController tunerStrip, ITunerStripPreferenceService tunerStripPreferences)
@@ -332,7 +334,7 @@ public partial class SheetViewerPage : ContentPage
 
     private void UpdateTopTunerStripMargin()
     {
-        if (_tunerStripPreferences.Position == TunerStripPosition.Top)
+        if (_tunerStripPosition == TunerStripPosition.Top)
         {
             TunerStripHost.Margin = TopStripMargin();
         }
@@ -344,7 +346,7 @@ public partial class SheetViewerPage : ContentPage
     private void ApplyTunerStripPosition()
     {
         const double stripDp = 6;
-        var position = _tunerStripPreferences.Position;
+        var position = _tunerStripPosition;
         var vertical = position is TunerStripPosition.Left or TunerStripPosition.Right;
 
         TunerStripHost.ClearValue(WidthRequestProperty);
@@ -412,6 +414,7 @@ public partial class SheetViewerPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _tunerStripPosition = _tunerStripPreferences.Position;
         _metronome.PropertyChanged += OnMetronomePropertyChanged;
         _pageTurnInput.Requested -= OnPageTurnRequested;
         _pageTurnInput.Requested += OnPageTurnRequested;
@@ -1450,7 +1453,19 @@ public partial class SheetViewerPage : ContentPage
         }
 
         SetDragControlsVisible(true);
-        _ = _viewModel.ResizeSelectedAnnotationAsync(_resizeStartWidth, _resizeStartHeight, annotation.Width, annotation.Height, _resizeStartX);
+        _ = ResizeSelectedAnnotationSafeAsync(annotation.Width, annotation.Height);
+    }
+
+    private async Task ResizeSelectedAnnotationSafeAsync(double width, double height)
+    {
+        try
+        {
+            await _viewModel.ResizeSelectedAnnotationAsync(_resizeStartWidth, _resizeStartHeight, width, height, _resizeStartX);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Resize annotation failed: {ex}");
+        }
     }
 
     private async void OnTrashTargetTapped(object? sender, TappedEventArgs e)
@@ -2047,21 +2062,41 @@ public partial class SheetViewerPage : ContentPage
 
     private async void OnBackClicked(object? sender, EventArgs e)
     {
-        if (IsEditing || _inEditSession)
+        try
         {
-            await HandleEditingBackAsync();
-            return;
-        }
+            if (IsEditing || _inEditSession)
+            {
+                await HandleEditingBackAsync();
+                return;
+            }
 
-        await Shell.Current.GoToAsync("..");
+            if (_isToolFabExpanded)
+            {
+                SetToolFabExpanded(false);
+                return;
+            }
+
+            await Shell.Current.GoToAsync("..");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Back failed: {ex}");
+        }
     }
 
     // While editing, Back undoes the changes made since edit mode was
     // activated one by one and, once none are left, leaves edit mode.
+    // Otherwise an expanded tool FAB menu is collapsed before leaving.
     protected override bool OnBackButtonPressed()
     {
         if (!IsEditing && !_inEditSession)
         {
+            if (_isToolFabExpanded)
+            {
+                SetToolFabExpanded(false);
+                return true;
+            }
+
             return base.OnBackButtonPressed();
         }
 
@@ -2923,6 +2958,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         ToolSheet.AbortAnimation("ToolSheetHeight");
+        ToolSheet.TranslationY = 0;
         ToolSheet.HeightRequest = Math.Round(height);
         if (_viewModel.SelectedAnnotation is { } selected)
         {
@@ -2969,16 +3005,48 @@ public partial class SheetViewerPage : ContentPage
 
     private void AnimateToolSheetHeight(double target)
     {
+        // Animating HeightRequest relays out the page every frame. Instead the
+        // sheet is laid out at the larger of the two heights and only its
+        // TranslationY moves (a compositor property); the final height is set
+        // once at the end. Growing starts pushed down by the delta, shrinking
+        // slides down by it, so the top edge travels the same distance.
         ToolSheet.AbortAnimation("ToolSheetHeight");
+        ToolSheet.TranslationY = 0;
         var from = ToolSheet.HeightRequest;
-        ToolSheet.Animate("ToolSheetHeight", v =>
+        var delta = target - from;
+        if (Math.Abs(delta) < 0.5)
         {
-            ToolSheet.HeightRequest = Math.Round(v);
-            if (_viewModel.SelectedAnnotation is { } selected)
+            return;
+        }
+
+        double start, end;
+        if (delta > 0)
+        {
+            ToolSheet.HeightRequest = target;
+            start = delta;
+            end = 0;
+        }
+        else
+        {
+            start = 0;
+            end = -delta;
+        }
+
+        ToolSheet.Animate("ToolSheetHeight", v => ToolSheet.TranslationY = v, start, end, length: 180, easing: Easing.CubicOut,
+            finished: (_, cancelled) =>
             {
-                UpdateTrashPlacement(selected);
-            }
-        }, from, target, length: 180, easing: Easing.CubicOut);
+                if (cancelled)
+                {
+                    return;
+                }
+
+                ToolSheet.HeightRequest = target;
+                ToolSheet.TranslationY = 0;
+                if (_viewModel.SelectedAnnotation is { } selected)
+                {
+                    UpdateTrashPlacement(selected);
+                }
+            });
     }
 
     private bool? _toolSheetLandscape;

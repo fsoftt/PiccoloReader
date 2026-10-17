@@ -53,10 +53,15 @@ public static class HairpinGeometry
         return (x, clampedWidth, clampedHeight);
     }
 
+    private static readonly (double X1, double Y1, double X2, double Y2)[] CrescendoLines =
+        { (0.0, 0.5, 1.0, 0.0), (0.0, 0.5, 1.0, 1.0) };
+
+    private static readonly (double X1, double Y1, double X2, double Y2)[] DecrescendoLines =
+        { (0.0, 0.0, 1.0, 0.5), (0.0, 1.0, 1.0, 0.5) };
+
     // The two strokes as (x1, y1, x2, y2) fractions of the hairpin's box: a
-    // crescendo opens to the right, a decrescendo closes to the right.
+    // crescendo opens to the right, a decrescendo closes to the right. The
+    // arrays are shared, so callers must not modify them.
     public static IReadOnlyList<(double X1, double Y1, double X2, double Y2)> Lines(string iconKey) =>
-        iconKey == DecrescendoKey
-            ? new[] { (0.0, 0.0, 1.0, 0.5), (0.0, 1.0, 1.0, 0.5) }
-            : new[] { (0.0, 0.5, 1.0, 0.0), (0.0, 0.5, 1.0, 1.0) };
+        iconKey == DecrescendoKey ? DecrescendoLines : CrescendoLines;
 }
