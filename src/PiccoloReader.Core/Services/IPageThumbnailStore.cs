@@ -5,11 +5,11 @@ namespace PiccoloReader.Core.Services;
 // dimensions can be read like those of a normal render.
 public interface IPageThumbnailStore
 {
-    byte[]? TryLoad(int sheetId, int pageIndex);
+    Task<byte[]?> TryLoadAsync(int sheetId, int pageIndex);
 
     // Downscales and stores the page image, replacing any previous one.
     // Failures are swallowed: a missing thumbnail only costs the blank wait.
     Task SaveAsync(int sheetId, int pageIndex, byte[] pageImageBytes);
 
-    void DeleteForSheet(int sheetId);
+    Task DeleteForSheetAsync(int sheetId);
 }

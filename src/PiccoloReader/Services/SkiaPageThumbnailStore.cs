@@ -16,19 +16,19 @@ public class SkiaPageThumbnailStore : IPageThumbnailStore
 
     private string PathFor(int sheetId, int pageIndex) => Path.Combine(_directory, $"{sheetId}_p{pageIndex}.png");
 
-    public byte[]? TryLoad(int sheetId, int pageIndex)
+    public Task<byte[]?> TryLoadAsync(int sheetId, int pageIndex) => Task.Run(() =>
     {
         try
         {
             var path = PathFor(sheetId, pageIndex);
-            return File.Exists(path) ? File.ReadAllBytes(path) : null;
+            return File.Exists(path) ? File.ReadAllBytes(path) : (byte[]?)null;
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Thumbnail load failed: {ex.Message}");
-            return null;
+            return (byte[]?)null;
         }
-    }
+    });
 
     public Task SaveAsync(int sheetId, int pageIndex, byte[] pageImageBytes) => Task.Run(() =>
     {
@@ -58,7 +58,7 @@ public class SkiaPageThumbnailStore : IPageThumbnailStore
 
             // Write then move so a reader never sees a half-written file.
             var path = PathFor(sheetId, pageIndex);
-            var temp = path + ".tmp";
+            var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             File.WriteAllBytes(temp, data.ToArray());
             File.Move(temp, path, overwrite: true);
         }
@@ -68,7 +68,7 @@ public class SkiaPageThumbnailStore : IPageThumbnailStore
         }
     });
 
-    public void DeleteForSheet(int sheetId)
+    public Task DeleteForSheetAsync(int sheetId) => Task.Run(() =>
     {
         try
         {
@@ -86,5 +86,5 @@ public class SkiaPageThumbnailStore : IPageThumbnailStore
         {
             System.Diagnostics.Debug.WriteLine($"Thumbnail delete failed: {ex.Message}");
         }
-    }
+    });
 }

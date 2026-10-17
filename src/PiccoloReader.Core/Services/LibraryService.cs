@@ -120,7 +120,10 @@ public class LibraryService
     public async Task DeleteSheetAsync(Sheet sheet)
     {
         await _database.Connection.DeleteAsync(sheet);
-        _thumbnails?.DeleteForSheet(sheet.Id);
+        if (_thumbnails is not null)
+        {
+            await _thumbnails.DeleteForSheetAsync(sheet.Id);
+        }
 
         var filePath = Path.Combine(_storageProvider.SheetsDirectory, sheet.FileName);
         if (File.Exists(filePath))

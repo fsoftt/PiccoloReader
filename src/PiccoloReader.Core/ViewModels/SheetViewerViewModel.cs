@@ -159,6 +159,7 @@ public partial class SheetViewerViewModel : ObservableObject
 
     private readonly IPageThumbnailStore? _thumbnails;
     private bool _saveThumbnailAfterRender;
+    private int _thumbnailPageIndex = -1;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteSelectedAnnotationCommand))]
@@ -246,9 +247,10 @@ public partial class SheetViewerViewModel : ObservableObject
                 : 0;
 
             // Show the cached thumbnail of the opening page before the heavy work.
-            var thumbnail = pageCount > 0 ? _thumbnails?.TryLoad(sheetId, CurrentPageIndex) : null;
+            var thumbnail = pageCount > 0 ? await LoadThumbnailAsync(sheetId, CurrentPageIndex) : null;
             _saveThumbnailAfterRender = _thumbnails is not null && pageCount > 0;
             IsShowingThumbnail = thumbnail is not null;
+            _thumbnailPageIndex = CurrentPageIndex;
             if (thumbnail is not null && !IsContinuousReading)
             {
                 CurrentPageImageBytes = thumbnail;
@@ -290,6 +292,12 @@ public partial class SheetViewerViewModel : ObservableObject
         }
         finally
         {
+            if (IsShowingThumbnail && !IsContinuousReading)
+            {
+                // The render failed: do not leave the stand-in as if it were the page.
+                CurrentPageImageBytes = null;
+            }
+
             IsShowingThumbnail = false;
             _saveThumbnailAfterRender = false;
             IsLoading = false;
@@ -827,6 +835,12 @@ public partial class SheetViewerViewModel : ObservableObject
         RefreshUndoRedoState();
 
         var renderTask = GetPageImageAsync(pageIndex);
+        if (IsShowingThumbnail && pageIndex != _thumbnailPageIndex)
+        {
+            // The user moved off the opening page: its thumbnail is stale.
+            IsShowingThumbnail = false;
+        }
+
         if (!renderTask.IsCompleted && !IsShowingThumbnail)
         {
             // Not prefetched yet - blank the previous page rather than
@@ -1063,6 +1077,19 @@ public partial class SheetViewerViewModel : ObservableObject
 
         _saveThumbnailAfterRender = false;
         _ = _thumbnails.SaveAsync(_sheet.Id, pageIndex, imageBytes);
+    }
+
+    private async Task<byte[]?> LoadThumbnailAsync(int sheetId, int pageIndex)
+    {
+        try
+        {
+            return _thumbnails is null ? null : await _thumbnails.TryLoadAsync(sheetId, pageIndex);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Thumbnail load failed: {ex.Message}");
+            return null;
+        }
     }
 
     // Called when leaving the viewer so the next opening shows the page the
