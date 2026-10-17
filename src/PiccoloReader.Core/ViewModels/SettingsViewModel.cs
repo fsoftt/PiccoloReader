@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PiccoloReader.Core.Resources.Strings;
@@ -26,13 +27,29 @@ public partial class SettingsViewModel : ObservableObject
     public TunerStripPosition[] TunerStripPositions { get; } =
         { TunerStripPosition.Left, TunerStripPosition.Right, TunerStripPosition.Bottom, TunerStripPosition.Top };
 
-    public string[] TunerStripPositionNames => new[]
+    private string[]? _tunerStripPositionNames;
+    private CultureInfo? _tunerStripPositionNamesCulture;
+
+    public string[] TunerStripPositionNames
     {
-        AppStrings.TunerStripPositionLeft,
-        AppStrings.TunerStripPositionRight,
-        AppStrings.TunerStripPositionBottom,
-        AppStrings.TunerStripPositionTop
-    };
+        get
+        {
+            var culture = CultureInfo.CurrentUICulture;
+            if (_tunerStripPositionNames is null || !Equals(_tunerStripPositionNamesCulture, culture))
+            {
+                _tunerStripPositionNames = new[]
+                {
+                    AppStrings.TunerStripPositionLeft,
+                    AppStrings.TunerStripPositionRight,
+                    AppStrings.TunerStripPositionBottom,
+                    AppStrings.TunerStripPositionTop
+                };
+                _tunerStripPositionNamesCulture = culture;
+            }
+
+            return _tunerStripPositionNames;
+        }
+    }
 
     [ObservableProperty]
     private string _selectedLanguageCode;
