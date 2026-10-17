@@ -62,7 +62,6 @@ public static class AppStrings
     public static string CategoryDynamics => Get(nameof(CategoryDynamics));
     public static string CategoryArticulations => Get(nameof(CategoryArticulations));
     public static string CategoryFermataBreath => Get(nameof(CategoryFermataBreath));
-    public static string CategoryHairpins => Get(nameof(CategoryHairpins));
     public static string IconStaccato => Get(nameof(IconStaccato));
     public static string IconAccent => Get(nameof(IconAccent));
     public static string IconTenuto => Get(nameof(IconTenuto));
@@ -75,7 +74,6 @@ public static class AppStrings
     public static string CategoryBowingPlucking => Get(nameof(CategoryBowingPlucking));
     public static string CategoryPedalMarks => Get(nameof(CategoryPedalMarks));
     public static string CategoryRepeatsNavigation => Get(nameof(CategoryRepeatsNavigation));
-    public static string CategoryMoreDynamics => Get(nameof(CategoryMoreDynamics));
     public static string CategoryAccidentals => Get(nameof(CategoryAccidentals));
     public static string CategoryTremoloGlissando => Get(nameof(CategoryTremoloGlissando));
     public static string IconTrill => Get(nameof(IconTrill));

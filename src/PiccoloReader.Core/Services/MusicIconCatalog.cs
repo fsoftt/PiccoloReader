@@ -13,13 +13,25 @@ public static class MusicIconCatalog
         // pp/p/f/ff/fp are standard musical dynamics notation - identical
         // in every language, not translated (see AppStrings.cs for every
         // other name in this catalog, which are genuine words).
+        // Ordered soft to loud, then accents, then the hairpins. mp/mf are
+        // precomposed single glyphs in this project's Bravura.otf (SMuFL
+        // documents them as two glyphs composed side by side, but the font
+        // has real outlines at both codepoints).
         new(AppStrings.CategoryDynamics, new List<MusicIcon>
         {
+            new("dynamicPPP", AppStrings.IconPPP, 0xE52A, 2.80),
             new("dynamicPP", "pp", 0xE52B, 1.95),
             new("dynamicPiano", "p", 0xE520, 1.09),
+            new("dynamicMP", AppStrings.IconMezzoPiano, 0xE52C, 2.03),
+            new("dynamicMF", AppStrings.IconMezzoForte, 0xE52D, 1.41),
             new("dynamicForte", "f", 0xE522, 0.85),
             new("dynamicFF", "ff", 0xE52F, 1.25),
+            new("dynamicFFF", AppStrings.IconFFF, 0xE530, 1.65),
             new("dynamicFortePiano", "fp", 0xE534, 1.28),
+            new("dynamicSforzando", AppStrings.IconSforzando, 0xE524, 0.81),
+            new("dynamicRinforzando", AppStrings.IconRinforzando, 0xE523, 1.08),
+            new("dynamicCrescendoHairpin", AppStrings.IconCrescendo, 0xE53E, 2.78),
+            new("dynamicDiminuendoHairpin", AppStrings.IconDecrescendo, 0xE53F, 2.78),
         }),
         new(AppStrings.CategoryArticulations, new List<MusicIcon>
         {
@@ -37,11 +49,6 @@ public static class MusicIconCatalog
         {
             new("fermataAbove", AppStrings.IconFermata, 0xE4C0, 1.81),
             new("breathMarkComma", AppStrings.IconBreathMark, 0xE4CE, 0.61),
-        }),
-        new(AppStrings.CategoryHairpins, new List<MusicIcon>
-        {
-            new("dynamicCrescendoHairpin", AppStrings.IconCrescendo, 0xE53E, 2.78),
-            new("dynamicDiminuendoHairpin", AppStrings.IconDecrescendo, 0xE53F, 2.78),
         }),
         new(AppStrings.CategoryOrnaments, new List<MusicIcon>
         {
@@ -71,20 +78,6 @@ public static class MusicIconCatalog
             new("coda", AppStrings.IconCoda, 0xE048, 0.91),
             new("repeatLeft", AppStrings.IconRepeatStart, 0xE040, 0.37),
             new("repeatRight", AppStrings.IconRepeatEnd, 0xE041, 0.37),
-        }),
-        // mp/mf were assumed unavailable as single glyphs when the original
-        // Dynamics category was built (SMuFL documents them as two glyphs
-        // composed side by side) - direct inspection of this project's
-        // Bravura.otf via fonttools shows real, non-degenerate precomposed
-        // outlines at both codepoints, so they're included here instead.
-        new(AppStrings.CategoryMoreDynamics, new List<MusicIcon>
-        {
-            new("dynamicMP", AppStrings.IconMezzoPiano, 0xE52C, 2.03),
-            new("dynamicMF", AppStrings.IconMezzoForte, 0xE52D, 1.41),
-            new("dynamicPPP", AppStrings.IconPPP, 0xE52A, 2.80),
-            new("dynamicFFF", AppStrings.IconFFF, 0xE530, 1.65),
-            new("dynamicSforzando", AppStrings.IconSforzando, 0xE524, 0.81),
-            new("dynamicRinforzando", AppStrings.IconRinforzando, 0xE523, 1.08),
         }),
         new(AppStrings.CategoryAccidentals, new List<MusicIcon>
         {

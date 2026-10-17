@@ -5,18 +5,40 @@ namespace PiccoloReader.Core.Tests.Services;
 public class MusicIconCatalogTests
 {
     [Fact]
-    public void Categories_HasThirteenCategoriesWithExpectedNames()
+    public void Categories_HasElevenCategoriesWithExpectedNames()
     {
         var names = MusicIconCatalog.Categories.Select(c => c.Name).ToList();
 
         Assert.Equal(new[]
         {
-            "Dynamics", "Articulations", "Fermata & Breath", "Hairpins",
+            "Dynamics", "Articulations", "Fermata & Breath",
             "Ornaments", "Bowing & Plucking", "Pedal Marks", "Repeats & Navigation",
-            "More Dynamics", "Accidentals", "Tremolo & Glissando", "Notes", "Rests",
+            "Accidentals", "Tremolo & Glissando", "Notes", "Rests",
         }, names);
     }
 
+    [Fact]
+    public void Dynamics_ContainsAllDynamicsInMusicalOrder()
+    {
+        var dynamics = MusicIconCatalog.Categories[0];
+
+        Assert.Equal(new[]
+        {
+            "dynamicPPP", "dynamicPP", "dynamicPiano", "dynamicMP", "dynamicMF",
+            "dynamicForte", "dynamicFF", "dynamicFFF", "dynamicFortePiano",
+            "dynamicSforzando", "dynamicRinforzando",
+            "dynamicCrescendoHairpin", "dynamicDiminuendoHairpin",
+        }, dynamics.Icons.Select(i => i.Key).ToArray());
+    }
+
+    [Fact]
+    public void Categories_HasNoMoreDynamicsOrHairpinsCategory()
+    {
+        var names = MusicIconCatalog.Categories.Select(c => c.Name).ToList();
+
+        Assert.DoesNotContain("More Dynamics", names);
+        Assert.DoesNotContain("Hairpins", names);
+    }
     [Fact]
     public void Categories_AllIconsHaveUniqueKeys()
     {
