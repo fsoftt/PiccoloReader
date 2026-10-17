@@ -111,9 +111,11 @@ public partial class SheetViewerViewModel : ObservableObject
         BookmarkService bookmarkService,
         IAdsPreferenceService adsPreferenceService,
         IReadingPreferenceService readingPreferenceService,
-        PageCropService pageCropService)
+        PageCropService pageCropService,
+        IPageThumbnailStore? thumbnails = null)
     {
         _pageCropService = pageCropService;
+        _thumbnails = thumbnails;
         _libraryService = libraryService;
         _storageProvider = storageProvider;
         _pdfPageRenderer = pdfPageRenderer;
@@ -143,7 +145,20 @@ public partial class SheetViewerViewModel : ObservableObject
     private byte[]? _currentPageImageBytes;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowLoadingSpinner))]
     private bool _isLoading;
+
+    // True while a cached thumbnail of the opening page stands in for the
+    // page that is still rendering.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowLoadingSpinner))]
+    private bool _isShowingThumbnail;
+
+    // The spinner would sit on top of the thumbnail, so it is hidden then.
+    public bool ShowLoadingSpinner => IsLoading && !IsShowingThumbnail;
+
+    private readonly IPageThumbnailStore? _thumbnails;
+    private bool _saveThumbnailAfterRender;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteSelectedAnnotationCommand))]
@@ -230,6 +245,15 @@ public partial class SheetViewerViewModel : ObservableObject
                 ? Math.Clamp(sheet.LastViewedPageIndex, 0, pageCount - 1)
                 : 0;
 
+            // Show the cached thumbnail of the opening page before the heavy work.
+            var thumbnail = pageCount > 0 ? _thumbnails?.TryLoad(sheetId, CurrentPageIndex) : null;
+            _saveThumbnailAfterRender = _thumbnails is not null && pageCount > 0;
+            IsShowingThumbnail = thumbnail is not null;
+            if (thumbnail is not null && !IsContinuousReading)
+            {
+                CurrentPageImageBytes = thumbnail;
+            }
+
             _crops = await _pageCropService.GetCropsAsync(sheetId);
 
             Bookmarks.Clear();
@@ -248,6 +272,13 @@ public partial class SheetViewerViewModel : ObservableObject
                 ContinuousPages.Add(new ContinuousPage(i, crop.CroppedAspectRatio(estimatedAspectRatio)) { Crop = crop });
             }
 
+            if (thumbnail is not null && IsContinuousReading && ContinuousPages.Count > CurrentPageIndex && PngDimensions.TryRead(thumbnail, out var thumbWidth, out var thumbHeight))
+            {
+                var openingPage = ContinuousPages[CurrentPageIndex];
+                openingPage.AspectRatio = (double)thumbHeight / thumbWidth;
+                openingPage.ImageBytes = thumbnail;
+            }
+
             if (IsContinuousReading)
             {
                 await UpdateContinuousViewportAsync(CurrentPageIndex, CurrentPageIndex, CurrentPageIndex);
@@ -259,6 +290,8 @@ public partial class SheetViewerViewModel : ObservableObject
         }
         finally
         {
+            IsShowingThumbnail = false;
+            _saveThumbnailAfterRender = false;
             IsLoading = false;
         }
     }
@@ -370,6 +403,7 @@ public partial class SheetViewerViewModel : ObservableObject
         }
 
         page.ImageBytes = imageBytes;
+        SaveOpeningThumbnail(page.PageIndex, imageBytes);
 
         if (_sheet is not null)
         {
@@ -793,7 +827,7 @@ public partial class SheetViewerViewModel : ObservableObject
         RefreshUndoRedoState();
 
         var renderTask = GetPageImageAsync(pageIndex);
-        if (!renderTask.IsCompleted)
+        if (!renderTask.IsCompleted && !IsShowingThumbnail)
         {
             // Not prefetched yet - blank the previous page rather than
             // leave it on screen under the new page number.
@@ -827,6 +861,8 @@ public partial class SheetViewerViewModel : ObservableObject
             : 0;
         CurrentPageCrop = pageCrop;
         CurrentPageImageBytes = imageBytes;
+        IsShowingThumbnail = false;
+        SaveOpeningThumbnail(pageIndex, imageBytes);
 
         if (_sheet is not null)
         {
@@ -1013,6 +1049,37 @@ public partial class SheetViewerViewModel : ObservableObject
         else
         {
             await LoadCurrentPageAsync();
+        }
+    }
+
+    // Stores the thumbnail of the page the viewer opened on, once, after its
+    // full render. Off the UI thread; failures are ignored by the store.
+    private void SaveOpeningThumbnail(int pageIndex, byte[]? imageBytes)
+    {
+        if (!_saveThumbnailAfterRender || _thumbnails is null || _sheet is null || imageBytes is null || pageIndex != CurrentPageIndex)
+        {
+            return;
+        }
+
+        _saveThumbnailAfterRender = false;
+        _ = _thumbnails.SaveAsync(_sheet.Id, pageIndex, imageBytes);
+    }
+
+    // Called when leaving the viewer so the next opening shows the page the
+    // user left on.
+    public void SaveCurrentPageThumbnail()
+    {
+        if (_thumbnails is null || _sheet is null || IsShowingThumbnail || PageCount <= 0)
+        {
+            return;
+        }
+
+        var bytes = IsContinuousReading
+            ? (CurrentPageIndex < ContinuousPages.Count ? ContinuousPages[CurrentPageIndex].ImageBytes : null)
+            : CurrentPageImageBytes;
+        if (bytes is not null)
+        {
+            _ = _thumbnails.SaveAsync(_sheet.Id, CurrentPageIndex, bytes);
         }
     }
 

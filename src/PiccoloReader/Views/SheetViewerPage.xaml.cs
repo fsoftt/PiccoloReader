@@ -206,6 +206,7 @@ public partial class SheetViewerPage : ContentPage
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
+        _viewModel.SaveCurrentPageThumbnail();
         _metronome.PropertyChanged -= OnMetronomePropertyChanged;
         _pageTurnInput.Requested -= OnPageTurnRequested;
         AttachWindow(null);

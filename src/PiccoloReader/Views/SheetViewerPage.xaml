@@ -177,8 +177,8 @@
 
 
         <ActivityIndicator
-            IsRunning="{Binding IsLoading}"
-            IsVisible="{Binding IsLoading}"
+            IsRunning="{Binding ShowLoadingSpinner}"
+            IsVisible="{Binding ShowLoadingSpinner}"
             HorizontalOptions="Center"
             VerticalOptions="Center" />
 
