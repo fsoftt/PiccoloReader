@@ -18,6 +18,8 @@ public class TunerStripControllerTests
     private sealed class FakeStripPreferences : ITunerStripPreferenceService
     {
         public bool IsEnabled { get; set; }
+
+        public TunerStripPosition Position { get; set; } = TunerStripPosition.Right;
     }
 
     private readonly FakeTunerInput _input = new();

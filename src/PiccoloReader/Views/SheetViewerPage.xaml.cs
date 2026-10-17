@@ -60,9 +60,10 @@ public partial class SheetViewerPage : ContentPage
     private readonly LibraryService _libraryService;
     private readonly IPageTurnInput _pageTurnInput;
     private readonly TunerStripController _tunerStrip;
+    private readonly ITunerStripPreferenceService _tunerStripPreferences;
     private Window? _window;
 
-    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput, TunerStripController tunerStrip)
+    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput, TunerStripController tunerStrip, ITunerStripPreferenceService tunerStripPreferences)
     {
         InitializeComponent();
         Unloaded += (_, _) => _pageTurnInput.Requested -= OnPageTurnRequested;
@@ -72,6 +73,7 @@ public partial class SheetViewerPage : ContentPage
         _libraryService = libraryService;
         _pageTurnInput = pageTurnInput;
         _tunerStrip = tunerStrip;
+        _tunerStripPreferences = tunerStripPreferences;
         SetUpTunerStripView();
         BindingContext = _viewModel;
 
@@ -307,9 +309,77 @@ public partial class SheetViewerPage : ContentPage
     private void SetUpTunerStripView()
     {
 #if ANDROID
-        var strip = new TunerStripView { HeightRequest = 6, HalfTrackChanged = _tunerStrip.SetHalfTrack };
+        var strip = new TunerStripView { HalfTrackChanged = _tunerStrip.SetHalfTrack };
         TunerStripHost.Children.Add(strip);
         _tunerStrip.Bind(strip);
+#endif
+        ApplyTunerStripPosition();
+    }
+
+    // Top strip: under the floating bar while it shows, at the top edge of the page area
+    // while it is hidden. The margin snaps (the bar only fades).
+    private Thickness TopStripMargin() => new(0, _isToolbarVisible ? TrashTopMargin : 0, 0, 0);
+
+    private void UpdateTopTunerStripMargin()
+    {
+        if (_tunerStripPreferences.Position == TunerStripPosition.Top)
+        {
+            TunerStripHost.Margin = TopStripMargin();
+        }
+    }
+
+    // Left/Right: a 6 dp column at the page edge. Bottom: the row below the page.
+    // Top: overlaid on the page just under the floating bar (12 margin + 56 height + 12 gap),
+    // ignoring touches. The slot is always reserved so toggling the strip never resizes the page.
+    private void ApplyTunerStripPosition()
+    {
+        const double stripDp = 6;
+        var position = _tunerStripPreferences.Position;
+        var vertical = position is TunerStripPosition.Left or TunerStripPosition.Right;
+
+        TunerStripHost.ClearValue(WidthRequestProperty);
+        TunerStripHost.ClearValue(HeightRequestProperty);
+        TunerStripHost.Margin = default;
+        TunerStripHost.VerticalOptions = LayoutOptions.Fill;
+        TunerStripHost.InputTransparent = false;
+        switch (position)
+        {
+            case TunerStripPosition.Left:
+                Grid.SetRow(TunerStripHost, 0);
+                Grid.SetColumn(TunerStripHost, 0);
+                Grid.SetColumnSpan(TunerStripHost, 1);
+                TunerStripHost.WidthRequest = stripDp;
+                break;
+            case TunerStripPosition.Bottom:
+                Grid.SetRow(TunerStripHost, 1);
+                Grid.SetColumn(TunerStripHost, 0);
+                Grid.SetColumnSpan(TunerStripHost, 3);
+                TunerStripHost.HeightRequest = stripDp;
+                break;
+            case TunerStripPosition.Top:
+                Grid.SetRow(TunerStripHost, 0);
+                Grid.SetColumn(TunerStripHost, 1);
+                Grid.SetColumnSpan(TunerStripHost, 1);
+                TunerStripHost.VerticalOptions = LayoutOptions.Start;
+                TunerStripHost.Margin = TopStripMargin();
+                TunerStripHost.HeightRequest = stripDp;
+                TunerStripHost.InputTransparent = true;
+                break;
+            default:
+                Grid.SetRow(TunerStripHost, 0);
+                Grid.SetColumn(TunerStripHost, 2);
+                Grid.SetColumnSpan(TunerStripHost, 1);
+                TunerStripHost.WidthRequest = stripDp;
+                break;
+        }
+
+#if ANDROID
+        if (TunerStripHost.Children.FirstOrDefault() is TunerStripView strip)
+        {
+            strip.WidthRequest = vertical ? stripDp : -1;
+            strip.HeightRequest = vertical ? -1 : stripDp;
+            strip.IsVertical = vertical;
+        }
 #endif
     }
 
@@ -341,6 +411,7 @@ public partial class SheetViewerPage : ContentPage
         _tunerStrip.StateChanged -= OnTunerStripStateChanged;
         _tunerStrip.StateChanged += OnTunerStripStateChanged;
 
+        ApplyTunerStripPosition();
         UpdateTunerStripButton();
         AttachTunerStrip();
 
@@ -888,6 +959,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         _isToolbarVisible = visible;
+        UpdateTopTunerStripMargin();
 
         // MainToolFab is the replacement for what used to be a toolbar
         // button, so it follows the same visibility - collapsing the
