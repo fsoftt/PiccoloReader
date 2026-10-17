@@ -2053,15 +2053,28 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
+        if (_isToolFabExpanded)
+        {
+            SetToolFabExpanded(false);
+            return;
+        }
+
         await Shell.Current.GoToAsync("..");
     }
 
     // While editing, Back undoes the changes made since edit mode was
     // activated one by one and, once none are left, leaves edit mode.
+    // Otherwise an expanded tool FAB menu is collapsed before leaving.
     protected override bool OnBackButtonPressed()
     {
         if (!IsEditing && !_inEditSession)
         {
+            if (_isToolFabExpanded)
+            {
+                SetToolFabExpanded(false);
+                return true;
+            }
+
             return base.OnBackButtonPressed();
         }
 
