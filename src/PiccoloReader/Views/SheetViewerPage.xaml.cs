@@ -103,6 +103,10 @@ public partial class SheetViewerPage : ContentPage
                 HideDetail();
                 UpdateBookmarkButton();
                 UpdateEditingUi();
+                if (!IsEditing)
+                {
+                    _inEditSession = false;
+                }
             }
             else if (e.PropertyName is nameof(SheetViewerViewModel.CanUndo)
                 or nameof(SheetViewerViewModel.CanRedo)
@@ -2041,8 +2045,60 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
-    private async void OnBackClicked(object? sender, EventArgs e) =>
+    private async void OnBackClicked(object? sender, EventArgs e)
+    {
+        if (IsEditing || _inEditSession)
+        {
+            await HandleEditingBackAsync();
+            return;
+        }
+
         await Shell.Current.GoToAsync("..");
+    }
+
+    // While editing, Back undoes the changes made since edit mode was
+    // activated one by one and, once none are left, leaves edit mode.
+    protected override bool OnBackButtonPressed()
+    {
+        if (!IsEditing && !_inEditSession)
+        {
+            return base.OnBackButtonPressed();
+        }
+
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            try
+            {
+                await HandleEditingBackAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Back while editing failed: {ex}");
+            }
+        });
+        return true;
+    }
+
+    private async Task HandleEditingBackAsync()
+    {
+        if (_viewModel.HasEditSessionChanges && _viewModel.UndoCommand.CanExecute(null))
+        {
+            await _viewModel.UndoCommand.ExecuteAsync(null);
+            InvalidateAnnotations();
+            UpdateSelectionOverlay();
+
+            if (!IsEditing)
+            {
+                // Undo cleared the selection of a hidden-sheet symbol session:
+                // bring the editor back so the user still sees edit mode.
+                await ShowToolSheetAsync();
+            }
+
+            return;
+        }
+
+        await ExitEditModeAsync();
+    }
 
     // Secondary actions of the reading bar. Undo/redo live in the editing bar
     // while editing; this menu offers them for the reading state.
@@ -2175,6 +2231,7 @@ public partial class SheetViewerPage : ContentPage
     // page.
     private void UpdateReadingModeUi()
     {
+        _inEditSession = false;
         UpdateReadingModeIcon();
         UpdateReadingModeName();
         UpdateBookmarkButton();
@@ -3036,6 +3093,11 @@ public partial class SheetViewerPage : ContentPage
         ApplyToolSheetHeight();
     }
 
+    // Stays set from entering edit mode until Done, Back with nothing left to
+    // undo, or a page/mode change: IsEditing alone can drop transiently (undoing
+    // a placed symbol clears the selection while the sheet is hidden).
+    private bool _inEditSession;
+
     // True while any annotation editing is going on: a tool sheet is open,
     // a drawing tool is armed, a continuous-mode page is open in the
     // editor, or an icon is selected. The floating bar then shows the
@@ -3049,6 +3111,12 @@ public partial class SheetViewerPage : ContentPage
     private void UpdateEditingUi()
     {
         var editing = IsEditing;
+        if (editing && !_inEditSession)
+        {
+            _inEditSession = true;
+            _viewModel.BeginEditSession();
+        }
+
         EditingBarContent.IsVisible = editing;
         ReadingBarContent.IsVisible = !editing;
 
@@ -3089,7 +3157,24 @@ public partial class SheetViewerPage : ContentPage
             (Color)res[enabled ? "TextPrimaryDark" : "TextMutedDark"]);
     }
 
-    private async void OnEditorDoneTapped(object? sender, TappedEventArgs e)
+    private async void OnEditorDoneTapped(object? sender, TappedEventArgs e) =>
+        await ExitEditModeAsync();
+
+    private async Task ExitEditModeAsync()
+    {
+        try
+        {
+            await ExitEditModeCoreAsync();
+        }
+        finally
+        {
+            // Closing the tools re-runs UpdateEditingUi while the last one is
+            // still armed, which would otherwise start a new session.
+            _inEditSession = false;
+        }
+    }
+
+    private async Task ExitEditModeCoreAsync()
     {
         ToolSheet.IsVisible = false;
         SetToolFabExpanded(false);
