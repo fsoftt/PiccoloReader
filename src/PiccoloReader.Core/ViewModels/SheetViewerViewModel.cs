@@ -682,7 +682,7 @@ public partial class SheetViewerViewModel : ObservableObject
         }
     }
 
-    public async Task ResizeSelectedAnnotationAsync(double oldWidth, double oldHeight, double newWidth, double newHeight)
+    public async Task ResizeSelectedAnnotationAsync(double oldWidth, double oldHeight, double newWidth, double newHeight, double? oldX = null)
     {
         var annotation = SelectedAnnotation;
         if (annotation is null)
@@ -694,12 +694,13 @@ public partial class SheetViewerViewModel : ObservableObject
         annotation.Height = newHeight;
         await _annotationService.UpdateAnnotationAsync(annotation);
 
-        if (oldWidth != newWidth || oldHeight != newHeight)
+        var beforeX = oldX ?? annotation.X;
+        if (oldWidth != newWidth || oldHeight != newHeight || beforeX != annotation.X)
         {
             RecordAction(new UpdateAnnotationAction(
                 _annotationService,
                 annotation,
-                before: (annotation.X, annotation.Y, oldWidth, oldHeight),
+                before: (beforeX, annotation.Y, oldWidth, oldHeight),
                 after: (annotation.X, annotation.Y, newWidth, newHeight)));
         }
     }

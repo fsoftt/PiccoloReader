@@ -36,6 +36,7 @@ public partial class SheetViewerPage : ContentPage
 
     private double _resizeStartWidth;
     private double _resizeStartHeight;
+    private double _resizeStartX;
     private double _moveStartX;
     private double _moveStartY;
 
@@ -1405,6 +1406,7 @@ public partial class SheetViewerPage : ContentPage
 
         _resizeStartWidth = annotation.Width;
         _resizeStartHeight = annotation.Height;
+        _resizeStartX = annotation.X;
         SetDragControlsVisible(false);
     }
 
@@ -1423,6 +1425,14 @@ public partial class SheetViewerPage : ContentPage
         var pageRect = EditorPageRect();
         annotation.Width = Math.Max(0.02, _resizeStartWidth + totalX / (pageRect.Width * _currentScale));
         annotation.Height = Math.Max(0.02, _resizeStartHeight + totalY / (pageRect.Height * _currentScale));
+        if (HairpinGeometry.IsHairpin(annotation.IconKey))
+        {
+            // Horizontal drag lengthens the hairpin, vertical drag opens it.
+            (annotation.X, annotation.Width, annotation.Height) = HairpinGeometry.ClampBox(
+                _resizeStartX, annotation.Width, annotation.Height,
+                _viewModel.CurrentPageAspectRatio, _viewModel.CurrentPageCrop.Right);
+        }
+
         RepositionSelectionOverlay();
         InvalidateAnnotations();
     }
@@ -1436,7 +1446,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         SetDragControlsVisible(true);
-        _ = _viewModel.ResizeSelectedAnnotationAsync(_resizeStartWidth, _resizeStartHeight, annotation.Width, annotation.Height);
+        _ = _viewModel.ResizeSelectedAnnotationAsync(_resizeStartWidth, _resizeStartHeight, annotation.Width, annotation.Height, _resizeStartX);
     }
 
     private async void OnTrashTargetTapped(object? sender, TappedEventArgs e)
