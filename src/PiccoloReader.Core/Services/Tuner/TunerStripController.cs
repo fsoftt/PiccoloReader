@@ -13,8 +13,11 @@ public interface ITunerStripView
     /// <summary>Strip on (faint track shown) or off (fully transparent). Called only when listening starts or stops.</summary>
     void SetActive(bool active);
 
-    /// <summary>Marker state while on: visibility, offset and color.</summary>
-    void Apply(bool visible, int offsetPx, TunerStripBucket bucket);
+    /// <summary>
+    /// Fill state while on: visibility, color and signed fill length in pixels from the track center
+    /// (negative = flat, positive = sharp). A fill of 0 means in tune: a short centered segment.
+    /// </summary>
+    void Apply(bool visible, int fillPx, TunerStripBucket bucket);
 }
 
 /// <summary>
@@ -29,7 +32,7 @@ public sealed class TunerStripController
     public const float InTuneCents = 5f;
     public const float CloseCents = 15f;
 
-    private readonly record struct StripState(bool Visible, int OffsetPx, TunerStripBucket Bucket);
+    private readonly record struct StripState(bool Visible, int FillPx, TunerStripBucket Bucket);
 
     private readonly ITunerInput _input;
     private readonly ITunerPreferenceService _tunerPreferences;
@@ -45,7 +48,7 @@ public sealed class TunerStripController
     private StripState _target;
     private bool _applyPending;
     private volatile int _a4Hz = TunerSettings.DefaultA4Hz;
-    private volatile float _travelPx;
+    private volatile float _halfTrackPx;
     private int _attachVersion;
     private bool _subscribed;
     private bool _visible = true;
@@ -79,8 +82,8 @@ public sealed class TunerStripController
     /// <summary>Connects the native view (UI thread). Null disconnects it.</summary>
     public void Bind(ITunerStripView? view) => _view = view;
 
-    /// <summary>Distance in pixels the marker travels from the left end to the right end of the track.</summary>
-    public void SetTravel(float travelPx) => _travelPx = Math.Max(0f, travelPx);
+    /// <summary>Half of the track width in pixels: the fill length at +/-50 cents.</summary>
+    public void SetHalfTrack(float halfTrackPx) => _halfTrackPx = Math.Max(0f, halfTrackPx);
 
     /// <summary>
     /// Starts listening when the preference is on and the microphone permission is
@@ -223,12 +226,12 @@ public sealed class TunerStripController
     }
 
     /// <summary>Maps a reading to the strip state. Pure; no allocation.</summary>
-    internal static void Map(in TunerReading reading, int a4Hz, float travelPx, out bool visible, out int offsetPx, out TunerStripBucket bucket)
+    internal static void Map(in TunerReading reading, int a4Hz, float halfTrackPx, out bool visible, out int fillPx, out TunerStripBucket bucket)
     {
         if (!reading.HasPitch || reading.Hz <= 0f)
         {
             visible = false;
-            offsetPx = 0;
+            fillPx = 0;
             bucket = TunerStripBucket.Far;
             return;
         }
@@ -236,10 +239,15 @@ public sealed class TunerStripController
         var cents = Math.Clamp(NoteMapper.FromHz(reading.Hz, a4Hz).Cents, -RangeCents, RangeCents);
         var abs = MathF.Abs(cents);
         visible = true;
-        offsetPx = (int)MathF.Round((cents + RangeCents) / (2f * RangeCents) * travelPx);
         bucket = abs <= InTuneCents ? TunerStripBucket.InTune
             : abs <= CloseCents ? TunerStripBucket.Close
             : TunerStripBucket.Far;
+
+        // In tune is a short centered segment (fill 0), so it never reads as an empty bar.
+        // Otherwise the fill grows from the center, positive toward sharp, at least 1 px.
+        fillPx = bucket == TunerStripBucket.InTune
+            ? 0
+            : (cents < 0f ? -1 : 1) * Math.Max(1, (int)MathF.Round(abs / RangeCents * halfTrackPx));
     }
 
     // Audio thread. Keeps only the newest state and posts at most one pending UI
@@ -254,8 +262,8 @@ public sealed class TunerStripController
             return;
         }
 
-        Map(reading, _a4Hz, _travelPx, out var visible, out var offsetPx, out var bucket);
-        var state = new StripState(visible, offsetPx, bucket);
+        Map(reading, _a4Hz, _halfTrackPx, out var visible, out var fillPx, out var bucket);
+        var state = new StripState(visible, fillPx, bucket);
         lock (_latestLock)
         {
             if (state == _target)
@@ -309,6 +317,6 @@ public sealed class TunerStripController
             return;
         }
 
-        _view?.Apply(state.Visible, state.OffsetPx, state.Bucket);
+        _view?.Apply(state.Visible, state.FillPx, state.Bucket);
     }
 }

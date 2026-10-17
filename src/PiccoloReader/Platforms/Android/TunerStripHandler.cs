@@ -23,62 +23,74 @@ public class TunerStripHandler : ViewHandler<TunerStripView, TunerStripNativeVie
     protected override void ConnectHandler(TunerStripNativeView platformView)
     {
         base.ConnectHandler(platformView);
-        platformView.TravelChanged = VirtualView.TravelChanged;
+        platformView.HalfTrackChanged = VirtualView.HalfTrackChanged;
         VirtualView.Surface = platformView;
     }
 
     protected override void DisconnectHandler(TunerStripNativeView platformView)
     {
-        platformView.TravelChanged = null;
+        platformView.HalfTrackChanged = null;
         VirtualView.Surface = null;
         base.DisconnectHandler(platformView);
     }
 }
 
 /// <summary>
-/// A faint track (only while the strip is on; transparent when off) with a small
-/// marker child. Per reading, updates only change the marker's visibility,
-/// TranslationX and background color: no layout pass, no invalidation of anything
-/// else. Invisible (not Gone) keeps the layout stable.
+/// A faint track with a fixed center tick (only while the strip is on; transparent
+/// when off) and a colored fill that grows from the center toward the deviation.
+/// The fill is a 1 px wide child scaled horizontally from its left edge (negative
+/// scale mirrors it to the left), so per reading only ScaleX, TranslationX,
+/// background color and visibility change: no layout pass, no invalidation of
+/// anything else. Invisible (not Gone) keeps the layout stable.
 /// </summary>
 public class TunerStripNativeView : FrameLayout, ITunerStripView
 {
-    private const float MarkerWidthDp = 12f;
+    // Total width of the centered "in tune" segment.
+    private const float InTuneSegmentDp = 8f;
+    private const float TickWidthDp = 2f;
 
     private static readonly Color TrackColor = Color.Argb(0x40, 0x80, 0x80, 0x80);
+    private static readonly Color TickColor = Color.Argb(0xA0, 0x80, 0x80, 0x80);
     private static readonly Color InTuneColor = Color.Argb(0xFF, 0x4C, 0xAF, 0x50);
     private static readonly Color CloseColor = Color.Argb(0xFF, 0xFF, 0xC1, 0x07);
     private static readonly Color FarColor = Color.Argb(0xFF, 0xF4, 0x43, 0x36);
 
-    private readonly View _marker;
-    private readonly int _markerWidthPx;
+    private readonly View _fill;
+    private readonly View _tick;
+    private readonly float _inTuneSegmentPx;
+    private float _centerPx;
     private TunerStripBucket? _bucket;
 
     public TunerStripNativeView(Context? context) : base(context!)
     {
-        _markerWidthPx = (int)Math.Round(MarkerWidthDp * context!.Resources!.DisplayMetrics!.Density);
-        _marker = new View(context) { Visibility = ViewStates.Invisible };
-        AddView(_marker, new LayoutParams(_markerWidthPx, ViewGroup.LayoutParams.MatchParent, GravityFlags.Start));
+        var density = context!.Resources!.DisplayMetrics!.Density;
+        _inTuneSegmentPx = InTuneSegmentDp * density;
+        _fill = new View(context) { Visibility = ViewStates.Invisible, PivotX = 0f };
+        AddView(_fill, new LayoutParams(1, ViewGroup.LayoutParams.MatchParent, GravityFlags.Start));
+        _tick = new View(context) { Visibility = ViewStates.Invisible };
+        _tick.SetBackgroundColor(TickColor);
+        AddView(_tick, new LayoutParams((int)Math.Round(TickWidthDp * density), ViewGroup.LayoutParams.MatchParent, GravityFlags.CenterHorizontal));
     }
 
-    internal Action<float>? TravelChanged { get; set; }
+    internal Action<float>? HalfTrackChanged { get; set; }
 
     public void SetActive(bool active)
     {
         SetBackgroundColor(active ? TrackColor : Color.Transparent);
+        _tick.Visibility = active ? ViewStates.Visible : ViewStates.Invisible;
         if (!active)
         {
-            _marker.Visibility = ViewStates.Invisible;
+            _fill.Visibility = ViewStates.Invisible;
         }
     }
 
-    public void Apply(bool visible, int offsetPx, TunerStripBucket bucket)
+    public void Apply(bool visible, int fillPx, TunerStripBucket bucket)
     {
         if (!visible)
         {
-            if (_marker.Visibility != ViewStates.Invisible)
+            if (_fill.Visibility != ViewStates.Invisible)
             {
-                _marker.Visibility = ViewStates.Invisible;
+                _fill.Visibility = ViewStates.Invisible;
             }
 
             return;
@@ -87,7 +99,7 @@ public class TunerStripNativeView : FrameLayout, ITunerStripView
         if (_bucket != bucket)
         {
             _bucket = bucket;
-            _marker.SetBackgroundColor(bucket switch
+            _fill.SetBackgroundColor(bucket switch
             {
                 TunerStripBucket.InTune => InTuneColor,
                 TunerStripBucket.Close => CloseColor,
@@ -95,16 +107,27 @@ public class TunerStripNativeView : FrameLayout, ITunerStripView
             });
         }
 
-        _marker.TranslationX = offsetPx;
-        if (_marker.Visibility != ViewStates.Visible)
+        if (fillPx == 0)
         {
-            _marker.Visibility = ViewStates.Visible;
+            _fill.TranslationX = _centerPx - _inTuneSegmentPx / 2f;
+            _fill.ScaleX = _inTuneSegmentPx;
+        }
+        else
+        {
+            _fill.TranslationX = _centerPx;
+            _fill.ScaleX = fillPx;
+        }
+
+        if (_fill.Visibility != ViewStates.Visible)
+        {
+            _fill.Visibility = ViewStates.Visible;
         }
     }
 
     protected override void OnSizeChanged(int w, int h, int oldw, int oldh)
     {
         base.OnSizeChanged(w, h, oldw, oldh);
-        TravelChanged?.Invoke(Math.Max(0, w - _markerWidthPx));
+        _centerPx = w / 2f;
+        HalfTrackChanged?.Invoke(_centerPx);
     }
 }

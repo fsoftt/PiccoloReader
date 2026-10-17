@@ -6,7 +6,7 @@ public class TunerStripControllerTests
 {
     private sealed class FakeStripView : ITunerStripView
     {
-        public List<(bool Visible, int Offset, TunerStripBucket Bucket)> Calls { get; } = [];
+        public List<(bool Visible, int Fill, TunerStripBucket Bucket)> Calls { get; } = [];
 
         public bool Active { get; private set; }
 
@@ -32,7 +32,7 @@ public class TunerStripControllerTests
     {
         _controller = new TunerStripController(_input, _tunerPreferences, _stripPreferences, _permission, _posted.Add);
         _controller.Bind(_view);
-        _controller.SetTravel(100f);
+        _controller.SetHalfTrack(100f);
     }
 
     private static float HzAtCents(float cents, float a4 = 440f) => a4 * MathF.Pow(2f, cents / 1200f);
@@ -62,20 +62,20 @@ public class TunerStripControllerTests
         _input.Raise(Pitch(0f));
         Flush();
 
-        Assert.Equal((true, 50, TunerStripBucket.InTune), _view.Calls.Single());
+        Assert.Equal((true, 0, TunerStripBucket.InTune), _view.Calls.Single());
     }
 
     [Theory]
-    [InlineData(-30f, 20)]
-    [InlineData(30f, 80)]
-    [InlineData(-10f, 40)]
-    public async Task Offset_follows_cents_across_track(float cents, int expectedPx)
+    [InlineData(-30f, -60)]
+    [InlineData(30f, 60)]
+    [InlineData(-10f, -20)]
+    public async Task Fill_grows_from_the_center_with_the_deviation(float cents, int expectedPx)
     {
         await StartAsync();
         _input.Raise(Pitch(cents));
         Flush();
 
-        Assert.Equal(expectedPx, _view.Calls.Single().Offset);
+        Assert.Equal(expectedPx, _view.Calls.Single().Fill);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class TunerStripControllerTests
         _input.Raise(Pitch(120f));
         Flush();
 
-        Assert.Equal(70, _view.Calls.Single().Offset);
+        Assert.Equal(40, _view.Calls.Single().Fill);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class TunerStripControllerTests
         _input.Raise(new TunerReading(true, 442f, 0f));
         Flush();
 
-        Assert.Equal((true, 50, TunerStripBucket.InTune), _view.Calls.Single());
+        Assert.Equal((true, 0, TunerStripBucket.InTune), _view.Calls.Single());
     }
 
     [Theory]
@@ -120,7 +120,7 @@ public class TunerStripControllerTests
     }
 
     [Fact]
-    public async Task Offset_stays_inside_the_track_at_both_extremes()
+    public async Task Fill_stays_inside_the_half_track_at_both_extremes()
     {
         await StartAsync();
         _input.Raise(Pitch(49.9f));
@@ -128,7 +128,7 @@ public class TunerStripControllerTests
         _input.Raise(Pitch(-49.9f));
         Flush();
 
-        Assert.All(_view.Calls, call => Assert.InRange(call.Offset, 0, 100));
+        Assert.All(_view.Calls, call => Assert.InRange(call.Fill, -100, 100));
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public class TunerStripControllerTests
     }
 
     [Fact]
-    public async Task Movement_under_one_pixel_posts_nothing()
+    public async Task Fill_change_under_one_pixel_posts_nothing()
     {
         await StartAsync();
         _input.Raise(Pitch(10f));
@@ -159,7 +159,7 @@ public class TunerStripControllerTests
     [Fact]
     public async Task Color_change_posts_even_without_a_pixel_change()
     {
-        _controller.SetTravel(10f);
+        _controller.SetHalfTrack(10f);
         await StartAsync();
         _input.Raise(Pitch(4.6f));
         Flush();
@@ -180,7 +180,7 @@ public class TunerStripControllerTests
 
         Assert.Single(_posted);
         Flush();
-        Assert.Equal(70, _view.Calls.Single().Offset);
+        Assert.Equal(40, _view.Calls.Single().Fill);
     }
 
     [Fact]
@@ -346,7 +346,7 @@ public class TunerStripControllerTests
     {
         var controller = new TunerStripController(input, _tunerPreferences, new FakeStripPreferences { IsEnabled = enabled }, permission, _posted.Add);
         controller.Bind(_view);
-        controller.SetTravel(100f);
+        controller.SetHalfTrack(100f);
         return controller;
     }
 
@@ -488,5 +488,59 @@ public class TunerStripControllerTests
 
         _controller.Detach();
         Assert.False(_view.Active);
+    }
+
+    [Theory]
+    [InlineData(5.5f, 11)]
+    [InlineData(-5.5f, -11)]
+    [InlineData(49.9f, 100)]
+    [InlineData(-49.9f, -100)]
+    public async Task Fill_is_signed_and_reaches_the_edge_at_fifty_cents(float cents, int expectedPx)
+    {
+        await StartAsync();
+        _input.Raise(Pitch(cents));
+        Flush();
+
+        Assert.Equal(expectedPx, _view.Calls.Single().Fill);
+    }
+
+    [Theory]
+    [InlineData(-4.5f)]
+    [InlineData(0f)]
+    [InlineData(4.5f)]
+    public async Task In_tune_is_a_centered_segment_with_zero_fill(float cents)
+    {
+        await StartAsync();
+        _input.Raise(Pitch(cents));
+        Flush();
+
+        Assert.Equal((true, 0, TunerStripBucket.InTune), _view.Calls.Single());
+    }
+
+    [Fact]
+    public async Task Fill_is_never_empty_outside_the_in_tune_band()
+    {
+        _controller.SetHalfTrack(2f);
+        await StartAsync();
+        _input.Raise(Pitch(5.5f));
+        Flush();
+        _input.Raise(Pitch(-5.5f));
+        Flush();
+
+        Assert.Equal(1, _view.Calls[0].Fill);
+        Assert.Equal(-1, _view.Calls[1].Fill);
+    }
+
+    [Fact]
+    public async Task Flat_to_sharp_crossing_posts_both_sides()
+    {
+        await StartAsync();
+        _input.Raise(Pitch(-20f));
+        Flush();
+        _input.Raise(Pitch(20f));
+        Flush();
+
+        Assert.Equal(-40, _view.Calls[0].Fill);
+        Assert.Equal(40, _view.Calls[1].Fill);
     }
 }

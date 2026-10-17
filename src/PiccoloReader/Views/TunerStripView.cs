@@ -25,7 +25,7 @@ public class TunerStripView : View, ITunerStripView
     private bool _active;
 
     /// <summary>Raised by the handler when the track width changes; argument is the marker travel in pixels.</summary>
-    internal Action<float>? TravelChanged { get; set; }
+    internal Action<float>? HalfTrackChanged { get; set; }
 
     public void SetActive(bool active)
     {
@@ -33,5 +33,5 @@ public class TunerStripView : View, ITunerStripView
         _surface?.SetActive(active);
     }
 
-    public void Apply(bool visible, int offsetPx, TunerStripBucket bucket) => Surface?.Apply(visible, offsetPx, bucket);
+    public void Apply(bool visible, int fillPx, TunerStripBucket bucket) => Surface?.Apply(visible, fillPx, bucket);
 }

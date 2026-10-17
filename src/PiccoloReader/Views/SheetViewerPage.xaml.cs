@@ -307,7 +307,7 @@ public partial class SheetViewerPage : ContentPage
     private void SetUpTunerStripView()
     {
 #if ANDROID
-        var strip = new TunerStripView { HeightRequest = 2, TravelChanged = _tunerStrip.SetTravel };
+        var strip = new TunerStripView { HeightRequest = 6, HalfTrackChanged = _tunerStrip.SetHalfTrack };
         TunerStripHost.Children.Add(strip);
         _tunerStrip.Bind(strip);
 #endif
