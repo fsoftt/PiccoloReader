@@ -16,19 +16,19 @@ public class SkiaPageThumbnailStore : IPageThumbnailStore
 
     private string PathFor(int sheetId, int pageIndex) => Path.Combine(_directory, $"{sheetId}_p{pageIndex}.png");
 
-    public Task<byte[]?> TryLoadAsync(int sheetId, int pageIndex) => Task.Run(() =>
+    public async Task<byte[]?> TryLoadAsync(int sheetId, int pageIndex)
     {
         try
         {
             var path = PathFor(sheetId, pageIndex);
-            return File.Exists(path) ? File.ReadAllBytes(path) : (byte[]?)null;
+            return File.Exists(path) ? await File.ReadAllBytesAsync(path).ConfigureAwait(false) : null;
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Thumbnail load failed: {ex.Message}");
-            return (byte[]?)null;
+            return null;
         }
-    });
+    }
 
     public Task SaveAsync(int sheetId, int pageIndex, byte[] pageImageBytes) => Task.Run(() =>
     {

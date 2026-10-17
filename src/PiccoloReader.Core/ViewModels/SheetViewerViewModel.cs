@@ -166,6 +166,8 @@ public partial class SheetViewerViewModel : ObservableObject
     private readonly IPageThumbnailStore? _thumbnails;
     private bool _saveThumbnailAfterRender;
     private int _thumbnailPageIndex = -1;
+    private int _openVersion;
+    private bool _thumbnailApplicable;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteSelectedAnnotationCommand))]
@@ -253,15 +255,16 @@ public partial class SheetViewerViewModel : ObservableObject
                 ? Math.Clamp(sheet.LastViewedPageIndex, 0, pageCount - 1)
                 : 0;
 
-            // Show the cached thumbnail of the opening page before the heavy work.
-            var thumbnail = pageCount > 0 ? await LoadThumbnailAsync(sheetId, CurrentPageIndex) : null;
+            // The cached thumbnail loads in parallel with the heavy work and
+            // never delays it: it is applied only if it arrives before the
+            // full render of the opening page.
+            var openId = ++_openVersion;
             _saveThumbnailAfterRender = _thumbnails is not null && pageCount > 0;
-            IsShowingThumbnail = thumbnail is not null;
             _thumbnailPageIndex = CurrentPageIndex;
-            if (thumbnail is not null && !IsContinuousReading)
+            _thumbnailApplicable = pageCount > 0 && _thumbnails is not null;
+            if (_thumbnailApplicable)
             {
-                CurrentPageImageBytes = thumbnail;
-                OpeningThumbnailBytes = thumbnail;
+                _ = ApplyOpeningThumbnailAsync(sheetId, CurrentPageIndex, openId);
             }
 
             _crops = await _pageCropService.GetCropsAsync(sheetId);
@@ -282,13 +285,6 @@ public partial class SheetViewerViewModel : ObservableObject
                 ContinuousPages.Add(new ContinuousPage(i, crop.CroppedAspectRatio(estimatedAspectRatio)) { Crop = crop });
             }
 
-            if (thumbnail is not null && IsContinuousReading && ContinuousPages.Count > CurrentPageIndex && PngDimensions.TryRead(thumbnail, out var thumbWidth, out var thumbHeight))
-            {
-                var openingPage = ContinuousPages[CurrentPageIndex];
-                openingPage.AspectRatio = (double)thumbHeight / thumbWidth;
-                openingPage.ImageBytes = thumbnail;
-            }
-
             if (IsContinuousReading)
             {
                 await UpdateContinuousViewportAsync(CurrentPageIndex, CurrentPageIndex, CurrentPageIndex);
@@ -307,6 +303,7 @@ public partial class SheetViewerViewModel : ObservableObject
                 OpeningThumbnailBytes = null;
             }
 
+            _thumbnailApplicable = false;
             IsShowingThumbnail = false;
             _saveThumbnailAfterRender = false;
             IsLoading = false;
@@ -420,6 +417,12 @@ public partial class SheetViewerViewModel : ObservableObject
         }
 
         page.ImageBytes = imageBytes;
+        if (page.PageIndex == _thumbnailPageIndex)
+        {
+            _thumbnailApplicable = false;
+            IsShowingThumbnail = false;
+        }
+
         SaveOpeningThumbnail(page.PageIndex, imageBytes);
 
         if (_sheet is not null)
@@ -885,6 +888,11 @@ public partial class SheetViewerViewModel : ObservableObject
             : 0;
         CurrentPageCrop = pageCrop;
         CurrentPageImageBytes = imageBytes;
+        if (pageIndex == _thumbnailPageIndex)
+        {
+            _thumbnailApplicable = false;
+        }
+
         IsShowingThumbnail = false;
         SaveOpeningThumbnail(pageIndex, imageBytes);
 
@@ -1087,6 +1095,52 @@ public partial class SheetViewerViewModel : ObservableObject
 
         _saveThumbnailAfterRender = false;
         _ = _thumbnails.SaveAsync(_sheet.Id, pageIndex, imageBytes);
+    }
+
+    private async Task ApplyOpeningThumbnailAsync(int sheetId, int pageIndex, int openId)
+    {
+        var thumbnail = await LoadThumbnailAsync(sheetId, pageIndex);
+        if (thumbnail is null
+            || !_thumbnailApplicable
+            || openId != _openVersion
+            || pageIndex != CurrentPageIndex
+            || _sheet?.Id != sheetId)
+        {
+            return;
+        }
+
+        if (IsContinuousReading)
+        {
+            if (pageIndex >= ContinuousPages.Count)
+            {
+                return;
+            }
+
+            var openingPage = ContinuousPages[pageIndex];
+            if (openingPage.ImageBytes is not null)
+            {
+                return;
+            }
+
+            if (PngDimensions.TryRead(thumbnail, out var thumbWidth, out var thumbHeight))
+            {
+                openingPage.AspectRatio = (double)thumbHeight / thumbWidth;
+            }
+
+            openingPage.ImageBytes = thumbnail;
+            IsShowingThumbnail = true;
+        }
+        else
+        {
+            if (CurrentPageImageBytes is not null)
+            {
+                return;
+            }
+
+            CurrentPageImageBytes = thumbnail;
+            OpeningThumbnailBytes = thumbnail;
+            IsShowingThumbnail = true;
+        }
     }
 
     private async Task<byte[]?> LoadThumbnailAsync(int sheetId, int pageIndex)
