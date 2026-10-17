@@ -219,15 +219,29 @@
             Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
             <Grid x:Name="ToolSheetGrid" RowDefinitions="Auto,Auto,*" RowSpacing="14">
-                <BoxView
-                    x:Name="ToolSheetHandle"
+                <!-- Taller touch target for the drag-to-expand gesture; the
+                     visible bar stays thin. Tap toggles as well. -->
+                <Grid
+                    x:Name="ToolSheetHandleArea"
                     Grid.Row="0"
-                    WidthRequest="36"
-                    HeightRequest="4"
-                    CornerRadius="2"
-                    HorizontalOptions="Center"
-                    Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
-                    Opacity="0.5" />
+                    AutomationId="ToolSheetHandleArea"
+                    HeightRequest="28"
+                    Margin="0,-10,0,-14"
+                    BackgroundColor="Transparent">
+                    <Grid.GestureRecognizers>
+                        <PanGestureRecognizer PanUpdated="OnToolSheetHandlePanUpdated" />
+                        <TapGestureRecognizer Tapped="OnToolSheetHandleTapped" />
+                    </Grid.GestureRecognizers>
+                    <BoxView
+                        x:Name="ToolSheetHandle"
+                        WidthRequest="36"
+                        HeightRequest="4"
+                        CornerRadius="2"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                        Opacity="0.5" />
+                </Grid>
 
                 <Border
                     Grid.Row="1"

@@ -76,7 +76,6 @@
   <data name="CategoryDynamics" xml:space="preserve"><value>Dinámica</value></data>
   <data name="CategoryArticulations" xml:space="preserve"><value>Articulaciones</value></data>
   <data name="CategoryFermataBreath" xml:space="preserve"><value>Calderón y respiración</value></data>
-  <data name="CategoryHairpins" xml:space="preserve"><value>Reguladores</value></data>
   <data name="IconStaccato" xml:space="preserve"><value>Staccato</value></data>
   <data name="IconAccent" xml:space="preserve"><value>Acento</value></data>
   <data name="IconTenuto" xml:space="preserve"><value>Tenuto</value></data>
@@ -89,7 +88,6 @@
   <data name="CategoryBowingPlucking" xml:space="preserve"><value>Arco y pizzicato</value></data>
   <data name="CategoryPedalMarks" xml:space="preserve"><value>Marcas de pedal</value></data>
   <data name="CategoryRepeatsNavigation" xml:space="preserve"><value>Repeticiones y navegación</value></data>
-  <data name="CategoryMoreDynamics" xml:space="preserve"><value>Más dinámicas</value></data>
   <data name="CategoryAccidentals" xml:space="preserve"><value>Alteraciones</value></data>
   <data name="CategoryTremoloGlissando" xml:space="preserve"><value>Trémolo y glissando</value></data>
   <data name="IconTrill" xml:space="preserve"><value>Trino</value></data>

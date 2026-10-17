@@ -114,6 +114,11 @@ public partial class SheetViewerPage : ContentPage
         {
             if (e.PropertyName == nameof(VisualElement.IsVisible))
             {
+                if (!ToolSheet.IsVisible)
+                {
+                    _toolSheetExpanded = false;
+                }
+
                 UpdateEditingUi();
                 // Defensive: repaint the annotation layer whenever a tool sheet
                 // opens or closes (Bug 16: a glyph stayed unpainted until the next
@@ -2718,13 +2723,19 @@ public partial class SheetViewerPage : ContentPage
     // (little height, lots of width): a compact sheet (cap ~45%) with the
     // pencil colors and width side by side and the symbols in one
     // horizontally scrolling row, so the document stays usable above it.
-    private void ApplyToolSheetHeight()
+    private void ApplyToolSheetHeight(bool animate = false)
     {
         var pageHeight = Height > 0 ? Height : 800;
         var pageWidth = Width > 0 ? Width : 400;
         var landscape = pageWidth > pageHeight;
         ApplyToolSheetLayout(landscape);
         var cap = pageHeight * 0.45;
+
+        // Expansion only applies to the portrait symbol picker.
+        if (landscape || _viewModel.ActiveTool != AnnotationTool.MusicIcons)
+        {
+            _toolSheetExpanded = false;
+        }
 
         // handle + segmented control + paddings/spacing (landscape drops
         // the handle and tightens the spacing)
@@ -2746,6 +2757,11 @@ public partial class SheetViewerPage : ContentPage
                 var rows = Math.Max(1, (int)Math.Ceiling(count / (double)cols));
                 // category chips row (44) + spacing (10) + grid padding (8 + 24)
                 height = Math.Min(cap, header + 44 + 10 + 40 + rows * tile);
+                if (_toolSheetExpanded)
+                {
+                    height = pageHeight * ToolSheetExpandedFraction;
+                }
+
                 break;
             case AnnotationTool.Eraser:
                 height = header + (landscape ? 82 : 100);
@@ -2761,11 +2777,69 @@ public partial class SheetViewerPage : ContentPage
             height = Math.Min(height, Math.Max(cap, header + 82));
         }
 
+        if (animate && ToolSheet.IsVisible)
+        {
+            AnimateToolSheetHeight(Math.Round(height));
+            return;
+        }
+
+        ToolSheet.AbortAnimation("ToolSheetHeight");
         ToolSheet.HeightRequest = Math.Round(height);
         if (_viewModel.SelectedAnnotation is { } selected)
         {
             UpdateTrashPlacement(selected);
         }
+    }
+
+    // Symbol picker only: dragging the handle up grows the sheet to ~65% of
+    // the page so more rows show; dragging down (or tapping) snaps it back.
+    // Reset whenever the sheet hides or the tool leaves the symbols.
+    private bool _toolSheetExpanded;
+    private const double ToolSheetExpandedFraction = 0.65;
+
+    private void OnToolSheetHandlePanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        if (e.StatusType != GestureStatus.Completed)
+        {
+            return;
+        }
+
+        if (e.TotalY < -30)
+        {
+            SetToolSheetExpanded(true);
+        }
+        else if (e.TotalY > 30)
+        {
+            SetToolSheetExpanded(false);
+        }
+    }
+
+    private void OnToolSheetHandleTapped(object? sender, TappedEventArgs e) =>
+        SetToolSheetExpanded(!_toolSheetExpanded);
+
+    private void SetToolSheetExpanded(bool expanded)
+    {
+        if (_toolSheetExpanded == expanded)
+        {
+            return;
+        }
+
+        _toolSheetExpanded = expanded;
+        ApplyToolSheetHeight(animate: true);
+    }
+
+    private void AnimateToolSheetHeight(double target)
+    {
+        ToolSheet.AbortAnimation("ToolSheetHeight");
+        var from = ToolSheet.HeightRequest;
+        ToolSheet.Animate("ToolSheetHeight", v =>
+        {
+            ToolSheet.HeightRequest = Math.Round(v);
+            if (_viewModel.SelectedAnnotation is { } selected)
+            {
+                UpdateTrashPlacement(selected);
+            }
+        }, from, target, length: 180, easing: Easing.CubicOut);
     }
 
     private bool? _toolSheetLandscape;
@@ -2778,7 +2852,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         _toolSheetLandscape = landscape;
-        ToolSheetHandle.IsVisible = !landscape;
+        ToolSheetHandleArea.IsVisible = !landscape;
         ToolSheetGrid.RowSpacing = landscape ? 8 : 14;
         ToolSheet.Padding = landscape ? new Thickness(20, 8, 20, 0) : new Thickness(20, 10, 20, 0);
         ToolOptionsPad.Padding = new Thickness(0, 0, 0, landscape ? 8 : 24);
