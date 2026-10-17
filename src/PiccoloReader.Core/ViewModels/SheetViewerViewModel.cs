@@ -157,6 +157,12 @@ public partial class SheetViewerViewModel : ObservableObject
     // The spinner would sit on top of the thumbnail, so it is hidden then.
     public bool ShowLoadingSpinner => IsLoading && !IsShowingThumbnail;
 
+    // The opening thumbnail, kept under the page image after the full render
+    // is set so the view can leave it showing until that image has decoded
+    // (swapping an Image source blanks it for a moment). The view clears it.
+    [ObservableProperty]
+    private byte[]? _openingThumbnailBytes;
+
     private readonly IPageThumbnailStore? _thumbnails;
     private bool _saveThumbnailAfterRender;
     private int _thumbnailPageIndex = -1;
@@ -222,6 +228,7 @@ public partial class SheetViewerViewModel : ObservableObject
         ReadingMode = _readingPreferenceService.GetReadingMode();
         _pageRenders.Clear();
         ClearUndoHistory();
+        OpeningThumbnailBytes = null;
 
         IsLoading = true;
         try
@@ -254,6 +261,7 @@ public partial class SheetViewerViewModel : ObservableObject
             if (thumbnail is not null && !IsContinuousReading)
             {
                 CurrentPageImageBytes = thumbnail;
+                OpeningThumbnailBytes = thumbnail;
             }
 
             _crops = await _pageCropService.GetCropsAsync(sheetId);
@@ -296,6 +304,7 @@ public partial class SheetViewerViewModel : ObservableObject
             {
                 // The render failed: do not leave the stand-in as if it were the page.
                 CurrentPageImageBytes = null;
+                OpeningThumbnailBytes = null;
             }
 
             IsShowingThumbnail = false;
@@ -838,6 +847,7 @@ public partial class SheetViewerViewModel : ObservableObject
         if (IsShowingThumbnail && pageIndex != _thumbnailPageIndex)
         {
             // The user moved off the opening page: its thumbnail is stale.
+            OpeningThumbnailBytes = null;
             IsShowingThumbnail = false;
         }
 

@@ -141,6 +141,44 @@ public class SheetViewerViewModelTests : IDisposable
         Assert.False(_sut.IsLoading);
     }
 
+
+    private sealed class StubThumbnailStore : IPageThumbnailStore
+    {
+        public byte[]? Thumbnail { get; init; }
+
+        public Task<byte[]?> TryLoadAsync(int sheetId, int pageIndex) => Task.FromResult(Thumbnail);
+
+        public Task SaveAsync(int sheetId, int pageIndex, byte[] pageImageBytes) => Task.CompletedTask;
+
+        public Task DeleteForSheetAsync(int sheetId) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task LoadAsync_KeepsOpeningThumbnailUntilViewClearsIt_AndNeverBlanksThePage()
+    {
+        var thumbnail = new byte[] { 9, 9, 9 };
+        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database), new StubThumbnailStore { Thumbnail = thumbnail });
+        var sheet = await InsertSheetAsync(pageCount: 3, lastViewedPageIndex: 1);
+        var blankedAfterThumbnail = false;
+        var thumbnailShown = false;
+        sut.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageImageBytes))
+            {
+                thumbnailShown |= sut.CurrentPageImageBytes == thumbnail;
+                blankedAfterThumbnail |= thumbnailShown && sut.CurrentPageImageBytes is null;
+            }
+        };
+
+        await sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+
+        Assert.True(thumbnailShown);
+        Assert.False(blankedAfterThumbnail);
+        Assert.Equal(new byte[] { 1 }, sut.CurrentPageImageBytes);
+        Assert.False(sut.IsShowingThumbnail);
+        // Still under the page image: the view removes it once the full page has decoded.
+        Assert.Same(thumbnail, sut.OpeningThumbnailBytes);
+    }
     [Fact]
     public void ReadingMode_DefaultsToSavedPreference()
     {
