@@ -217,8 +217,6 @@ public partial class SheetViewerViewModel : ObservableObject
 
             if (IsCurrentPageDisplayed())
             {
-                System.Diagnostics.Debug.WriteLine(
-                    $"SpinnerWatchdog: clearing stuck spinner (CurrentPageIndex={CurrentPageIndex}, ReadingMode={ReadingMode}, IsShowingThumbnail={IsShowingThumbnail})");
                 IsLoading = false;
                 return;
             }
