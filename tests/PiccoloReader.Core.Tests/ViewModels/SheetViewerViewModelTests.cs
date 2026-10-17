@@ -179,6 +179,67 @@ public class SheetViewerViewModelTests : IDisposable
         // Still under the page image: the view removes it once the full page has decoded.
         Assert.Same(thumbnail, sut.OpeningThumbnailBytes);
     }
+    private SheetViewerViewModel CreateWithTime(ManualTimeProvider time) =>
+        new(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database), null, time);
+
+    // Timer callbacks complete the delay asynchronously; let the watchdog continuation run.
+    private static async Task AdvanceAsync(ManualTimeProvider time, TimeSpan amount)
+    {
+        time.Advance(amount);
+        await Task.Delay(50);
+    }
+
+    [Fact]
+    public async Task SpinnerWatchdog_StuckSpinnerOverShownPage_ClearsLoadingAfterTimeout()
+    {
+        var time = new ManualTimeProvider();
+        var sut = CreateWithTime(time);
+        sut.CurrentPageImageBytes = new byte[] { 1 };
+        sut.IsLoading = true;
+
+        await AdvanceAsync(time, TimeSpan.FromSeconds(2));
+        Assert.True(sut.IsLoading);
+
+        await AdvanceAsync(time, TimeSpan.FromSeconds(2));
+        Assert.False(sut.IsLoading);
+    }
+
+    [Fact]
+    public async Task SpinnerWatchdog_NoPageImage_KeepsSpinnerUntilImageArrives()
+    {
+        var time = new ManualTimeProvider();
+        var sut = CreateWithTime(time);
+        sut.IsLoading = true;
+
+        await AdvanceAsync(time, TimeSpan.FromSeconds(4));
+        await AdvanceAsync(time, TimeSpan.FromSeconds(1));
+        Assert.True(sut.IsLoading);
+
+        sut.CurrentPageImageBytes = new byte[] { 1 };
+        await AdvanceAsync(time, TimeSpan.FromSeconds(1));
+
+        Assert.False(sut.IsLoading);
+    }
+
+    [Fact]
+    public async Task SpinnerWatchdog_LoadingClearedNormally_StopsWithoutTouchingState()
+    {
+        var time = new ManualTimeProvider();
+        var sut = CreateWithTime(time);
+        sut.IsLoading = true;
+        sut.IsLoading = false;
+        sut.IsLoading = true; // a new load started; a stale watchdog must not clear it early
+        sut.IsLoading = false;
+        sut.CurrentPageImageBytes = new byte[] { 1 };
+        var changes = 0;
+        sut.PropertyChanged += (_, _) => changes++;
+
+        await AdvanceAsync(time, TimeSpan.FromSeconds(10));
+
+        Assert.Equal(0, changes);
+        Assert.False(sut.IsLoading);
+    }
+
     private sealed class GatedThumbnailStore : IPageThumbnailStore
     {
         public TaskCompletionSource<byte[]?> Gate { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
