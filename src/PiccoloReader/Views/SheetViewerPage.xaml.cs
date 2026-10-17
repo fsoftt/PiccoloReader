@@ -502,6 +502,25 @@ public partial class SheetViewerPage : ContentPage
             frame.Height * PageContainer.Height);
     }
 
+    // The part of the page on screen right now, in full-page coordinates:
+    // the reading area (PageContainer's untransformed bounds) mapped back
+    // through the zoom and pan. Null while not zoomed in.
+    private PageCrop? EditorVisibleArea()
+    {
+        if (_currentScale <= ZoomedInThreshold || PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        {
+            return null;
+        }
+
+        var pageRect = EditorPageRect();
+        var left = -PageContainer.TranslationX / _currentScale;
+        var top = -PageContainer.TranslationY / _currentScale;
+        return PageViewport.VisiblePart(
+            pageRect.Left, pageRect.Top, pageRect.Width, pageRect.Height,
+            left, top, left + PageContainer.Width / _currentScale, top + PageContainer.Height / _currentScale,
+            _viewModel.CurrentPageCrop);
+    }
+
     // Sharp zoomed-in view ("detail"). The page image is rendered once at
     // screen width, so zooming alone only magnifies those pixels. Once a
     // pinch/pan/scroll has settled, the part of the page that is on screen is
@@ -3055,6 +3074,7 @@ public partial class SheetViewerPage : ContentPage
     {
         if (e.Parameter is string iconKey)
         {
+            _viewModel.VisibleArea = EditorVisibleArea();
             await _viewModel.PlaceIconCommand.ExecuteAsync(iconKey);
             ToolSheet.IsVisible = false;
             UpdateSelectionOverlay();

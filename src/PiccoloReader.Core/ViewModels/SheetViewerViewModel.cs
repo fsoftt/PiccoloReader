@@ -477,6 +477,10 @@ public partial class SheetViewerViewModel : ObservableObject
         await PersistLastViewedPageAsync();
     }
 
+    // The part of the current page on screen (full-page coordinates), set by
+    // the view while zoomed or panned; null means the whole cropped page.
+    public PageCrop? VisibleArea { get; set; }
+
     [RelayCommand]
     private async Task PlaceIconAsync(string iconKey)
     {
@@ -496,13 +500,15 @@ public partial class SheetViewerViewModel : ObservableObject
             height /= CurrentPageAspectRatio;
         }
 
-        // Placed at the middle of what is on screen (the cropped part),
-        // sized relative to it.
+        // Sized relative to the cropped part, placed at the middle of what is
+        // on screen (the zoomed-in area when there is one) and kept inside
+        // the cropped part.
         var crop = CurrentPageCrop;
         width *= crop.Width;
         height *= crop.Width;
-        var x = crop.ToPageX(0.5) - width / 2;
-        var y = crop.ToPageY(0.5) - height / 2;
+        var area = VisibleArea ?? crop;
+        var x = Math.Clamp(area.ToPageX(0.5) - width / 2, crop.Left, Math.Max(crop.Left, crop.Right - width));
+        var y = Math.Clamp(area.ToPageY(0.5) - height / 2, crop.Top, Math.Max(crop.Top, crop.Bottom - height));
 
         var annotation = await _annotationService.AddIconAsync(_sheet.Id, CurrentPageIndex, iconKey, x, y, width, height);
 

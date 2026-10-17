@@ -533,6 +533,34 @@ public class SheetViewerViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task PlaceIconAsync_WhenZoomed_IsCenteredInTheVisibleArea()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 1);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        _sut.VisibleArea = new PageCrop(0.5, 0.5, 1, 0.9);
+
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        var placed = _sut.CurrentPageAnnotations[0];
+        Assert.Equal(0.75, placed.X + placed.Width / 2, precision: 6);
+        Assert.Equal(0.7, placed.Y + placed.Height / 2, precision: 6);
+    }
+
+    [Fact]
+    public async Task PlaceIconAsync_WhenVisibleAreaIsAtThePageEdge_StaysInsideThePage()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 1);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        _sut.VisibleArea = new PageCrop(0.98, 0.98, 1, 1);
+
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        var placed = _sut.CurrentPageAnnotations[0];
+        Assert.Equal(1, placed.X + placed.Width, precision: 6);
+        Assert.Equal(1, placed.Y + placed.Height, precision: 6);
+    }
+
+    [Fact]
     public async Task PlaceIconAsync_SelectsTheNewIcon()
     {
         var sheet = await InsertSheetAsync(pageCount: 3);
