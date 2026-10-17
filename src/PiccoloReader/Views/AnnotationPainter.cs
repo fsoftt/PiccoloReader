@@ -17,6 +17,14 @@ public class AnnotationPainter
     private readonly Dictionary<int, SKRect> _glyphBoundsCache = new();
     private readonly SKPaint _glyphPaint = new() { Color = SKColors.Black, IsAntialias = true };
 
+    private readonly SKPaint _hairpinPaint = new()
+    {
+        Color = SKColors.Black,
+        Style = SKPaintStyle.Stroke,
+        StrokeCap = SKStrokeCap.Round,
+        IsAntialias = true
+    };
+
     public SKTypeface? Typeface { get; set; }
 
     // A crop clips the drawing to the visible part of the page: with it the
@@ -61,10 +69,37 @@ public class AnnotationPainter
                 (float)(frame.ToContainerX(annotation.X + annotation.Width) * width),
                 (float)(frame.ToContainerY(annotation.Y + annotation.Height) * height));
 
+            if (HairpinGeometry.IsHairpin(annotation.IconKey))
+            {
+                DrawHairpin(canvas, annotation.IconKey, targetRect, (float)(HairpinGeometry.StrokeWidth * frame.Width * width));
+                continue;
+            }
+
             DrawGlyphFitted(canvas, icon.Codepoint, targetRect, icon.VisualScale);
         }
 
         canvas.RestoreToCount(restoreCount);
+    }
+
+    // Hairpins fill their whole box with two lines, so a stretched one gets
+    // longer while its stroke thickness stays the same.
+    private void DrawHairpin(SKCanvas canvas, string iconKey, SKRect rect, float strokeWidth)
+    {
+        _hairpinPaint.StrokeWidth = strokeWidth;
+        var inset = strokeWidth / 2;
+        var box = new SKRect(rect.Left + inset, rect.Top + inset, rect.Right - inset, rect.Bottom - inset);
+        if (box.Width <= 0 || box.Height <= 0)
+        {
+            return;
+        }
+
+        foreach (var (x1, y1, x2, y2) in HairpinGeometry.Lines(iconKey))
+        {
+            canvas.DrawLine(
+                box.Left + (float)x1 * box.Width, box.Top + (float)y1 * box.Height,
+                box.Left + (float)x2 * box.Width, box.Top + (float)y2 * box.Height,
+                _hairpinPaint);
+        }
     }
 
     private static void DrawStroke(SKCanvas canvas, Annotation annotation, float width, float height, PageFrame frame)
