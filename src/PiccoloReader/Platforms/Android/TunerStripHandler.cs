@@ -46,7 +46,7 @@ public class TunerStripHandler : ViewHandler<TunerStripView, TunerStripNativeVie
 public class TunerStripNativeView : FrameLayout, ITunerStripView
 {
     // Total width of the centered "in tune" segment.
-    private const float InTuneSegmentDp = 8f;
+    private const float InTuneSegmentDp = 32f;
     private const float TickWidthDp = 2f;
 
     private static readonly Color TrackColor = Color.Argb(0x40, 0x80, 0x80, 0x80);
