@@ -426,7 +426,7 @@ public partial class SheetViewerPage : ContentPage
 
         ApplyTunerStripPosition();
         UpdateTunerStripButton();
-        AttachTunerStrip();
+        // The tuner strip starts after the first page is shown (below): opening the microphone competes with the page load.
 
 
         // The view model is reused across openings: start outside any editing
@@ -444,10 +444,12 @@ public partial class SheetViewerPage : ContentPage
 
         if (!int.TryParse(SheetId, out var sheetId))
         {
+            AttachTunerStrip();
             return;
         }
 
-        await EnsureBravuraTypefaceLoadedAsync();
+        // The typeface loads while the page renders; only the annotation overlay needs it.
+        var bravuraTask = EnsureBravuraTypefaceLoadedAsync();
         UpdateToolSections();
 
         var displayInfo = DeviceDisplay.Current.MainDisplayInfo;
@@ -456,9 +458,11 @@ public partial class SheetViewerPage : ContentPage
         var targetHeightPx = (int)displayInfo.Height;
 
         await _viewModel.LoadAsync(sheetId, targetWidthPx, targetHeightPx);
+        await bravuraTask;
         ResetZoom();
         InvalidateAnnotations();
         UpdateReadingModeUi();
+        AttachTunerStrip();
     }
 
     // The editor's zoom/translation (set by ApplyEditorZoomFromContinuous)
