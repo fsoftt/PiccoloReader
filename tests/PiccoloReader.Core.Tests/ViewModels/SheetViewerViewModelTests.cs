@@ -731,6 +731,54 @@ public class SheetViewerViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task EditSession_CountsOnlyChangesMadeAfterBegin()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+
+        _sut.BeginEditSession();
+        Assert.False(_sut.HasEditSessionChanges);
+
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicPiano");
+        Assert.True(_sut.HasEditSessionChanges);
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        // The earlier icon is still undoable but not part of this session.
+        Assert.True(_sut.CanUndo);
+        Assert.False(_sut.HasEditSessionChanges);
+    }
+
+    [Fact]
+    public async Task EditSession_RedoCountsAgain()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        _sut.BeginEditSession();
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        await _sut.UndoCommand.ExecuteAsync(null);
+        Assert.False(_sut.HasEditSessionChanges);
+
+        await _sut.RedoCommand.ExecuteAsync(null);
+
+        Assert.True(_sut.HasEditSessionChanges);
+    }
+
+    [Fact]
+    public async Task EditSession_BeginResetsCounter()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        Assert.True(_sut.HasEditSessionChanges);
+
+        _sut.BeginEditSession();
+
+        Assert.False(_sut.HasEditSessionChanges);
+    }
+
+    [Fact]
     public async Task UndoCommand_AfterPlaceIcon_RemovesTheIconAndEnablesRedo()
     {
         var sheet = await InsertSheetAsync(pageCount: 3);

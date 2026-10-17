@@ -63,6 +63,17 @@ public partial class SheetViewerViewModel : ObservableObject
     private int _historyPageIndex = -1;
     private List<IUndoableAction>? _eraseBatch;
 
+    // Changes made (and not undone) since edit mode was last activated, so
+    // Back can undo just those and never reach edits from earlier sessions.
+    private int _editSessionChanges;
+
+    // True when Back should undo a change instead of leaving edit mode.
+    public bool HasEditSessionChanges => _editSessionChanges > 0 && CanUndo;
+
+    // Called when edit mode is activated: earlier history stays undoable from
+    // the editing bar but is no longer counted for Back.
+    public void BeginEditSession() => _editSessionChanges = 0;
+
     private Sheet? _sheet;
     private string _filePath = string.Empty;
     private int _targetWidthPx;
@@ -563,6 +574,7 @@ public partial class SheetViewerViewModel : ObservableObject
         var action = _undoStack.Pop();
         await action.UndoAsync();
         _redoStack.Push(action);
+        _editSessionChanges = Math.Max(0, _editSessionChanges - 1);
         ClearSelectionIfNoLongerPresent();
         RefreshUndoRedoState();
     }
@@ -578,6 +590,7 @@ public partial class SheetViewerViewModel : ObservableObject
         var action = _redoStack.Pop();
         await action.RedoAsync();
         _undoStack.Push(action);
+        _editSessionChanges++;
         ClearSelectionIfNoLongerPresent();
         RefreshUndoRedoState();
     }
@@ -589,6 +602,7 @@ public partial class SheetViewerViewModel : ObservableObject
         _undoStack = new Stack<IUndoableAction>();
         _redoStack = new Stack<IUndoableAction>();
         _historyPageIndex = -1;
+        _editSessionChanges = 0;
         RefreshUndoRedoState();
     }
 
@@ -624,6 +638,12 @@ public partial class SheetViewerViewModel : ObservableObject
             }
         }
 
+        if (_historyPageIndex != pageIndex)
+        {
+            // The counter describes the page's stack; it doesn't carry over.
+            _editSessionChanges = 0;
+        }
+
         _historyPageIndex = pageIndex;
         if (_histories.TryGetValue(pageIndex, out var restored))
         {
@@ -641,6 +661,7 @@ public partial class SheetViewerViewModel : ObservableObject
     {
         _undoStack.Push(action);
         _redoStack.Clear();
+        _editSessionChanges++;
         RefreshUndoRedoState();
     }
 
