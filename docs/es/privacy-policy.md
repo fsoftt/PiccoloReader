@@ -141,6 +141,7 @@ Usamos la información recopilada para:
 - **Datos compartidos:** Identificadores del dispositivo, dirección IP, comportamiento de navegación
 - **Política de privacidad:** https://policies.google.com/privacy
 - **Cómo desactivarlo:** Ajustes → Desactiva "Apoyar con anuncios"
+- **Consentimiento (EEE, Reino Unido y Suiza):** Al abrir la app por primera vez, el formulario de consentimiento de Google pregunta si los anuncios pueden personalizarse. Puedes cambiar tu elección en cualquier momento en Ajustes → "Opciones de privacidad de anuncios"
 
 ### 4.2 Google Play Services
 

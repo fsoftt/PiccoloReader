@@ -141,6 +141,8 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="PrivacyPolicyDescription" xml:space="preserve"><value>How we collect, use, and protect your information</value></data>
   <data name="TermsOfServiceLabel" xml:space="preserve"><value>Terms of Service</value></data>
   <data name="TermsOfServiceDescription" xml:space="preserve"><value>Usage rights, restrictions, and liability disclaimers</value></data>
+  <data name="AdPrivacyOptionsLabel" xml:space="preserve"><value>Ad Privacy Options</value></data>
+  <data name="AdPrivacyOptionsDescription" xml:space="preserve"><value>Review or change your consent for personalized ads</value></data>
   <data name="OpenPrivacyPolicy" xml:space="preserve"><value>Open in Browser</value></data>
   <data name="TutorialSkip" xml:space="preserve"><value>Skip</value></data>
   <data name="TutorialNext" xml:space="preserve"><value>Next</value></data>

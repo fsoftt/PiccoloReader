@@ -141,6 +141,8 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="PrivacyPolicyDescription" xml:space="preserve"><value>Cómo recopilamos, usamos y protegemos tu información</value></data>
   <data name="TermsOfServiceLabel" xml:space="preserve"><value>Términos del servicio</value></data>
   <data name="TermsOfServiceDescription" xml:space="preserve"><value>Derechos de uso, restricciones y exenciones de responsabilidad</value></data>
+  <data name="AdPrivacyOptionsLabel" xml:space="preserve"><value>Opciones de privacidad de anuncios</value></data>
+  <data name="AdPrivacyOptionsDescription" xml:space="preserve"><value>Revisa o cambia tu consentimiento para anuncios personalizados</value></data>
   <data name="OpenPrivacyPolicy" xml:space="preserve"><value>Abrir en el navegador</value></data>
   <data name="TutorialSkip" xml:space="preserve"><value>Omitir</value></data>
   <data name="TutorialNext" xml:space="preserve"><value>Siguiente</value></data>
