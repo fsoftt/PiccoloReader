@@ -165,14 +165,41 @@
                     <HorizontalStackLayout x:Name="PresetsLayout" Spacing="12" Padding="16,0,16,12" />
                     <BoxView Style="{StaticResource RowDivider}" />
 
-                    <Grid Style="{StaticResource RowGrid}" ColumnDefinitions="*,Auto">
+                    <Grid Style="{StaticResource RowGrid}" AutomationId="TunerTransposeKeyRow" ColumnDefinitions="*,Auto,20"
+                          SemanticProperties.Description="{x:Static strings:AppStrings.TunerTransposeKey}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnTransposeKeyRowTapped" />
+                        </Grid.GestureRecognizers>
                         <Label Grid.Column="0" Style="{StaticResource RowTitle}" VerticalOptions="Center"
-                               Text="{x:Static strings:AppStrings.TunerShowWritten}"
+                               Text="{x:Static strings:AppStrings.TunerTransposeKey}"
                                TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-                        <Switch Grid.Column="1" AutomationId="TunerWrittenSwitch" VerticalOptions="Center"
-                                SemanticProperties.Description="{x:Static strings:AppStrings.TunerShowWritten}"
-                                OnColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
-                                IsToggled="{Binding ShowAsWritten}" />
+                        <Label Grid.Column="1" x:Name="TransposeKeyValueLabel" Style="{StaticResource Caption}" FontSize="14" VerticalOptions="Center"
+                               AutomationId="TunerTransposeKeyValue" />
+                        <Image Grid.Column="2" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE5CC;" FontFamily="MaterialOutlined" Size="20"
+                                    Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                            </Image.Source>
+                        </Image>
+                    </Grid>
+                    <BoxView Style="{StaticResource RowDivider}" />
+
+                    <Grid Style="{StaticResource RowGrid}" AutomationId="TunerTransposeOctaveRow" ColumnDefinitions="*,Auto,20"
+                          SemanticProperties.Description="{x:Static strings:AppStrings.TunerTransposeOctave}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnTransposeOctaveRowTapped" />
+                        </Grid.GestureRecognizers>
+                        <Label Grid.Column="0" Style="{StaticResource RowTitle}" VerticalOptions="Center"
+                               Text="{x:Static strings:AppStrings.TunerTransposeOctave}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Label Grid.Column="1" x:Name="TransposeOctaveValueLabel" Style="{StaticResource Caption}" FontSize="14" VerticalOptions="Center"
+                               AutomationId="TunerTransposeOctaveValue" />
+                        <Image Grid.Column="2" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE5CC;" FontFamily="MaterialOutlined" Size="20"
+                                    Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                            </Image.Source>
+                        </Image>
                     </Grid>
                 </VerticalStackLayout>
             </Border>

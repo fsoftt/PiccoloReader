@@ -325,7 +325,8 @@ public static class AppStrings
     public static string TunerReferencePitch => Get(nameof(TunerReferencePitch));
     public static string TunerDecreaseA4 => Get(nameof(TunerDecreaseA4));
     public static string TunerIncreaseA4 => Get(nameof(TunerIncreaseA4));
-    public static string TunerShowWritten => Get(nameof(TunerShowWritten));
+    public static string TunerTransposeKey => Get(nameof(TunerTransposeKey));
+    public static string TunerTransposeOctave => Get(nameof(TunerTransposeOctave));
 
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;

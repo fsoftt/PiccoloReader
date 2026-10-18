@@ -95,9 +95,9 @@ public class TunerViewModelTests
         Assert.Equal(1, _prefs.SaveCount);
         Assert.Equal(442, _prefs.Stored.A4Hz);
 
-        sut.ShowAsWritten = true;
+        sut.OctaveShift = -1;
         Assert.Equal(2, _prefs.SaveCount);
-        Assert.True(_prefs.Stored.ShowAsWritten);
+        Assert.Equal(-1, _prefs.Stored.OctaveShift);
 
         sut.NoteNaming = NoteNaming.Solfege;
         Assert.Equal(3, _prefs.SaveCount);
@@ -296,12 +296,13 @@ public class TunerViewModelTests
     [Fact]
     public void Constructor_LoadsStoredSettings()
     {
-        _prefs.Stored = new TunerSettings { A4Hz = 443, ShowAsWritten = true, NoteNaming = NoteNaming.Solfege };
+        _prefs.Stored = new TunerSettings { A4Hz = 443, Key = TransposeKey.Eb, OctaveShift = 1, NoteNaming = NoteNaming.Solfege };
 
         var sut = Create();
 
         Assert.Equal(443, sut.A4Hz);
-        Assert.True(sut.ShowAsWritten);
+        Assert.Equal(TransposeKey.Eb, sut.TransposeKey);
+        Assert.Equal(1, sut.OctaveShift);
         Assert.Equal(NoteNaming.Solfege, sut.NoteNaming);
         Assert.Equal(0, _prefs.SaveCount);
     }
@@ -313,9 +314,9 @@ public class TunerViewModelTests
         await sut.AttachAsync();
         _input.Raise(Reading(880));
 
-        sut.ShowAsWritten = true;
+        sut.OctaveShift = -1;
         Assert.Equal(4, sut.Octave);
-        Assert.True(sut.Settings.ShowAsWritten);
+        Assert.Equal(-1, sut.Settings.OctaveShift);
 
         sut.NoteNaming = NoteNaming.Solfege;
         Assert.Equal("La", sut.NoteName);
