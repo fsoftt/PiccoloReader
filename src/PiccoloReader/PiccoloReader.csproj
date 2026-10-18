@@ -89,9 +89,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.90" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.110" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.90" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.110" />
 		<PackageReference Include="Plugin.AdMob" Version="10.0.90" />
 		<PackageReference Include="SkiaSharp.Extended.UI.Maui" Version="3.0.0" />
 		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
