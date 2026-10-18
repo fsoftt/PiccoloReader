@@ -28,23 +28,20 @@ We grant you a **limited, non-exclusive, non-transferable, revocable license** t
 ### 2.2 Restrictions
 
 You **may NOT:**
-- Modify, reverse-engineer, decompile, or disassemble the App
-- Distribute, sell, lease, or rent the App or any component
-- Use the App for commercial purposes without explicit written permission
-- Remove proprietary notices, labels, or copyrights from the App
-- Use the App to develop competing products
+- Use the "Piccolo Reader" name, logo, or icon in a way that suggests your version is the official app or is endorsed by fsoftt
+- Remove copyright and license notices from the source code
 - Access the App through automated means (bots, scrapers)
 - Use the App in any way that violates applicable laws
 - Attempt to bypass security features or access unauthorized areas
 
 ### 2.3 Copyright & Intellectual Property
 
-- **Piccolo Music Reader App:** © fsoftt. All rights reserved.
-- **Logo, Interface Design, Functionality:** Proprietary to fsoftt
-- **Open Source Components:** Licensed under their respective licenses (see LICENSE file)
+- **Piccolo Music Reader Source Code:** Copyright © 2026 fsoftt. Licensed under the **GNU General Public License v3.0 (GPL-3.0)**. You may use, study, modify, and redistribute the source code under the terms of that license. See the [LICENSE](https://github.com/fsoftt/PiccoloReader/blob/main/LICENSE) file in https://github.com/fsoftt/PiccoloReader
+- **Name, Logo, and Icon:** The name "Piccolo Reader" (and "Piccolo Music Reader"), the logo, and the app icon are NOT granted by the GPL-3.0 license and remain reserved by fsoftt. Modified versions must use a different name and branding
+- **Open Source Components:** Licensed under their respective licenses
 - **Your Digital Content:** See Section 3 (Your Responsibility for Content)
 
-You acknowledge and agree that no title or ownership in the App is transferred to you.
+The GPL-3.0 license applies to the source code. Apart from the rights it grants, you acknowledge and agree that no title or ownership in the App, its name, logo, or icon is transferred to you.
 
 ---
 

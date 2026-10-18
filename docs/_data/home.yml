@@ -8,8 +8,9 @@ en:
     facts:
       - Stored locally on your device
       - No account required
-      - Open source
+      - Open source (GPL-3.0)
     github: View on GitHub
+    play: Get it on Google Play
     docs: Privacy & legal
     mock_label: "Illustration: a sheet of music open in Piccolo Reader, with a pencil mark around a bar, a bookmark ribbon and two music-symbol annotations."
   movements_intro:
@@ -41,12 +42,12 @@ en:
       glyph: "&#xE4C0;"
       at: -0.6
       title: Private by design
-      text: All your sheets are stored locally on your device. No cloud sync and no account required. Your PDFs never leave your phone.
+      text: All your sheets are stored locally on your device. No cloud sync and no account required. Your PDFs never leave your phone. Ads appear only on the optional Donate page, and you can turn them off in Settings.
     - numeral: VI
       glyph: "&#xE048;"
       at: 3.8
       title: Open source
-      text: Piccolo Reader is open source on GitHub. Read the code, report a bug or suggest a feature.
+      text: Piccolo Reader is open source (GPL-3.0) on GitHub. Read the code, report a bug or suggest a feature.
 es:
   description: Piccolo Reader es un lector de partituras en PDF para músicos. Tus partituras y anotaciones se almacenan localmente en tu dispositivo.
   hero:
@@ -56,8 +57,9 @@ es:
     facts:
       - Almacenamiento local en tu dispositivo
       - Sin cuenta obligatoria
-      - Código abierto
+      - Código abierto (GPL-3.0)
     github: Ver en GitHub
+    play: Consíguela en Google Play
     docs: Privacidad y aspectos legales
     mock_label: "Ilustración: una partitura abierta en Piccolo Reader, con un trazo de lápiz alrededor de un compás, una cinta de marcador y dos anotaciones con símbolos musicales."
   movements_intro:
@@ -89,9 +91,9 @@ es:
       glyph: "&#xE4C0;"
       at: -0.6
       title: Privado por diseño
-      text: Todas tus partituras se almacenan localmente en tu dispositivo. Sin sincronización en la nube y sin cuenta obligatoria. Tus PDFs nunca salen de tu teléfono.
+      text: Todas tus partituras se almacenan localmente en tu dispositivo. Sin sincronización en la nube y sin cuenta obligatoria. Tus PDFs nunca salen de tu teléfono. Los anuncios solo aparecen en la página opcional Donar y puedes desactivarlos en Ajustes.
     - numeral: VI
       glyph: "&#xE048;"
       at: 3.8
       title: Código abierto
-      text: Piccolo Reader es de código abierto en GitHub. Lee el código, reporta un error o sugiere una función.
+      text: Piccolo Reader es de código abierto (GPL-3.0) en GitHub. Lee el código, reporta un error o sugiere una función.

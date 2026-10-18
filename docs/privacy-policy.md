@@ -2,13 +2,13 @@
 
 # Privacy Policy
 
-**Last Updated:** October 2026
+**Last Updated:** October 18, 2026
 
 **Effective Date:** January 2026
 
 ## Introduction
 
-Piccolo Music Reader ("**App**", "**we**", "**us**", or "**our**") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our music sheet reading application.
+Piccolo Music Reader ("**App**", "**we**", "**us**", or "**our**") is committed to protecting your privacy. This Privacy Policy explains what information the App handles, how it is used, and who can access it when you use our music sheet reading application for Android.
 
 Please read this Privacy Policy carefully. If you do not agree with our policies and practices, please do not use our App.
 
@@ -16,89 +16,76 @@ Please read this Privacy Policy carefully. If you do not agree with our policies
 
 ## 1. Information We Collect
 
+In short: the App works on your device. We have no servers, no accounts, no analytics, and we do not receive your files or your data.
+
 ### 1.1 Information You Provide
 
 **PDF Files & Annotations:**
-- Your PDF music sheets, folder structures, and annotations are stored **entirely on your device**
+- Your PDF music sheets, folder structures, annotations, bookmarks, last-read page and settings are stored **entirely on your device**
 - We do NOT collect, store, transmit, or have access to your PDF files or personal annotations
 - All data remains under your control in your device's local storage
-- Your sheets and a library file (`piccolo-library.json`: folders, annotations, bookmarks, page crops) are saved in the **Documents/PiccoloReader** folder of your device, so you can recover them after reinstalling the app. They never leave your device through the app
+- The App keeps its data in its own app storage (a SQLite database and your PDF files). Your sheets and a library file (`piccolo-library.json`: folders, annotations, bookmarks, page crops) are also saved in the **Documents/PiccoloReader** folder of your device, so you can recover them after reinstalling the app. They never leave your device through the app
 
 **Account Information:**
 - Piccolo Music Reader does NOT require user accounts, registration, or login
 - We do NOT collect email addresses, usernames, or passwords
 - We do NOT collect payment information (the app is free)
 
-### 1.2 Information Collected Automatically
+### 1.2 Microphone (Tuner)
+
+- The App asks for the microphone permission (`RECORD_AUDIO`) only to power the tuner
+- The microphone is used only while the tuner is active, and only after you grant the permission
+- Audio is analyzed in real time on your device to detect the pitch of a note. It is NOT recorded, stored, or sent anywhere
+- You can revoke the permission at any time in your Android settings; the rest of the App keeps working
+
+### 1.3 Sharing Sheets
+
+When you share a sheet (the original or an annotated PDF), the App hands the file to the app you pick in the Android share sheet. From that point, the privacy policy of the receiving app applies. We do not receive the file.
+
+### 1.4 Information Collected Automatically
 
 **Google AdMob (Donate Page Only):**
 
-The Donate page displays ads powered by Google AdMob. When ads are displayed, Google collects:
-- Device identifiers (GAID/IDFA)
+The optional Donate page displays ads powered by Google AdMob. Ads are never shown in the reader. When ads load, Google may collect:
+- Device identifiers, such as the advertising ID
 - IP address
-- Device type and OS version
-- General location information (city/country-level only)
-- Browsing behavior and interests (for ad targeting)
+- Device and app information (for example device model, OS version and app version)
 
-This data is used by Google to:
-- Display relevant advertisements
-- Measure ad effectiveness
-- Prevent fraud
-- Generate advertising insights
+Google uses this data under its own privacy policy, for example to serve and measure ads, prevent fraud and, where you allow it, personalize ads. More information:
+- https://policies.google.com/privacy
+- https://support.google.com/admob/answer/6128543
 
 **What We Collect:**
 - We do NOT have access to Google's detailed user data
-- We only see anonymized, aggregated ad performance metrics
-- We cannot identify individual users from ad data
+- We do NOT receive this data ourselves; we only see aggregated ad performance figures in our AdMob account
 
-**Important:** Google AdMob is optional. Users can disable ads in Settings → "Support with Ads" toggle.
+**Important:** Ads are optional. Users can disable them in Settings → "Support with ads" toggle. Internet and network state permissions are used only to load ads.
 
-### 1.3 Device Information
+### 1.5 Crash and Performance Data
 
-When you use Piccolo Music Reader, we automatically receive:
-- Device type (Android/iOS)
-- Operating system version
-- App version
-- Crash logs and error reports (if you enable diagnostics)
-
-This information helps us:
-- Improve app stability and performance
-- Debug crashes
-- Optimize for different devices
-
-**No personal information** (name, email, location) is included in crash reports.
+- The App itself does NOT send crash reports, error logs, analytics, or usage data to us or to any third party
+- Google Play may provide us with aggregated crash and performance data (Android vitals) from users who have chosen to share usage and diagnostics data with app developers in their Android settings. This is Google's mechanism, not the App's, and you control it in your Android settings
 
 ---
 
 ## 2. How We Use Your Information
 
-We use collected information for:
+The App uses the data on your device to:
 
-1. **Providing Service:**
+1. **Provide the Service:**
    - Displaying and running the Piccolo Music Reader app
    - Storing your sheets locally on your device
    - Rendering PDFs and annotations
+   - Detecting pitch in the tuner
 
-2. **Improving the App:**
-   - Analyzing how features are used
-   - Fixing bugs and crashes
-   - Optimizing performance
-
-3. **Advertising (Donate Page):**
-   - Displaying relevant ads to support development
-   - Understanding ad effectiveness
-   - Preventing fraudulent clicks
-
-4. **Compliance:**
-   - Meeting legal and regulatory requirements
-   - Protecting against abuse
-   - Enforcing our Terms of Service
+2. **Advertising (Donate Page):**
+   - Showing ads to support development, through Google AdMob, if you leave ads enabled
 
 **We do NOT:**
 - Sell your data
-- Share your files with third parties
-- Use your data for marketing (beyond in-app ads)
-- Build detailed user profiles
+- Share your data or files with third parties (we do not hold any)
+- Use your data for marketing
+- Build user profiles
 
 ---
 
@@ -115,9 +102,9 @@ We use collected information for:
 ### 3.2 No Cloud Storage
 
 - Piccolo Music Reader does NOT upload files to servers
-- Your data is NOT backed up to cloud services
+- Your data is NOT backed up to cloud services by the app
 - We do NOT have the ability to access your sheets
-- Data remains 100% private on your device
+- Your data stays on your device
 
 ### 3.3 No Encryption Within App
 
@@ -125,11 +112,10 @@ We use collected information for:
 - Your device's operating system encryption protects the data
 - If you use device-level encryption (recommended), files are encrypted automatically
 
-### 3.4 Secure Communications
+### 3.4 Network Communications
 
-- Any app-to-server communication uses HTTPS/TLS encryption
-- Google AdMob also uses HTTPS for secure ad serving
-- No unencrypted data transmission occurs
+- The App has no servers and does not communicate with any server of ours
+- The only network traffic is the ad requests made by the Google AdMob SDK on the Donate page, which uses HTTPS
 
 ---
 
@@ -137,27 +123,22 @@ We use collected information for:
 
 ### 4.1 Google AdMob
 
-- **Service:** Advertisement delivery
-- **Data Shared:** Device identifiers, IP address, browsing behavior
+- **Service:** Advertisement delivery (Donate page only)
+- **Data Shared:** Device identifiers such as the advertising ID, IP address, device and app information, collected by Google
 - **Privacy Policy:** https://policies.google.com/privacy
-- **Opt-Out:** Settings → Toggle "Support with Ads" OFF
-- **Consent (EEA, UK, Switzerland):** On first launch, Google's consent form asks whether ads may be personalized. You can change your choice anytime in Settings → "Ad Privacy Options"
+- **More information:** https://support.google.com/admob/answer/6128543
+- **Opt-Out:** Settings → Toggle "Support with ads" OFF
+- **Consent (EEA, UK, Switzerland):** Where required, Google's consent form (User Messaging Platform) asks whether ads may be personalized. You can change your choice anytime in Settings → "Ad Privacy Options", which appears only in those regions
 
-### 4.2 Google Play Services
+### 4.2 Google Play
 
-- **Service:** App distribution, in-app purchases (if added in future)
+- **Service:** App distribution
+- **Data:** Google Play may share aggregated crash and performance data (Android vitals) with us from users who opted in to share usage and diagnostics data in their Android settings
 - **Privacy Policy:** https://policies.google.com/privacy
 
-### 4.3 Crash Reporting
+### 4.3 Open Source Libraries
 
-- **Service:** Firebase Crashlytics (if enabled)
-- **Data Shared:** App crashes, error logs, device info
-- **Privacy Policy:** https://firebase.google.com/terms/analytics
-- **Note:** No personal data is included in crash reports
-
-### 4.4 Open Source Libraries
-
-Piccolo Music Reader uses open-source libraries (SkiaSharp, SQLite, etc.) that may collect telemetry. Each library's privacy policy applies to its own data collection.
+Piccolo Music Reader uses open-source libraries (SkiaSharp, SQLite, etc.) that run on your device. The App does not use them to send data anywhere.
 
 ---
 
@@ -172,9 +153,9 @@ Piccolo Music Reader uses open-source libraries (SkiaSharp, SQLite, etc.) that m
 
 ### 5.2 Advertising Preferences
 
-- **Disable Ads:** Settings → "Support with Ads" toggle OFF
+- **Disable Ads:** Settings → "Support with ads" toggle OFF
 - **Google Ads Personalization:** Manage at https://myaccount.google.com/ads
-- **Reset Advertising ID:** Device Settings → Apps → Reset Advertising Identifier
+- **Reset or Limit Advertising ID:** Android Settings → Privacy → Ads → Delete advertising ID (the exact path varies by device)
 
 ### 5.3 GDPR & CCPA Rights (EU & California Users)
 
@@ -184,14 +165,14 @@ If you are an EU resident (GDPR) or California resident (CCPA), you have:
 - **Right to Portability:** Request your data in portable format
 - **Right to Object:** Opt-out of processing
 
-**Note:** Since we don't store your personal data on servers, most requests are automatically fulfilled.
+**Note:** Since we do not hold your personal data, most requests are automatically fulfilled. Requests about data Google collects for ads should be directed to Google.
 
 ### 5.4 Contact Us for Privacy Requests
 
 Email: **fsilva@duck.com**
 
 Please include:
-- Your device type (Android/iOS)
+- Your device model and Android version
 - Device ID or GAID (optional)
 - Description of your request
 
@@ -201,38 +182,32 @@ Response time: Within 30 days
 
 ## 6. Children's Privacy
 
-Piccolo Music Reader is designed for musicians of all ages, including children. We:
+Piccolo Music Reader is a general-audience app for musicians of all ages. It is not directed specifically at children. We:
 
 - **Do NOT collect personal information** from anyone intentionally
 - **Do NOT knowingly collect data from children under 13** (COPPA)
-- **Do NOT permit third-party advertising** that targets children specifically
 - Recommend parental oversight for children under 13
 
-Parents can:
-- Monitor app usage
-- Disable ads (Settings → "Support with Ads" OFF)
+The only third-party data collection is by Google AdMob on the optional Donate page. Parents can:
+- Disable ads (Settings → "Support with ads" OFF)
+- Revoke the microphone permission in Android settings
 - Delete app data anytime by uninstalling
 
-If we learn we've collected data from a child under 13, we'll delete it immediately.
+Because we hold no data, we have nothing to delete on our side. If you believe a child has provided personal information to us, contact us and we will help.
 
 ---
 
 ## 7. Data Retention
 
-- **Local Data:** Stored indefinitely until you manually delete it (including the Documents/PiccoloReader folder)
+- **Local Data:** Stored on your device until you delete it (including the Documents/PiccoloReader folder)
+- **Developer:** We retain no user data
 - **Ad Serving Data:** Retained by Google per https://policies.google.com/privacy
-- **Crash Reports:** Retained for 30 days for debugging
-- **App Usage Logs:** Retained for 90 days then auto-deleted
 
 ---
 
 ## 8. International Data Transfer
 
-Piccolo Music Reader operates globally. By using the app:
-- Your data may be processed in different countries
-- International data transfer is governed by GDPR, CCPA, and other laws
-- If you're in EU, data transfers comply with Standard Contractual Clauses
-- We do NOT transfer your personal PDF data internationally (it stays on your device)
+We do not collect or transfer your data. Your PDF files and annotations stay on your device. Data that Google collects for ads is processed by Google, which may transfer it internationally under its own privacy policy.
 
 ---
 
@@ -274,20 +249,20 @@ If you're a California resident, you have the right to:
 
 **Piccolo's Music Reader CCPA Compliance:**
 - We do NOT sell your personal information
-- We do NOT "share" information for cross-context behavioral advertising
 - Your sheets are stored locally (we never receive them)
+- Ads on the Donate page are served by Google AdMob; you can turn them off in Settings
 - California residents can exercise rights by emailing: fsilva@duck.com
 
 ### 11.2 European Union GDPR
 
 If you're in the EU, processing is based on:
 - Legitimate interests (app functionality)
-- Consent (for advertising data via AdMob)
+- Consent (for advertising data via AdMob, collected through Google's consent form)
 - Legal compliance
 
 **Your rights:**
 - Access, rectify, erase, or portability of personal data
-- Withdraw consent anytime (disable ads)
+- Withdraw consent anytime (Settings → "Ad Privacy Options" or disable ads)
 - Lodge complaints with your local data protection authority
 
 ### 11.3 Australia Privacy Act

@@ -28,23 +28,20 @@ Te otorgamos una **licencia limitada, no exclusiva, intransferible y revocable**
 ### 2.2 Restricciones
 
 **NO puedes:**
-- Modificar, aplicar ingeniería inversa, descompilar o desensamblar la App
-- Distribuir, vender, arrendar o alquilar la App o cualquiera de sus componentes
-- Usar la App con fines comerciales sin permiso explícito por escrito
-- Eliminar avisos de propiedad, etiquetas o derechos de autor de la App
-- Usar la App para desarrollar productos competidores
+- Usar el nombre, el logotipo o el icono de "Piccolo Reader" de forma que sugiera que tu versión es la app oficial o cuenta con el respaldo de fsoftt
+- Eliminar los avisos de derechos de autor y de licencia del código fuente
 - Acceder a la App por medios automatizados (bots, rastreadores)
 - Usar la App de cualquier forma que infrinja las leyes aplicables
 - Intentar eludir las funciones de seguridad o acceder a áreas no autorizadas
 
 ### 2.3 Derechos de autor y propiedad intelectual
 
-- **App Piccolo Music Reader:** © fsoftt. Todos los derechos reservados.
-- **Logotipo, diseño de interfaz y funcionalidad:** Propiedad exclusiva de fsoftt
-- **Componentes de código abierto:** Licenciados bajo sus respectivas licencias (consulta el archivo LICENSE)
+- **Código fuente de Piccolo Music Reader:** Copyright © 2026 fsoftt. Licenciado bajo la **Licencia Pública General de GNU v3.0 (GPL-3.0)**. Puedes usar, estudiar, modificar y redistribuir el código fuente según los términos de esa licencia. Consulta el archivo [LICENSE](https://github.com/fsoftt/PiccoloReader/blob/main/LICENSE) en https://github.com/fsoftt/PiccoloReader
+- **Nombre, logotipo e icono:** El nombre "Piccolo Reader" (y "Piccolo Music Reader"), el logotipo y el icono de la app NO están cubiertos por la licencia GPL-3.0 y siguen reservados por fsoftt. Las versiones modificadas deben usar otro nombre y otra marca
+- **Componentes de código abierto:** Licenciados bajo sus respectivas licencias
 - **Tu contenido digital:** Consulta la Sección 3 (Tu responsabilidad sobre el contenido)
 
-Reconoces y aceptas que no se te transfiere ningún título ni propiedad sobre la App.
+La licencia GPL-3.0 se aplica al código fuente. Aparte de los derechos que otorga, reconoces y aceptas que no se te transfiere ningún título ni propiedad sobre la App, su nombre, su logotipo ni su icono.
 
 ---
 

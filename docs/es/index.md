@@ -4,6 +4,12 @@ Te damos la bienvenida al sitio de documentación de Piccolo Music Reader. Aquí
 
 ---
 
+## Obtén la app
+
+Piccolo Music Reader está disponible en [Google Play](https://play.google.com/store/apps/details?id=com.fsoftt.piccoloreader).
+
+---
+
 ## Enlaces rápidos
 
 ### Aspectos legales y cumplimiento
@@ -16,9 +22,10 @@ Te damos la bienvenida al sitio de documentación de Piccolo Music Reader. Aquí
 
 **Piccolo Music Reader es privado por diseño:**
 - Todas tus partituras se almacenan **localmente en tu dispositivo**
-- Sin sincronización en la nube, sin cuenta obligatoria, sin recopilación de datos personales
+- Sin sincronización en la nube, sin cuenta obligatoria
+- Anuncios solo en la página opcional Donar, y puedes desactivarlos en Ajustes
 - Tus PDFs nunca salen de tu teléfono
-- Código abierto en GitHub
+- Código abierto en GitHub (GPL-3.0)
 {: .checks}
 
 **Cumple con:**
@@ -152,9 +159,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 | Tipo de dato | Dónde se almacena | Conservación | Eliminación |
 |--------------|-------------------|--------------|-------------|
 | Archivos PDF y anotaciones | Tu dispositivo | Hasta que los elimines | Desinstalar la app O eliminarlos manualmente en la app |
-| Informes de fallos | Firebase (propio) | 30 días | Se eliminan automáticamente después de 30 días |
 | Datos de entrega de anuncios | Google AdMob | Según la política de Google | Por Google (consulta su política de privacidad) |
-| Registros de uso de la app | Servidor propio | 90 días | Se eliminan automáticamente |
 
 **Importante:** Nunca almacenamos tus archivos personales. Una vez desinstalada la app, todos sus datos desaparecen de forma permanente.
 
@@ -170,7 +175,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 
 ### Comunicaciones con servidores
 
-- **HTTPS/TLS:** Toda comunicación entre la app y un servidor está cifrada
+- **Sin servidores de la app:** La app no se comunica con ningún servidor nuestro
 - **AdMob seguro:** Google AdMob usa HTTPS para las solicitudes de anuncios
 - **Sin transmisión sin cifrar:** No se envían datos personales en texto plano
 
@@ -187,8 +192,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 | Servicio | Propósito | Política de privacidad |
 |----------|-----------|------------------------|
 | Google AdMob | Anuncios en la página Donar | https://policies.google.com/privacy |
-| Google Play Services | Distribución de la app e informes de fallos | https://policies.google.com/privacy |
-| Firebase Crashlytics | Diagnóstico de fallos (si está activado) | https://firebase.google.com/terms/analytics |
+| Google Play Services | Distribución de la app (Android vitals, opcional) | https://policies.google.com/privacy |
 
 **Nota:** Cada servicio tiene su propia política de privacidad. Al usar Piccolo Music Reader, aceptas también sus términos.
 
@@ -202,7 +206,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 
 **Incluye:**
 - Tu pregunta o inquietud
-- Tipo de dispositivo (Android/iOS)
+- Modelo del dispositivo y versión de Android
 - ID del dispositivo o GAID (opcional)
 
 **Tiempo de respuesta:** Dentro de 30 días
@@ -229,7 +233,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 Piccolo utiliza bibliotecas de código abierto y es, en sí mismo, de código abierto:
 
 - **Repositorio:** https://github.com/fsoftt/PiccoloReader
-- **Licencia:** Consulta el archivo LICENSE en el repositorio
+- **Licencia:** GPL-3.0, consulta el archivo [LICENSE](https://github.com/fsoftt/PiccoloReader/blob/main/LICENSE)
 - **Cómo contribuir:** Consulta CONTRIBUTING.md para ver las pautas
 
 Cada biblioteca de terceros está licenciada bajo su propia licencia. Cumplimos con todos los requisitos de código abierto.
