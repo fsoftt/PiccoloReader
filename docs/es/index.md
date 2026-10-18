@@ -159,9 +159,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 | Tipo de dato | Dónde se almacena | Conservación | Eliminación |
 |--------------|-------------------|--------------|-------------|
 | Archivos PDF y anotaciones | Tu dispositivo | Hasta que los elimines | Desinstalar la app O eliminarlos manualmente en la app |
-| Informes de fallos | Firebase (propio) | 30 días | Se eliminan automáticamente después de 30 días |
 | Datos de entrega de anuncios | Google AdMob | Según la política de Google | Por Google (consulta su política de privacidad) |
-| Registros de uso de la app | Servidor propio | 90 días | Se eliminan automáticamente |
 
 **Importante:** Nunca almacenamos tus archivos personales. Una vez desinstalada la app, todos sus datos desaparecen de forma permanente.
 
@@ -177,7 +175,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 
 ### Comunicaciones con servidores
 
-- **HTTPS/TLS:** Toda comunicación entre la app y un servidor está cifrada
+- **Sin servidores de la app:** La app no se comunica con ningún servidor nuestro
 - **AdMob seguro:** Google AdMob usa HTTPS para las solicitudes de anuncios
 - **Sin transmisión sin cifrar:** No se envían datos personales en texto plano
 
@@ -194,8 +192,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 | Servicio | Propósito | Política de privacidad |
 |----------|-----------|------------------------|
 | Google AdMob | Anuncios en la página Donar | https://policies.google.com/privacy |
-| Google Play Services | Distribución de la app e informes de fallos | https://policies.google.com/privacy |
-| Firebase Crashlytics | Diagnóstico de fallos (si está activado) | https://firebase.google.com/terms/analytics |
+| Google Play Services | Distribución de la app (Android vitals, opcional) | https://policies.google.com/privacy |
 
 **Nota:** Cada servicio tiene su propia política de privacidad. Al usar Piccolo Music Reader, aceptas también sus términos.
 
@@ -209,7 +206,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 
 **Incluye:**
 - Tu pregunta o inquietud
-- Tipo de dispositivo (Android/iOS)
+- Modelo del dispositivo y versión de Android
 - ID del dispositivo o GAID (opcional)
 
 **Tiempo de respuesta:** Dentro de 30 días
