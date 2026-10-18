@@ -128,6 +128,10 @@ public partial class TunerPage : ContentPage
             case nameof(TunerViewModel.A4Hz):
                 UpdatePresets();
                 break;
+            case nameof(TunerViewModel.TransposeKey):
+            case nameof(TunerViewModel.OctaveShift):
+                UpdateTransposition();
+                break;
         }
     }
 
@@ -138,6 +142,7 @@ public partial class TunerPage : ContentPage
         UpdateReading();
         UpdateNotationValue();
         UpdatePresets();
+        UpdateTransposition();
     }
 
     private static Color Themed(string lightKey, string darkKey) =>
@@ -299,6 +304,21 @@ public partial class TunerPage : ContentPage
 
     private void UpdateNotationValue() => NotationValueLabel.Text = GetNotationName(_viewModel.NoteNaming);
 
+    private void UpdateTransposition()
+    {
+        TransposeKeyValueLabel.Text = GetKeyName(_viewModel.TransposeKey);
+        TransposeOctaveValueLabel.Text = GetOctaveName(_viewModel.OctaveShift);
+    }
+
+    private static string GetKeyName(TransposeKey key) => key switch
+    {
+        TransposeKey.Bb => "B♭",
+        TransposeKey.Eb => "E♭",
+        _ => key.ToString()
+    };
+
+    private static string GetOctaveName(int shift) => shift > 0 ? $"+{shift}" : shift.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
     private static string GetNotationName(NoteNaming naming) => naming switch
     {
         NoteNaming.Letter => AppStrings.TunerNotationLetter,
@@ -347,6 +367,30 @@ public partial class TunerPage : ContentPage
             _presetLabels[i].TextColor = selected
                 ? Themed("OnPrimaryContainerLight", "OnPrimaryContainerDark")
                 : Themed("TextPrimaryLight", "TextPrimaryDark");
+        }
+    }
+
+    private async void OnTransposeKeyRowTapped(object? sender, TappedEventArgs e)
+    {
+        TransposeKey[] values = [TransposeKey.C, TransposeKey.Bb, TransposeKey.A, TransposeKey.Eb, TransposeKey.F, TransposeKey.G];
+        var options = values.Select(GetKeyName).ToArray();
+        var selected = await DisplayActionSheetAsync(AppStrings.TunerTransposeKey, AppStrings.Cancel, null, options);
+        var index = Array.IndexOf(options, selected);
+        if (index >= 0)
+        {
+            _viewModel.TransposeKey = values[index];
+        }
+    }
+
+    private async void OnTransposeOctaveRowTapped(object? sender, TappedEventArgs e)
+    {
+        var values = Enumerable.Range(TunerSettings.MinOctaveShift, TunerSettings.MaxOctaveShift - TunerSettings.MinOctaveShift + 1).ToArray();
+        var options = values.Select(GetOctaveName).ToArray();
+        var selected = await DisplayActionSheetAsync(AppStrings.TunerTransposeOctave, AppStrings.Cancel, null, options);
+        var index = Array.IndexOf(options, selected);
+        if (index >= 0)
+        {
+            _viewModel.OctaveShift = values[index];
         }
     }
 

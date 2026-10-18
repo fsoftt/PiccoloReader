@@ -58,9 +58,9 @@ public class NoteMapperTests
     }
 
     [Fact]
-    public void ShowAsWritten_TransposesDownAnOctave()
+    public void PiccoloTransposition_WritesAnOctaveBelow()
     {
-        var settings = new TunerSettings { ShowAsWritten = true };
+        var settings = new TunerSettings { Key = TransposeKey.C, OctaveShift = -1 };
 
         var note = NoteMapper.FromHz(880f, 440, settings.TransposeSemitones);
 

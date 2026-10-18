@@ -67,7 +67,10 @@ public partial class TunerViewModel : ObservableObject
     private int _a4Hz;
 
     [ObservableProperty]
-    private bool _showAsWritten;
+    private TransposeKey _transposeKey;
+
+    [ObservableProperty]
+    private int _octaveShift;
 
     [ObservableProperty]
     private NoteNaming _noteNaming;
@@ -94,7 +97,8 @@ public partial class TunerViewModel : ObservableObject
 
         var settings = preferences.Load();
         _a4Hz = settings.A4Hz;
-        _showAsWritten = settings.ShowAsWritten;
+        _transposeKey = settings.Key;
+        _octaveShift = settings.OctaveShift;
         _noteNaming = settings.NoteNaming;
         _settings = settings;
         _resolvedNaming = NoteNames.Resolve(settings.NoteNaming, CultureInfo.CurrentUICulture);
@@ -227,7 +231,19 @@ public partial class TunerViewModel : ObservableObject
         SettingsChanged();
     }
 
-    partial void OnShowAsWrittenChanged(bool value) => SettingsChanged();
+    partial void OnTransposeKeyChanged(TransposeKey value) => SettingsChanged();
+
+    partial void OnOctaveShiftChanged(int value)
+    {
+        var clamped = Math.Clamp(value, TunerSettings.MinOctaveShift, TunerSettings.MaxOctaveShift);
+        if (clamped != value)
+        {
+            OctaveShift = clamped;
+            return;
+        }
+
+        SettingsChanged();
+    }
 
     partial void OnNoteNamingChanged(NoteNaming value)
     {
@@ -240,7 +256,8 @@ public partial class TunerViewModel : ObservableObject
         var snapshot = new TunerSettings
         {
             A4Hz = A4Hz,
-            ShowAsWritten = ShowAsWritten,
+            Key = TransposeKey,
+            OctaveShift = OctaveShift,
             NoteNaming = NoteNaming
         };
         if (snapshot == _settings)

@@ -3,7 +3,8 @@ namespace PiccoloReader.Core.Services.Tuner;
 /// <summary>
 /// YIN pitch detector tuned for a cheap per-frame cost on slow devices:
 /// an RMS gate skips silent windows before any lag is evaluated; the lag range
-/// covers the piccolo (400 Hz to 4.5 kHz) and the integration length is the
+/// comes from the minHz/maxHz arguments (the tuner runs one instance for 400 Hz to
+/// 4.5 kHz and one for 25 to 500 Hz) and the integration length is the
 /// window minus the longest lag; a full search stops at the first dip under the
 /// threshold; and once a pitch is found, the next frames only verify five lags
 /// around it (about 10x cheaper) and fall back to the full search when the
@@ -21,14 +22,21 @@ public sealed class YinPitchDetector
     private readonly int _tauMax;
     private readonly float _threshold;
     private readonly float _rmsGate;
+    private readonly bool _interpolateDips;
+    private readonly float _subMultipleThreshold;
+    private readonly int _fullSearchEvery;
+    private int _trackedFrames;
     private readonly float[] _centered;
     private readonly float[] _difference;
     private readonly float[] _cmndf;
     private int _trackedLag;
     private int _trackCount;
 
-    public YinPitchDetector(float sampleRate, int windowSize = 640, float minHz = 400f, float maxHz = 4500f, float threshold = 0.13f, float rmsGate = 0.005f)
+    public YinPitchDetector(float sampleRate, int windowSize = 640, float minHz = 400f, float maxHz = 4500f, float threshold = 0.13f, float rmsGate = 0.005f, bool interpolateDips = false, float subMultipleThreshold = 0f, int fullSearchEvery = 0)
     {
+        _fullSearchEvery = fullSearchEvery;
+        _subMultipleThreshold = Math.Max(threshold, subMultipleThreshold);
+        _interpolateDips = interpolateDips;
         _sampleRate = sampleRate;
         _windowSize = windowSize;
         _threshold = threshold;
@@ -47,6 +55,9 @@ public sealed class YinPitchDetector
     }
 
     public int WindowSize => _windowSize;
+
+    /// <summary>Samples compared per lag.</summary>
+    public int IntegrationLength => _integrationLength;
 
     /// <summary>Number of lags evaluated so far (each costs one integration length of multiply-adds).</summary>
     public long LagEvaluations { get; private set; }
@@ -91,10 +102,14 @@ public sealed class YinPitchDetector
             return PitchEstimate.None(rms);
         }
 
-        if (_trackedLag > 0 && TryTrack(rms, out var tracked))
+        // A lag that stays clean can be a multiple of the period (a sine repeats every
+        // period); a periodic full search lets the first dip win again.
+        if (_trackedLag > 0 && (_fullSearchEvery == 0 || ++_trackedFrames < _fullSearchEvery) && TryTrack(rms, out var tracked))
         {
             return tracked;
         }
+
+        _trackedFrames = 0;
 
         return FullSearch(rms);
     }
@@ -156,7 +171,35 @@ public sealed class YinPitchDetector
         }
 
         var denominator = e0 + eLag;
-        return denominator > 0f ? _difference[lag] / denominator : 1f;
+        if (denominator <= 0f)
+        {
+            return 1f;
+        }
+
+        var d = _difference[lag];
+        if (_interpolateDips)
+        {
+            d = DipMinimum(_difference[lag - 1], d, _difference[lag + 1]);
+        }
+
+        return d / denominator;
+    }
+
+    /// <summary>
+    /// Value at the bottom of the parabola through three neighbouring lags. At a low
+    /// sample rate the true period falls between two lags and the integer lag
+    /// alone looks worse than a multiple of the period that happens to land closer.
+    /// </summary>
+    private static float DipMinimum(float before, float center, float after)
+    {
+        var curvature = before - 2f * center + after;
+        if (curvature <= 0f)
+        {
+            return center;
+        }
+
+        var slope = before - after;
+        return Math.Max(0f, center - (slope * slope) / (8f * curvature));
     }
 
     private PitchEstimate FullSearch(float rms)
@@ -165,12 +208,24 @@ public sealed class YinPitchDetector
         var cm = _cmndf;
         var running = 0f;
         var chosen = 0;
+        var interpolated = -1f;
 
         for (var tau = 1; tau <= _tauMax; tau++)
         {
             ComputeDifference(tau);
             running += d[tau];
             cm[tau] = running > 0f ? d[tau] * tau / running : 1f;
+
+            if (_interpolateDips && tau - 2 >= _tauMin && cm[tau - 1] <= cm[tau - 2] && cm[tau - 1] < cm[tau])
+            {
+                var dip = DipMinimum(cm[tau - 2], cm[tau - 1], cm[tau]);
+                if (dip < _threshold)
+                {
+                    chosen = tau - 1;
+                    interpolated = dip;
+                    break;
+                }
+            }
 
             if (tau < _tauMin || cm[tau] >= _threshold)
             {
@@ -196,7 +251,9 @@ public sealed class YinPitchDetector
             break;
         }
 
-        if (chosen == 0)
+        // A dip on the last lag is not a minimum (the next lag was never seen): the
+        // pitch is below the range, not at its edge.
+        if (chosen == 0 || chosen >= _tauMax)
         {
             _trackedLag = 0;
             return PitchEstimate.None(rms);
@@ -223,7 +280,7 @@ public sealed class YinPitchDetector
             }
         }
 
-        var clarity = 1f - cm[chosen];
+        var clarity = 1f - (interpolated >= 0f ? interpolated : cm[chosen]);
         lag = ShortestSubMultiple(lag, ref clarity);
 
 
@@ -269,6 +326,12 @@ public sealed class YinPitchDetector
             {
                 result = best;
                 clarity = 1f - normalised;
+            }
+            else if (normalised < _subMultipleThreshold)
+            {
+                // Not a clean dip, yet far deeper than a lag that is not a period would
+                // give: the lag found is a multiple of the period. Keeps its clarity.
+                result = best;
             }
         }
 
