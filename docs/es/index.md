@@ -4,6 +4,12 @@ Te damos la bienvenida al sitio de documentación de Piccolo Music Reader. Aquí
 
 ---
 
+## Obtén la app
+
+Piccolo Music Reader está disponible en [Google Play](https://play.google.com/store/apps/details?id=com.fsoftt.piccoloreader).
+
+---
+
 ## Enlaces rápidos
 
 ### Aspectos legales y cumplimiento
@@ -16,9 +22,10 @@ Te damos la bienvenida al sitio de documentación de Piccolo Music Reader. Aquí
 
 **Piccolo Music Reader es privado por diseño:**
 - Todas tus partituras se almacenan **localmente en tu dispositivo**
-- Sin sincronización en la nube, sin cuenta obligatoria, sin recopilación de datos personales
+- Sin sincronización en la nube, sin cuenta obligatoria
+- Anuncios solo en la página opcional Donar, y puedes desactivarlos en Ajustes
 - Tus PDFs nunca salen de tu teléfono
-- Código abierto en GitHub
+- Código abierto en GitHub (GPL-3.0)
 {: .checks}
 
 **Cumple con:**
@@ -229,7 +236,7 @@ Piccolo Music Reader cumple con los Principios de Privacidad de Australia:
 Piccolo utiliza bibliotecas de código abierto y es, en sí mismo, de código abierto:
 
 - **Repositorio:** https://github.com/fsoftt/PiccoloReader
-- **Licencia:** Consulta el archivo LICENSE en el repositorio
+- **Licencia:** GPL-3.0, consulta el archivo [LICENSE](https://github.com/fsoftt/PiccoloReader/blob/main/LICENSE)
 - **Cómo contribuir:** Consulta CONTRIBUTING.md para ver las pautas
 
 Cada biblioteca de terceros está licenciada bajo su propia licencia. Cumplimos con todos los requisitos de código abierto.

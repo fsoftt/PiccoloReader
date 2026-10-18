@@ -46,11 +46,11 @@ beyond releasing this one app.
 
 ## Current status
 
-Not yet wired up end-to-end: there's no Google Play Developer account
-or Play Console app entry for PiccoloReader yet, so the secrets above
-aren't set and this workflow has never actually run. It's ready to go
-once that account/app exists — create the `release` branch and add the
-three secrets, and the next push to `release` builds and uploads.
+The app is published on Google Play:
+https://play.google.com/store/apps/details?id=com.fsoftt.piccoloreader
+
+Releases go out by pushing to the `release` branch, which triggers
+this workflow (see the secrets above).
 
 ## Track
 

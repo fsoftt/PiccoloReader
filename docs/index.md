@@ -4,6 +4,12 @@ Welcome to the Piccolo Music Reader documentation site. Here you'll find legal p
 
 ---
 
+## Get the App
+
+Piccolo Music Reader is available on [Google Play](https://play.google.com/store/apps/details?id=com.fsoftt.piccoloreader).
+
+---
+
 ## Quick Links
 
 ### Legal & Compliance
@@ -16,9 +22,10 @@ Welcome to the Piccolo Music Reader documentation site. Here you'll find legal p
 
 **Piccolo Music Reader is private by design:**
 - All your sheets stored **locally on your device**
-- No cloud sync, no account required, no personal data collection
+- No cloud sync, no account required
+- Ads only on the optional Donate page, and you can turn them off in Settings
 - Your PDFs never leave your phone
-- Open source on GitHub
+- Open source on GitHub (GPL-3.0)
 {: .checks}
 
 **Compliant with:**
@@ -229,7 +236,7 @@ Piccolo Music Reader complies with Australian Privacy Principles:
 Piccolo uses open-source libraries and is itself open source:
 
 - **Repository:** https://github.com/fsoftt/PiccoloReader
-- **License:** See LICENSE file in repo
+- **License:** GPL-3.0, see the [LICENSE](https://github.com/fsoftt/PiccoloReader/blob/main/LICENSE) file
 - **Contributing:** See CONTRIBUTING.md for guidelines
 
 Each third-party library is licensed under its own license. We comply with all open-source requirements.
