@@ -1,15 +1,28 @@
+using System.Numerics;
+
 namespace PiccoloReader.Core.Services.Tuner;
 
 /// <summary>
 /// Glue between a platform audio input and the pitch pipeline. Feed it blocks of
-/// mono samples from the audio thread; it decimates by 2, runs YIN every hop and
-/// invokes the reading callback (on the calling thread) when the smoothed reading
-/// meaningfully changes. Allocation-free after construction.
+/// mono samples from the audio thread; it decimates by 2 (high band, piccolo down
+/// to 400 Hz) and by 8 more (low band, tuba up from 25 Hz), runs one YIN per band
+/// every hop, picks one result (<see cref="BandSelector"/>) and invokes the reading
+/// callback (on the calling thread) when the smoothed reading meaningfully
+/// changes. Allocation-free after construction.
 /// </summary>
 public sealed class TunerEngine
 {
     public const int WindowSize = 640;
     public const int HopSize = 512;
+    public const int LowBandStages = 3;
+    public const int LowHopSize = HopSize >> LowBandStages;
+    public const float LowBandMinHz = 25f;
+    public const float LowBandMaxHz = 500f;
+    public const float HighBandMinHz = 400f;
+    public const float HighBandMaxHz = 4500f;
+    public const float LowBandCutoffHz = 450f;
+    public const int LowBandFullSearchEvery = 8;
+    public const float HighBandSubMultipleThreshold = 0.6f;
     private const int RingSize = 1024;
     private const float SilentPeak = 0.002f;
     private const int IdleHopsBeforeThrottle = 4;
@@ -21,6 +34,17 @@ public sealed class TunerEngine
 
     private readonly HalfBandDecimator _decimator = new();
     private readonly YinPitchDetector _detector;
+    private readonly YinPitchDetector _lowDetector;
+    private readonly HalfBandDecimator[] _lowDecimators = [new(), new(), new()];
+    private readonly LowBandFilter _lowFilter;
+    private readonly BandSelector _selector = new();
+    private readonly TransientGate _lowTransients = new();
+    private readonly float[] _lowRing;
+    private readonly float[] _lowWindow;
+    private readonly float[][] _lowStages;
+    private readonly int _lowWindowSize;
+    private int _lowWrite;
+    private int _lowFilled;
     private readonly PitchSmoother _smoother;
     private readonly float[] _ring = new float[RingSize];
     private readonly TransientGate _transients = new();
@@ -45,7 +69,21 @@ public sealed class TunerEngine
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(inputSampleRate, 32000);
         var decimatedRate = inputSampleRate / 2f;
-        _detector = new YinPitchDetector(decimatedRate, WindowSize);
+        _detector = new YinPitchDetector(decimatedRate, WindowSize, HighBandMinHz, HighBandMaxHz, subMultipleThreshold: HighBandSubMultipleThreshold);
+        var lowRate = decimatedRate / (1 << LowBandStages);
+        _lowWindowSize = 3 * (int)(lowRate / LowBandMinHz);
+        _lowDetector = new YinPitchDetector(lowRate, _lowWindowSize, LowBandMinHz, LowBandMaxHz, interpolateDips: true, fullSearchEvery: LowBandFullSearchEvery);
+        _lowFilter = new LowBandFilter(lowRate, LowBandCutoffHz);
+        _lowRing = new float[(int)BitOperations.RoundUpToPowerOf2((uint)_lowWindowSize)];
+        _lowWindow = new float[_lowWindowSize];
+        _lowStages = new float[LowBandStages][];
+        var stageLength = HopSize;
+        for (var i = 0; i < LowBandStages; i++)
+        {
+            stageLength = HalfBandDecimator.MaxOutputLength(stageLength);
+            _lowStages[i] = new float[stageLength];
+        }
+
         _hopMs = HopSize * 1000f / decimatedRate;
         _smoother = new PitchSmoother(_hopMs);
         _onReading = onReading;
@@ -58,7 +96,8 @@ public sealed class TunerEngine
     public void Reset() => _resetPending = true;
 
     /// <summary>Lags evaluated by the pitch detector so far; a proxy for the CPU spent.</summary>
-    public long LagEvaluations => _detector.LagEvaluations;
+    public long LagEvaluations => _detector.LagEvaluations
+        + (long)(_lowDetector.LagEvaluations * _lowDetector.IntegrationLength / (double)_detector.IntegrationLength);
 
     private void ApplyPendingReset()
     {
@@ -72,6 +111,18 @@ public sealed class TunerEngine
         _smoother.Reset();
         _detector.Reset();
         _transients.Reset();
+        foreach (var stage in _lowDecimators)
+        {
+            stage.Reset();
+        }
+
+        _lowDetector.Reset();
+        _lowFilter.Reset();
+        _lowTransients.Reset();
+        _selector.Reset();
+        Array.Clear(_lowRing);
+        _lowWrite = 0;
+        _lowFilled = 0;
         Array.Clear(_ring);
         _writeIndex = 0;
         _filled = 0;
@@ -129,7 +180,8 @@ public sealed class TunerEngine
             }
         }
 
-        var count = peak < SilentPeak
+        var silent = peak < SilentPeak;
+        var count = silent
             ? _decimator.ProcessSilence(chunk.Length, _decimated)
             : _decimator.Process(chunk, _decimated);
         var done = 0;
@@ -138,6 +190,7 @@ public sealed class TunerEngine
             // Copy up to the next hop boundary or the end of the ring, whichever is first.
             var run = Math.Min(count - done, Math.Min(HopSize - _sinceHop, RingSize - _writeIndex));
             Array.Copy(_decimated, done, _ring, _writeIndex, run);
+            FeedLowBand(_decimated.AsSpan(done, run), silent);
             done += run;
             _writeIndex = (_writeIndex + run) & (RingSize - 1);
             _filled = Math.Min(WindowSize, _filled + run);
@@ -153,6 +206,32 @@ public sealed class TunerEngine
         }
     }
 
+    /// <summary>Runs the 24 kHz samples through the three decimators into the low-band ring.</summary>
+    private void FeedLowBand(ReadOnlySpan<float> input, bool silent)
+    {
+        var count = input.Length;
+        var source = input;
+        for (var i = 0; i < LowBandStages; i++)
+        {
+            var output = _lowStages[i];
+            count = silent
+                ? _lowDecimators[i].ProcessSilence(count, output)
+                : _lowDecimators[i].Process(source, output);
+            source = output.AsSpan(0, count);
+        }
+
+        var filtered = _lowStages[LowBandStages - 1].AsSpan(0, count);
+        _lowFilter.Process(filtered);
+        var ring = _lowRing;
+        for (var i = 0; i < count; i++)
+        {
+            ring[_lowWrite] = filtered[i];
+            _lowWrite = (_lowWrite + 1) & (ring.Length - 1);
+        }
+
+        _lowFilled = Math.Min(_lowWindowSize, _lowFilled + count);
+    }
+
     private void Analyze()
     {
         // The window is the newest WindowSize samples of the ring.
@@ -162,8 +241,26 @@ public sealed class TunerEngine
         _ring.AsSpan(0, WindowSize - tail).CopyTo(_window.AsSpan(tail));
 
         var rms = _detector.Prepare(_window);
+        var lowReady = _lowFilled == _lowWindowSize;
+        var lowRms = 0f;
+        if (lowReady)
+        {
+            var ring = _lowRing;
+            var lowStart = (_lowWrite - _lowWindowSize) & (ring.Length - 1);
+            var lowTail = Math.Min(_lowWindowSize, ring.Length - lowStart);
+            ring.AsSpan(lowStart, lowTail).CopyTo(_lowWindow);
+            ring.AsSpan(0, _lowWindowSize - lowTail).CopyTo(_lowWindow.AsSpan(lowTail));
+            lowRms = _lowDetector.Prepare(_lowWindow);
+        }
+
         _sinceEmitMs += _hopMs;
-        if (_transients.IsTransient(rms))
+        var transient = _transients.IsTransient(rms);
+        if (lowReady && _lowTransients.IsTransient(lowRms))
+        {
+            transient = true;
+        }
+
+        if (transient)
         {
             // A click or tap corrupted this window: leave the smoother (and the
             // displayed note) exactly as they are.
@@ -177,7 +274,10 @@ public sealed class TunerEngine
             return;
         }
 
-        var estimate = _detector.Estimate(rms);
+        var low = lowReady ? _lowDetector.Estimate(lowRms) : PitchEstimate.None(0f);
+
+        var high = _detector.Estimate(rms);
+        var estimate = _selector.Select(low, high) == TunerBand.Low ? low : high;
         _noPitchHops = estimate.HasPitch ? 0 : _noPitchHops + 1;
         var reading = _smoother.Update(estimate);
         _lastReading = reading;
