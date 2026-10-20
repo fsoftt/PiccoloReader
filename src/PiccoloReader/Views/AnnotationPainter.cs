@@ -104,8 +104,22 @@ public class AnnotationPainter
 
     private static void DrawStroke(SKCanvas canvas, Annotation annotation, float width, float height, PageFrame frame)
     {
-        var points = AnnotationService.DeserializePoints(annotation.Points);
-        if (points.Count < 2 || annotation.ColorHex is null)
+        if (annotation.ColorHex is null)
+        {
+            return;
+        }
+
+        DrawStroke(canvas, AnnotationService.DeserializePoints(annotation.Points), annotation.ColorHex, annotation.StrokeWidth, width, height, frame);
+    }
+
+    // The stroke being drawn right now (not saved yet), painted like a saved
+    // one so the final result does not jump.
+    public void DrawLiveStroke(SKCanvas canvas, float width, float height, IReadOnlyList<StrokePoint> points, string colorHex, double strokeWidth, PageFrame? pageFrame = null) =>
+        DrawStroke(canvas, points, colorHex, strokeWidth, width, height, pageFrame ?? PageFrame.Full);
+
+    private static void DrawStroke(SKCanvas canvas, IReadOnlyList<StrokePoint> points, string colorHex, double strokeWidth, float width, float height, PageFrame frame)
+    {
+        if (points.Count < 2)
         {
             return;
         }
@@ -119,8 +133,8 @@ public class AnnotationPainter
 
         using var paint = new SKPaint
         {
-            Color = SKColor.Parse(annotation.ColorHex),
-            StrokeWidth = (float)(annotation.StrokeWidth * frame.Width * width),
+            Color = SKColor.Parse(colorHex),
+            StrokeWidth = (float)(strokeWidth * frame.Width * width),
             Style = SKPaintStyle.Stroke,
             StrokeCap = SKStrokeCap.Round,
             StrokeJoin = SKStrokeJoin.Round,

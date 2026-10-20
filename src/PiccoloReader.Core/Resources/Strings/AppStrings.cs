@@ -188,6 +188,7 @@ public static class AppStrings
     public static string ReadingModeNameVerticalPaged => Get(nameof(ReadingModeNameVerticalPaged));
     public static string ReadingModeNameVerticalContinuous => Get(nameof(ReadingModeNameVerticalContinuous));
     public static string UndoAction => Get(nameof(UndoAction));
+    public static string AnnotationsErased => Get(nameof(AnnotationsErased));
     public static string RedoAction => Get(nameof(RedoAction));
     public static string ToolSettingsAction => Get(nameof(ToolSettingsAction));
     public static string StopToolAction => Get(nameof(StopToolAction));
@@ -293,6 +294,8 @@ public static class AppStrings
     public static string AppVersionFormat => Get(nameof(AppVersionFormat));
     public static string TunerStrip => Get(nameof(TunerStrip));
     public static string TunerStripPositionLabel => Get(nameof(TunerStripPositionLabel));
+    public static string StylusDrawsDirectlyLabel => Get(nameof(StylusDrawsDirectlyLabel));
+    public static string StylusDrawsDirectlyDescription => Get(nameof(StylusDrawsDirectlyDescription));
     public static string TunerStripPositionLeft => Get(nameof(TunerStripPositionLeft));
     public static string TunerStripPositionRight => Get(nameof(TunerStripPositionRight));
     public static string TunerStripPositionBottom => Get(nameof(TunerStripPositionBottom));

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.ViewModels;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
@@ -229,6 +230,38 @@ public class ContinuousPageView : ContentView
     // annotations while the list was hidden.
     public void InvalidateAnnotations() => InvalidateCanvases();
 
+    // The stylus stroke being drawn on this page (not saved yet), painted over
+    // the annotations until it is saved. Set by the viewer page.
+    private IReadOnlyList<StrokePoint>? _liveStroke;
+    private string _liveColorHex = "#000000";
+    private double _liveStrokeWidth;
+
+    public void SetLiveStroke(IReadOnlyList<StrokePoint>? points, string colorHex, double strokeWidth)
+    {
+        _liveStroke = points;
+        _liveColorHex = colorHex;
+        _liveStrokeWidth = strokeWidth;
+        InvalidateCanvases();
+    }
+
+    // Clears the preview only if it still shows this stroke, so the end of one
+    // stroke cannot wipe the preview of the next.
+    public void ClearLiveStroke(IReadOnlyList<StrokePoint> stroke)
+    {
+        if (ReferenceEquals(_liveStroke, stroke))
+        {
+            SetLiveStroke(null, _liveColorHex, _liveStrokeWidth);
+        }
+    }
+
+    private void DrawLive(SkiaSharp.SKCanvas canvas, float width, float height, PageFrame frame)
+    {
+        if (_liveStroke is { Count: >= 2 } points)
+        {
+            _painter.DrawLiveStroke(canvas, width, height, points, _liveColorHex, _liveStrokeWidth, frame);
+        }
+    }
+
     // Item heights are derived from the list width, which can change while
     // the list is hidden (rotation with the editor open); Width is stale then.
     public void Relayout(double listWidth)
@@ -251,6 +284,7 @@ public class ContinuousPageView : ContentView
             // assuming the canvas is exactly the page.
             var frame = PageFrame.Fit(e.Info.Width, e.Info.Height, _page.FullAspectRatio, _page.Crop);
             _painter.DrawAnnotations(canvas, e.Info, _page.Annotations, frame, _page.Crop);
+            DrawLive(canvas, e.Info.Width, e.Info.Height, frame);
         }
     }
 
@@ -272,6 +306,7 @@ public class ContinuousPageView : ContentView
         canvas.Translate((float)(-_detailArea.X * k), (float)(-_detailArea.Y * k));
         var frame = PageFrame.Fit(width, height, _page.FullAspectRatio, _page.Crop);
         _painter.DrawAnnotations(canvas, width, height, _page.Annotations, frame, _page.Crop);
+        DrawLive(canvas, width, height, frame);
 
         // The base canvas keeps drawing until this has really painted, so the
         // annotations never go missing for a frame while the overlay appears.

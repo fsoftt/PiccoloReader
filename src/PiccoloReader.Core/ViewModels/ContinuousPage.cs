@@ -41,4 +41,8 @@ public partial class ContinuousPage : ObservableObject
     private IReadOnlyList<Annotation> _annotations = Array.Empty<Annotation>();
 
     internal bool IsLoadRequested { get; set; }
+
+    // True once Annotations holds what is stored for the page. While false, it
+    // only holds strokes added meanwhile, which are merged when the load ends.
+    public bool AnnotationsLoaded { get; internal set; }
 }

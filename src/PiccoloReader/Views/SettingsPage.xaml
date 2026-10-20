@@ -100,6 +100,25 @@
                                 </Image.Source>
                             </Image>
                         </Grid>
+                        <BoxView Style="{StaticResource RowDivider}" IsVisible="{x:Static local:PlatformInfo.IsAndroid}" />
+                        <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsStylusRow" ColumnDefinitions="20,*,Auto"
+                              IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center" Padding="0,8">
+                                <Label Style="{StaticResource RowTitle}" Text="{x:Static strings:AppStrings.StylusDrawsDirectlyLabel}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                <Label Style="{StaticResource Caption}" FontSize="12" Text="{x:Static strings:AppStrings.StylusDrawsDirectlyDescription}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="2" AutomationId="SettingsStylusSwitch" VerticalOptions="Center"
+                                    SemanticProperties.Description="{x:Static strings:AppStrings.StylusDrawsDirectlyLabel}"
+                                    OnColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                                    IsToggled="{Binding StylusDrawsDirectly}" />
+                        </Grid>
                     </VerticalStackLayout>
                 </Border>
             </VerticalStackLayout>

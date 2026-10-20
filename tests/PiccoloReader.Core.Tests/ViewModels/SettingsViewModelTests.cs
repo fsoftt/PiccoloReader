@@ -1,3 +1,4 @@
+using PiccoloReader.Core.Services.Stylus;
 using PiccoloReader.Core.Services.Tuner;
 using PiccoloReader.Core.ViewModels;
 
@@ -10,7 +11,7 @@ public class SettingsViewModelTests
     {
         var fake = new FakeLanguagePreferenceService { SavedCode = "es" };
 
-        var sut = new SettingsViewModel(fake, new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService());
+        var sut = new SettingsViewModel(fake, new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService(), new FakeStylusPreferenceService());
 
         Assert.Equal("es", sut.SelectedLanguageCode);
     }
@@ -20,7 +21,7 @@ public class SettingsViewModelTests
     {
         var fake = new FakeLanguagePreferenceService { SavedCode = null };
 
-        var sut = new SettingsViewModel(fake, new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService());
+        var sut = new SettingsViewModel(fake, new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService(), new FakeStylusPreferenceService());
 
         Assert.Equal("en", sut.SelectedLanguageCode);
     }
@@ -29,7 +30,7 @@ public class SettingsViewModelTests
     public void SetLanguageCommand_SavesCodeAndUpdatesSelectedLanguageCode()
     {
         var fake = new FakeLanguagePreferenceService { SavedCode = "en" };
-        var sut = new SettingsViewModel(fake, new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService());
+        var sut = new SettingsViewModel(fake, new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService(), new FakeStylusPreferenceService());
 
         sut.SetLanguageCommand.Execute("es");
 
@@ -40,7 +41,7 @@ public class SettingsViewModelTests
     [Fact]
     public void LanguageDisplayNames_And_LanguageCodes_AreParallelArrays()
     {
-        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService());
+        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService(), new FakeStylusPreferenceService());
 
         Assert.Equal(sut.LanguageDisplayNames.Length, sut.LanguageCodes.Length);
         Assert.Equal("English", sut.LanguageDisplayNames[Array.IndexOf(sut.LanguageCodes, "en")]);
@@ -52,7 +53,7 @@ public class SettingsViewModelTests
     {
         var fakeAds = new FakeAdsPreferenceService { Enabled = true };
 
-        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), fakeAds, new FakeTunerStripPreferenceService());
+        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), fakeAds, new FakeTunerStripPreferenceService(), new FakeStylusPreferenceService());
 
         Assert.True(sut.SupportWithAdsEnabled);
     }
@@ -61,7 +62,7 @@ public class SettingsViewModelTests
     public void SupportWithAdsEnabled_WhenChanged_PersistsToPreferenceService()
     {
         var fakeAds = new FakeAdsPreferenceService { Enabled = false };
-        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), fakeAds, new FakeTunerStripPreferenceService());
+        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), fakeAds, new FakeTunerStripPreferenceService(), new FakeStylusPreferenceService());
 
         sut.SupportWithAdsEnabled = true;
 
@@ -73,7 +74,7 @@ public class SettingsViewModelTests
     {
         var fakeStrip = new FakeTunerStripPreferenceService { Position = TunerStripPosition.Top };
 
-        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeAdsPreferenceService(), fakeStrip);
+        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeAdsPreferenceService(), fakeStrip, new FakeStylusPreferenceService());
 
         Assert.Equal(TunerStripPosition.Top, sut.TunerStripPosition);
     }
@@ -81,7 +82,7 @@ public class SettingsViewModelTests
     [Fact]
     public void TunerStripPosition_DefaultsToRight()
     {
-        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService());
+        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService(), new FakeStylusPreferenceService());
 
         Assert.Equal(TunerStripPosition.Right, sut.TunerStripPosition);
     }
@@ -90,7 +91,7 @@ public class SettingsViewModelTests
     public void TunerStripPosition_WhenChanged_PersistsToPreferenceService()
     {
         var fakeStrip = new FakeTunerStripPreferenceService();
-        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeAdsPreferenceService(), fakeStrip);
+        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeAdsPreferenceService(), fakeStrip, new FakeStylusPreferenceService());
 
         sut.TunerStripPosition = TunerStripPosition.Bottom;
 
@@ -100,10 +101,23 @@ public class SettingsViewModelTests
     [Fact]
     public void TunerStripPositionNames_AreParallelToPositions()
     {
-        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService());
+        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService(), new FakeStylusPreferenceService());
 
         Assert.Equal(sut.TunerStripPositions.Length, sut.TunerStripPositionNames.Length);
         Assert.Equal(4, sut.TunerStripPositions.Distinct().Count());
         Assert.All(sut.TunerStripPositionNames, name => Assert.False(string.IsNullOrWhiteSpace(name)));
+    }
+
+    [Fact]
+    public void StylusDrawsDirectly_DefaultsOnAndPersistsChanges()
+    {
+        var fakeStylus = new FakeStylusPreferenceService();
+        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeAdsPreferenceService(), new FakeTunerStripPreferenceService(), fakeStylus);
+
+        Assert.True(sut.StylusDrawsDirectly);
+
+        sut.StylusDrawsDirectly = false;
+
+        Assert.False(fakeStylus.DrawsDirectly);
     }
 }
