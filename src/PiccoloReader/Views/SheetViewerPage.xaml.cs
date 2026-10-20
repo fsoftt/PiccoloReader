@@ -2106,10 +2106,13 @@ public partial class SheetViewerPage : ContentPage
             eraseBegin: OnStylusEraseBegin,
             eraseMove: (x, y) => EraseAtDrawingViewPoint(new PointF(x, y)),
             eraseEnd: OnStylusEraseEnd,
-            cancelNativeStroke: nativePencil
+            onTap: nativePencil ? null : AndroidHandleTap,
+            cancelOngoing: nativePencil
                 ? (view, e) =>
                 {
-                    // Same as a pinch: end the DrawingView's stroke and drop it.
+                    // Same as a pinch: end the DrawingView stroke and drop it. LineCompleted
+                    // consumes the flag when it fires; if it comes later, the next
+                    // LineStarted clears it, so it never discards a later stroke.
                     _discardPencilLine = true;
                     var up = global::Android.Views.MotionEvent.Obtain(e.DownTime, e.EventTime, global::Android.Views.MotionEventActions.Up, e.GetX(0), e.GetY(0), e.MetaState);
                     if (up is not null)
@@ -2118,7 +2121,7 @@ public partial class SheetViewerPage : ContentPage
                         up.Recycle();
                     }
                 }
-                : null);
+                : (_, _) => _pageContainerTouchListener?.ResetGesture());
 
     // Direct stylus use on the plain page: setting on, no tool active and a
     // single-page view (the continuous list is not covered).
@@ -3723,17 +3726,33 @@ public partial class SheetViewerPage : ContentPage
     // normalized points and painted by the annotation canvases on top of the
     // saved annotations until it has been saved.
     private List<StrokePoint> _stylusLiveStroke = new();
+    private int _stylusSheetId;
+    private int _stylusPageIndex;
+    private bool _stylusInvalidatePending;
 
     private void OnStylusDrawBegin(float x, float y)
     {
         _stylusLiveStroke = new List<StrokePoint>();
+        _stylusPageIndex = _viewModel.CurrentPageIndex;
+        _ = int.TryParse(SheetId, out _stylusSheetId);
         AddStylusPoint(x, y);
     }
 
+    // At most one repaint per frame, however many moves arrive.
     private void OnStylusDrawMove(float x, float y)
     {
         AddStylusPoint(x, y);
-        InvalidateAnnotations();
+        if (_stylusInvalidatePending)
+        {
+            return;
+        }
+
+        _stylusInvalidatePending = true;
+        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(16), () =>
+        {
+            _stylusInvalidatePending = false;
+            InvalidateAnnotations();
+        });
     }
 
     private void AddStylusPoint(float x, float y)
@@ -3744,7 +3763,13 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
-        _stylusLiveStroke.Add(new StrokePoint((x - pageRect.Left) / pageRect.Width, (y - pageRect.Top) / pageRect.Height));
+        var point = new StrokePoint((x - pageRect.Left) / pageRect.Width, (y - pageRect.Top) / pageRect.Height);
+        if (_stylusLiveStroke.Count > 0 && _stylusLiveStroke[^1] == point)
+        {
+            return;
+        }
+
+        _stylusLiveStroke.Add(point);
     }
 
     private void OnStylusDrawCancel()
@@ -3756,12 +3781,19 @@ public partial class SheetViewerPage : ContentPage
     private async void OnStylusDrawEnd()
     {
         var stroke = _stylusLiveStroke;
+        var sheetId = _stylusSheetId;
+        var pageIndex = _stylusPageIndex;
         try
         {
-            if (stroke.Count >= 2 && int.TryParse(SheetId, out var sheetId))
+            // The page may have turned (pedal) since the stroke began.
+            if (stroke.Count >= 2 && sheetId > 0 && pageIndex == _viewModel.CurrentPageIndex)
             {
                 await SavePencilStrokeAsync(sheetId, stroke);
             }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Stylus stroke save failed: {ex}");
         }
         finally
         {

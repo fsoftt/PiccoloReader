@@ -8,17 +8,24 @@ namespace PiccoloReader.Platforms.Android;
 // every event; returns true when it consumed the event, so the normal finger
 // handling (pan, pinch, tap) never sees a stylus gesture.
 //
-// The role of a gesture is decided at ACTION_DOWN (see StylusInputClassifier):
+// The role of a gesture is decided when its pointer goes down (see
+// StylusInputClassifier). That is ACTION_DOWN, or ACTION_POINTER_DOWN when a
+// palm or finger was already on the screen (the finger gesture is cancelled
+// first):
 // - Draw: only handled here when canDraw() is true (direct drawing on the
 //   page). Otherwise the gesture is left to the caller (the Pencil
-//   DrawingView draws it natively).
+//   DrawingView draws it natively). A Draw gesture that ends as a tap (little
+//   movement, short) is discarded and reported through onTap instead, so a
+//   stylus tap acts like a finger tap.
 // - Erase (eraser tip, or stylus side button held): handled here whenever
 //   canErase() is true.
 // If the side button is pressed in the middle of a stroke, the stroke is
-// dropped (own stroke: drawCancel; native stroke: cancelNativeStroke) and the
+// dropped (own stroke: drawCancel; native stroke: cancelOngoing) and the
 // rest of the gesture erases.
 // While a gesture is handled here, every other pointer (a resting palm,
-// fingers) is ignored.
+// fingers) is ignored, and after it ends with other pointers still down their
+// events are swallowed until the next ACTION_DOWN, so the finger listener
+// never sees orphan Move/Up events.
 //
 // Points are reported in dp, in the view's own (transform-corrected) local
 // coordinates, which is the PageContainer space the page works in.
@@ -40,11 +47,18 @@ public sealed class StylusGestureHandler
     private readonly Action _eraseBegin;
     private readonly Action<float, float> _eraseMove;
     private readonly Action _eraseEnd;
-    private readonly Action<View, MotionEvent>? _cancelNativeStroke;
+    private readonly Action<double, double>? _onTap;
+    private readonly Action<View, MotionEvent>? _cancelOngoing;
 
     private Mode _mode;
     private int _pointerId;
     private bool _nativeStylusGesture;
+    private bool _ignoreUntilDown;
+    private View? _view;
+    private float _downX;
+    private float _downY;
+    private long _downTime;
+    private double _maxTravelPx;
 
     public StylusGestureHandler(
         Func<bool> canDraw,
@@ -56,7 +70,8 @@ public sealed class StylusGestureHandler
         Action eraseBegin,
         Action<float, float> eraseMove,
         Action eraseEnd,
-        Action<View, MotionEvent>? cancelNativeStroke = null)
+        Action<double, double>? onTap = null,
+        Action<View, MotionEvent>? cancelOngoing = null)
     {
         _canDraw = canDraw;
         _canErase = canErase;
@@ -67,7 +82,8 @@ public sealed class StylusGestureHandler
         _eraseBegin = eraseBegin;
         _eraseMove = eraseMove;
         _eraseEnd = eraseEnd;
-        _cancelNativeStroke = cancelNativeStroke;
+        _onTap = onTap;
+        _cancelOngoing = cancelOngoing;
     }
 
     public static StylusRole RoleOf(MotionEvent e, int pointerIndex)
@@ -94,42 +110,7 @@ public sealed class StylusGestureHandler
 
         if (_mode == Mode.None)
         {
-            if (action == MotionEventActions.Down)
-            {
-                _nativeStylusGesture = false;
-                var role = RoleOf(e, 0);
-                if (role == StylusRole.Draw && _canDraw())
-                {
-                    Begin(v, e, 0, Mode.Draw);
-                    return true;
-                }
-
-                if (role == StylusRole.Erase && _canErase())
-                {
-                    Begin(v, e, 0, Mode.Erase);
-                    return true;
-                }
-
-                // A plain stylus stroke left to the native view: watch it for
-                // the side button being pressed later.
-                _nativeStylusGesture = role == StylusRole.Draw && _canErase();
-                return false;
-            }
-
-            if (_nativeStylusGesture && action == MotionEventActions.Move && e.PointerCount == 1 && RoleOf(e, 0) == StylusRole.Erase)
-            {
-                _nativeStylusGesture = false;
-                _cancelNativeStroke?.Invoke(v, e);
-                Begin(v, e, 0, Mode.Erase);
-                return true;
-            }
-
-            if (action is MotionEventActions.Up or MotionEventActions.Cancel)
-            {
-                _nativeStylusGesture = false;
-            }
-
-            return false;
+            return HandleIdle(v, e, action);
         }
 
         // A gesture is being handled here.
@@ -156,6 +137,7 @@ public sealed class StylusGestureHandler
                     _eraseBegin();
                 }
 
+                TrackTravel(e.GetX(index), e.GetY(index));
                 if (_mode == Mode.Draw)
                 {
                     for (var h = 0; h < e.HistorySize; h++)
@@ -175,16 +157,16 @@ public sealed class StylusGestureHandler
             case MotionEventActions.Up:
                 if (index >= 0)
                 {
-                    MoveTo(v, e, index);
+                    TrackTravel(e.GetX(index), e.GetY(index));
                 }
 
-                Finish();
+                Finish(v, e, index, otherPointersDown: false);
                 break;
 
             case MotionEventActions.PointerUp:
                 if (e.ActionIndex == index)
                 {
-                    Finish();
+                    Finish(v, e, index, otherPointersDown: e.PointerCount > 1);
                 }
 
                 break;
@@ -197,13 +179,97 @@ public sealed class StylusGestureHandler
         return true;
     }
 
+    private bool HandleIdle(View v, MotionEvent e, MotionEventActions action)
+    {
+        if (_ignoreUntilDown)
+        {
+            if (action != MotionEventActions.Down)
+            {
+                if (action is MotionEventActions.Up or MotionEventActions.Cancel)
+                {
+                    _ignoreUntilDown = false;
+                }
+
+                return true;
+            }
+
+            _ignoreUntilDown = false;
+        }
+
+        if (action == MotionEventActions.Down)
+        {
+            _nativeStylusGesture = false;
+            var role = RoleOf(e, 0);
+            if (TryBegin(v, e, 0, role))
+            {
+                return true;
+            }
+
+            // A plain stylus stroke left to the native view: watch it for
+            // the side button being pressed later.
+            _nativeStylusGesture = role == StylusRole.Draw && _canErase();
+            return false;
+        }
+
+        if (action == MotionEventActions.PointerDown)
+        {
+            // A stylus touching down while a palm or finger is already on the
+            // screen takes over: that finger gesture is cancelled.
+            var index = e.ActionIndex;
+            var role = RoleOf(e, index);
+            if (role != StylusRole.Finger && CanHandle(role))
+            {
+                _cancelOngoing?.Invoke(v, e);
+                _nativeStylusGesture = false;
+                TryBegin(v, e, index, role);
+                return true;
+            }
+
+            return false;
+        }
+
+        if (_nativeStylusGesture && action == MotionEventActions.Move && e.PointerCount == 1 && RoleOf(e, 0) == StylusRole.Erase)
+        {
+            _nativeStylusGesture = false;
+            _cancelOngoing?.Invoke(v, e);
+            Begin(v, e, 0, Mode.Erase);
+            return true;
+        }
+
+        if (action is MotionEventActions.Up or MotionEventActions.Cancel)
+        {
+            _nativeStylusGesture = false;
+        }
+
+        return false;
+    }
+
+    private bool CanHandle(StylusRole role) =>
+        role == StylusRole.Draw ? _canDraw() : role == StylusRole.Erase && _canErase();
+
+    private bool TryBegin(View v, MotionEvent e, int index, StylusRole role)
+    {
+        if (!CanHandle(role))
+        {
+            return false;
+        }
+
+        Begin(v, e, index, role == StylusRole.Draw ? Mode.Draw : Mode.Erase);
+        return true;
+    }
+
     private void Begin(View v, MotionEvent e, int index, Mode mode)
     {
         _mode = mode;
+        _view = v;
         _pointerId = e.GetPointerId(index);
+        _downX = e.GetX(index);
+        _downY = e.GetY(index);
+        _downTime = e.EventTime;
+        _maxTravelPx = 0;
         v.Parent?.RequestDisallowInterceptTouchEvent(true);
-        var x = Dp(v, e.GetX(index));
-        var y = Dp(v, e.GetY(index));
+        var x = Dp(v, _downX);
+        var y = Dp(v, _downY);
         if (mode == Mode.Draw)
         {
             _drawBegin(x, y);
@@ -215,25 +281,42 @@ public sealed class StylusGestureHandler
         }
     }
 
-    private void MoveTo(View v, MotionEvent e, int index)
+    private void TrackTravel(float x, float y)
     {
-        if (_mode == Mode.Draw)
-        {
-            _drawMove(Dp(v, e.GetX(index)), Dp(v, e.GetY(index)));
-        }
-        else
-        {
-            _eraseMove(Dp(v, e.GetX(index)), Dp(v, e.GetY(index)));
-        }
+        var dx = x - _downX;
+        var dy = y - _downY;
+        _maxTravelPx = Math.Max(_maxTravelPx, Math.Sqrt(dx * dx + dy * dy));
     }
 
-    private void Finish()
+    private void Finish(View v, MotionEvent e, int index, bool otherPointersDown)
     {
         var mode = _mode;
-        _mode = Mode.None;
+        var downX = _downX;
+        var downY = _downY;
+        var isTap = mode == Mode.Draw
+            && StylusTapDetector.IsTap(_maxTravelPx, e.EventTime - _downTime, (v.Context is { } context ? ViewConfiguration.Get(context)?.ScaledTouchSlop : null) ?? 8);
+        End(otherPointersDown);
+
         if (mode == Mode.Draw)
         {
-            _drawEnd();
+            if (isTap)
+            {
+                // Not a stroke: no ink, no undo entry; act like a finger tap.
+                _drawCancel();
+                if (v.Width > 0 && v.Height > 0)
+                {
+                    _onTap?.Invoke(downX / v.Width, downY / v.Height);
+                }
+            }
+            else
+            {
+                if (index >= 0 && e.ActionMasked == MotionEventActions.Up)
+                {
+                    _drawMove(Dp(v, e.GetX(index)), Dp(v, e.GetY(index)));
+                }
+
+                _drawEnd();
+            }
         }
         else if (mode == Mode.Erase)
         {
@@ -244,7 +327,7 @@ public sealed class StylusGestureHandler
     private void Abort()
     {
         var mode = _mode;
-        _mode = Mode.None;
+        End(otherPointersDown: false);
         if (mode == Mode.Draw)
         {
             _drawCancel();
@@ -253,6 +336,14 @@ public sealed class StylusGestureHandler
         {
             _eraseEnd();
         }
+    }
+
+    private void End(bool otherPointersDown)
+    {
+        _mode = Mode.None;
+        _ignoreUntilDown = otherPointersDown;
+        _view?.Parent?.RequestDisallowInterceptTouchEvent(false);
+        _view = null;
     }
 
     private static float Dp(View v, float px)
