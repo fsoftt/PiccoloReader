@@ -73,9 +73,63 @@ public class PagedViewportTests
     }
 
     [Fact]
-    public void Fit_falls_back_to_container_bounds_when_page_smaller()
+    public void Fit_centers_and_locks_when_scaled_page_is_smaller()
     {
-        Assert.Equal((-400.0, 0.0), PagedViewport.Range(400, 2, 0, 100, true));
+        // Page 100..300 scaled 1.5 = 300 < 400: centered at (400 - 400*1.5)/2 = -100.
+        var (min, max) = PagedViewport.Range(400, 1.5, 100, 300, true);
+        Assert.Equal(-100, min, 6);
+        Assert.Equal(-100, max, 6);
+        Assert.Equal(-100, PagedViewport.Clamp(50, 400, 1.5, 100, 300, true), 6);
+    }
+
+    [Fact]
+    public void Without_fit_the_old_container_bounds_are_kept()
+    {
+        Assert.Equal((-400.0, 0.0), PagedViewport.Range(400, 2, 0, 100, false));
+        Assert.Equal((0.0, 0.0), PagedViewport.Range(400, 1, 50, 350, false));
+    }
+
+    [Fact]
+    public void Swipe_without_room_turns_in_both_directions()
+    {
+        Assert.Equal(PageTurnIntent.Next, PagedViewport.SwipeTurn(-80, 0, 0, 0, 60));
+        Assert.Equal(PageTurnIntent.Previous, PagedViewport.SwipeTurn(80, 0, 0, 0, 60));
+        Assert.Equal(PageTurnIntent.None, PagedViewport.SwipeTurn(-30, 0, 0, 0, 60));
+    }
+
+    [Fact]
+    public void Swipe_with_room_turns_only_from_the_limit()
+    {
+        // Range -800..0: at the bottom a swipe up goes next, mid-page it pans.
+        Assert.Equal(PageTurnIntent.Next, PagedViewport.SwipeTurn(-80, -800, -800, 0, 60));
+        Assert.Equal(PageTurnIntent.None, PagedViewport.SwipeTurn(-80, -400, -800, 0, 60));
+        Assert.Equal(PageTurnIntent.Previous, PagedViewport.SwipeTurn(80, 0, -800, 0, 60));
+        Assert.Equal(PageTurnIntent.None, PagedViewport.SwipeTurn(80, -400, -800, 0, 60));
+        Assert.Equal(PageTurnIntent.None, PagedViewport.SwipeTurn(80, -800, -800, 0, 60));
+    }
+
+    [Fact]
+    public void Pedal_never_moves_content_against_the_direction()
+    {
+        foreach (var scale in new[] { 1.5, 2.0, 3.0 })
+        {
+            for (var ty = -(400 * scale - 400); ty <= 0; ty += 37)
+            {
+                var next = PagedViewport.PedalTurn(ty, 400, scale, 0, 400, PageTurnIntent.Next);
+                if (next.Action == PagedScrollAction.ScrollTo)
+                {
+                    Assert.True(next.Translation < ty);
+                    Assert.True(next.Translation >= 400 - 400 * scale - 1e-9);
+                }
+
+                var prev = PagedViewport.PedalTurn(ty, 400, scale, 0, 400, PageTurnIntent.Previous);
+                if (prev.Action == PagedScrollAction.ScrollTo)
+                {
+                    Assert.True(prev.Translation > ty);
+                    Assert.True(prev.Translation <= 1e-9);
+                }
+            }
+        }
     }
 
     [Fact]

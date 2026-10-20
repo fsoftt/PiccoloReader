@@ -42,14 +42,21 @@ public static class PagedViewport
 
     // Allowed translation range along an axis. With fitToExtent, a page that
     // overflows the container is never dragged past its own edges (no empty
-    // bands); otherwise the whole container may be panned (min..0).
+    // bands) and one that is smaller than the container is centered and
+    // locked; without it the whole container may be panned (min..0).
     public static (double Min, double Max) Range(double container, double scale, double start, double end, bool fitToExtent)
     {
-        if (fitToExtent && (end - start) * scale >= container - 0.5)
+        if (fitToExtent)
         {
-            var min = container - end * scale;
-            var max = -start * scale;
-            return min <= max ? (min, max) : (max, max);
+            if ((end - start) * scale >= container - 0.5)
+            {
+                var min = container - end * scale;
+                var max = -start * scale;
+                return min <= max ? (min, max) : (max, max);
+            }
+
+            var centered = (container - (start + end) * scale) / 2;
+            return (centered, centered);
         }
 
         return (Math.Min(0, -container * (scale - 1)), 0);
@@ -72,6 +79,26 @@ public static class PagedViewport
     // Whether the page overflows the container along the axis.
     public static bool Overflows(double container, double scale, double start, double end) =>
         (end - start) * scale > container + Epsilon;
+
+    // A drag on the mode's axis (negative = towards the next page). Without
+    // room to pan on that axis any drag past the threshold turns the page;
+    // with room, only a drag that started at the pan limit in its direction
+    // does (translation is the one at the start of the drag).
+    public static PageTurnIntent SwipeTurn(double drag, double startTranslation, double min, double max, double threshold)
+    {
+        var hasRoom = max - min > 2;
+        if (drag <= -threshold && (!hasRoom || startTranslation <= min + Epsilon))
+        {
+            return PageTurnIntent.Next;
+        }
+
+        if (drag >= threshold && (!hasRoom || startTranslation >= max - Epsilon))
+        {
+            return PageTurnIntent.Previous;
+        }
+
+        return PageTurnIntent.None;
+    }
 
     // Pedal press on a paged view whose page overflows vertically: scroll by a
     // viewport (minus overlap) or, at the page's end/start, turn the page.

@@ -530,14 +530,9 @@ public partial class SheetViewerPage : ContentPage
         {
             ResetZoom();
         }
-        else if (Math.Abs(_currentScale - _baseScale) < 0.001)
-        {
-            // Not zoomed beyond the base: the fit-width scale follows the new size.
-            ApplyBaseZoom(alignBottom: false);
-        }
         else
         {
-            UpdateSelectionOverlay();
+            RefreshZoomAfterResize();
         }
 
         _orientationFlipped = false;
@@ -894,17 +889,34 @@ public partial class SheetViewerPage : ContentPage
     // rendering (which compare against 1) need no knowledge of it.
     private double _baseScale = 1;
     private int _pageShownIndex = -1;
+    // A page turn waiting for the new page's image (its aspect ratio/crop are
+    // unknown until it renders): where to put it once it shows.
     private bool? _pendingPageAlignBottom;
+    private int _pendingPageIndex = -1;
+    // Container size the current scale/translation were computed for.
+    private double _zoomGeometryWidth;
+    private double _zoomGeometryHeight;
 
     private bool FitToPageExtent => _baseScale > 1.0001;
 
+    private bool HasPendingPageTurn =>
+        _pendingPageAlignBottom is not null && _pendingPageIndex == _viewModel.CurrentPageIndex;
+
     private void ResetZoom()
     {
+        if (HasPendingPageTurn)
+        {
+            // E.g. a rotation while the next page loads: its base zoom is
+            // applied (with the new size) when the image arrives.
+            HideDetail();
+            return;
+        }
+
         _pendingPageAlignBottom = null;
         ApplyBaseZoom(alignBottom: false);
     }
 
-    // After a page turn the new page's aspect ratio/crop may not be known yet
+    // After a page turn the new page aspect ratio/crop may not be known yet
     // (it renders asynchronously); when so, the base zoom is applied once its
     // image arrives (OnPageImageShown).
     private void ResetZoomForNewPage(bool alignBottom)
@@ -912,6 +924,7 @@ public partial class SheetViewerPage : ContentPage
         if (_viewModel.CurrentPageIndex != _pageShownIndex)
         {
             _pendingPageAlignBottom = alignBottom;
+            _pendingPageIndex = _viewModel.CurrentPageIndex;
             HideDetail();
             return;
         }
@@ -923,11 +936,20 @@ public partial class SheetViewerPage : ContentPage
     private void OnPageImageShown()
     {
         _pageShownIndex = _viewModel.CurrentPageIndex;
-        if (_pendingPageAlignBottom is { } alignBottom)
+        var pending = HasPendingPageTurn ? _pendingPageAlignBottom : null;
+        // A pending turn for another page was superseded.
+        _pendingPageAlignBottom = null;
+        if (pending is { } alignBottom)
         {
-            _pendingPageAlignBottom = null;
             ApplyBaseZoom(alignBottom);
         }
+    }
+
+    private Rect VisibleRectFor(double width, double height)
+    {
+        var frame = PageFrame.Fit(width, height, _viewModel.CurrentPageAspectRatio, _viewModel.CurrentPageCrop)
+            .VisibleRegion(_viewModel.CurrentPageCrop);
+        return new Rect(frame.X * width, frame.Y * height, frame.Width * width, frame.Height * height);
     }
 
     private void ApplyBaseZoom(bool alignBottom)
@@ -956,6 +978,67 @@ public partial class SheetViewerPage : ContentPage
 
         _xOffset = PageContainer.TranslationX;
         _yOffset = PageContainer.TranslationY;
+        _zoomGeometryWidth = width;
+        _zoomGeometryHeight = height;
+        UpdateResizeHandleScale();
+        UpdateSelectionOverlay();
+        ScheduleDetail();
+    }
+
+    // The container changed size without a rotation (banner, tuner strip,
+    // toolbar): follow the new fit-width scale but keep where the user is
+    // reading (same part of the page at the top of the screen) instead of
+    // jumping back to the page top.
+    private void RefreshZoomAfterResize()
+    {
+        var width = PageContainer.Width;
+        var height = PageContainer.Height;
+        if (HasPendingPageTurn)
+        {
+            UpdateSelectionOverlay();
+            return;
+        }
+
+        if (Math.Abs(_currentScale - _baseScale) >= 0.001 || _zoomGeometryHeight <= 0)
+        {
+            // Zoomed beyond the base: only keep the pan inside the new bounds.
+            ClampPageTranslation();
+            _xOffset = PageContainer.TranslationX;
+            _yOffset = PageContainer.TranslationY;
+            _zoomGeometryWidth = width;
+            _zoomGeometryHeight = height;
+            UpdateSelectionOverlay();
+            return;
+        }
+
+        // Fraction of the page height above the top of the screen, measured
+        // with the geometry the translation was computed for.
+        var old = VisibleRectFor(_zoomGeometryWidth, _zoomGeometryHeight);
+        var topFraction = old.Height > 0 && _baseScale > 1.0001
+            ? ((-PageContainer.TranslationY / _baseScale) - old.Top) / old.Height
+            : 0;
+
+        HideDetail();
+        _baseScale = PagedViewport.BaseScale(width, height, _viewModel.CurrentPageAspectRatio, _viewModel.CurrentPageCrop, MaxPagedZoom);
+        _currentScale = _baseScale;
+        PageContainer.Scale = _baseScale;
+        if (FitToPageExtent)
+        {
+            var visible = EditorVisibleRect();
+            PageContainer.TranslationX = PagedViewport.AlignY(width, _baseScale, visible.Left, visible.Right, false, true);
+            PageContainer.TranslationY = PagedViewport.Clamp(
+                -(visible.Top + topFraction * visible.Height) * _baseScale, height, _baseScale, visible.Top, visible.Bottom, true);
+        }
+        else
+        {
+            PageContainer.TranslationX = 0;
+            PageContainer.TranslationY = 0;
+        }
+
+        _xOffset = PageContainer.TranslationX;
+        _yOffset = PageContainer.TranslationY;
+        _zoomGeometryWidth = width;
+        _zoomGeometryHeight = height;
         UpdateResizeHandleScale();
         UpdateSelectionOverlay();
         ScheduleDetail();
@@ -1752,33 +1835,42 @@ public partial class SheetViewerPage : ContentPage
 
     private void ApplyPanEnded()
     {
-        if (_currentScale > ZoomedInThreshold)
+        // A drag along the mode axis turns the page when the page has
+        // nothing left to pan on that axis, or when the drag started at the
+        // pan limit in its direction (_xOffset/_yOffset still hold the start).
+        // Horizontal: swipe left = next. Vertical: swipe up = next.
+        var vertical = _viewModel.IsVerticalPaged;
+        var visible = EditorVisibleRect();
+        var zoomed = _currentScale > ZoomedInThreshold;
+        var (min, max) = !zoomed
+            ? (0.0, 0.0)
+            : vertical
+                ? PagedViewport.Range(PageContainer.Height, _currentScale, visible.Top, visible.Bottom, FitToPageExtent)
+                : PagedViewport.Range(PageContainer.Width, _currentScale, visible.Left, visible.Right, FitToPageExtent);
+        var pageTurnDrag = vertical ? _panTotalY : _panTotalX;
+        var crossDrag = vertical ? _panTotalX : _panTotalY;
+        var intent = PagedViewport.SwipeTurn(pageTurnDrag, vertical ? _yOffset : _xOffset, min, max, PageTurnDragThreshold);
+        var panning = max - min > 2 || CanPanAxis(horizontal: vertical);
+        if (panning && Math.Abs(pageTurnDrag) <= Math.Abs(crossDrag))
+        {
+            intent = PageTurnIntent.None;
+        }
+
+        if (zoomed)
         {
             _xOffset = PageContainer.TranslationX;
             _yOffset = PageContainer.TranslationY;
             ScheduleDetail();
         }
 
-        // A drag along the mode's axis turns the page only when the page
-        // has nothing left to pan on that axis (portrait at scale 1,
-        // landscape fit-width horizontally).
-        // Horizontal: swipe left = next. Vertical: swipe up = next.
-        var vertical = _viewModel.IsVerticalPaged;
-        if (!CanPanAxis(horizontal: !vertical))
+        if (intent == PageTurnIntent.Next)
         {
-            var pageTurnDrag = vertical ? _panTotalY : _panTotalX;
-            var crossDrag = vertical ? _panTotalX : _panTotalY;
-            if (!CanPanAxis(horizontal: vertical) || Math.Abs(pageTurnDrag) > Math.Abs(crossDrag))
-            {
-                if (pageTurnDrag <= -PageTurnDragThreshold)
-                {
-                    TryGoToNextPage();
-                }
-                else if (pageTurnDrag >= PageTurnDragThreshold)
-                {
-                    TryGoToPreviousPage();
-                }
-            }
+            TryGoToNextPage();
+        }
+        else if (intent == PageTurnIntent.Previous)
+        {
+            // Like the pedal: back onto the end of the previous page.
+            TryGoToPreviousPage(alignBottom: vertical);
         }
 
         _panTotalX = 0;
@@ -2133,7 +2225,7 @@ public partial class SheetViewerPage : ContentPage
             {
                 HideDetail();
                 PageContainer.TranslationY = PagedViewport.Clamp(
-                    result.Translation, PageContainer.Height, _currentScale, visible.Top, visible.Bottom, true);
+                    result.Translation, PageContainer.Height, _currentScale, visible.Top, visible.Bottom, FitToPageExtent);
                 _yOffset = PageContainer.TranslationY;
                 UpdateSelectionOverlay();
                 ScheduleDetail();
