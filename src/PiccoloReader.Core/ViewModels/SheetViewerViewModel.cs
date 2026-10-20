@@ -901,6 +901,31 @@ public partial class SheetViewerViewModel : ObservableObject
         }
     }
 
+    // Direct stylus drawing/erasing on the continuous list, without opening
+    // the editor. The page's annotations are replaced (the list repaints on
+    // that). These are not added to the undo history: the editor's history is
+    // tied to the single page it edits.
+    public async Task AddStrokeToContinuousPageAsync(ContinuousPage page, int sheetId, string colorHex, double strokeWidth, IReadOnlyList<StrokePoint> points)
+    {
+        var added = new List<Annotation>();
+        foreach (var piece in StrokeClipper.Clip(points, page.Crop))
+        {
+            added.Add(await _annotationService.AddStrokeAsync(sheetId, page.PageIndex, colorHex, strokeWidth, piece));
+        }
+
+        if (added.Count > 0)
+        {
+            page.Annotations = page.Annotations.Concat(added).ToList();
+        }
+    }
+
+    public async Task EraseContinuousAnnotationAsync(ContinuousPage page, Annotation annotation)
+    {
+        // Removed from the page first, so a drag over it again finds nothing.
+        page.Annotations = page.Annotations.Where(a => !ReferenceEquals(a, annotation)).ToList();
+        await _annotationService.DeleteAnnotationAsync(annotation);
+    }
+
     public void BeginEraseBatch()
     {
         _eraseBatch = new List<IUndoableAction>();

@@ -59,6 +59,9 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
     // stays valid after ACTION_UP, until the next ACTION_DOWN).
     public bool IsTap { get; private set; }
 
+    // Stylus gestures (direct drawing, erasing) never scroll or zoom the list.
+    public StylusGestureHandler? Stylus { get; set; }
+
     private static float StableX(MotionEvent e, int pointerIndex, View v) => e.GetX(pointerIndex) * v.ScaleX + v.TranslationX;
 
     private static float StableY(MotionEvent e, int pointerIndex, View v) => e.GetY(pointerIndex) * v.ScaleY + v.TranslationY;
@@ -71,6 +74,31 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
     }
 
     public bool OnInterceptTouchEvent(RecyclerView rv, MotionEvent e)
+    {
+        if (e.ActionMasked == MotionEventActions.Down)
+        {
+            // The tap/pan bookkeeping starts first, so a stylus tap is still a tap.
+            var intercepted = InterceptFingerGesture(rv, e);
+            return Stylus?.Handle(rv, e) == true || intercepted;
+        }
+
+        return Stylus?.Handle(rv, e) == true || InterceptFingerGesture(rv, e);
+    }
+
+    // Called when a stylus takes over a gesture a palm or finger started.
+    public void ResetGesture()
+    {
+        if (_isPinching)
+        {
+            _isPinching = false;
+            _onPinchEnd();
+        }
+
+        _hasLastPanX = false;
+        IsTap = false;
+    }
+
+    private bool InterceptFingerGesture(RecyclerView rv, MotionEvent e)
     {
         switch (e.ActionMasked)
         {
@@ -113,6 +141,16 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
     }
 
     public void OnTouchEvent(RecyclerView rv, MotionEvent e)
+    {
+        if (Stylus?.Handle(rv, e) == true)
+        {
+            return;
+        }
+
+        HandleFingerTouch(rv, e);
+    }
+
+    private void HandleFingerTouch(RecyclerView rv, MotionEvent e)
     {
         switch (e.ActionMasked)
         {
