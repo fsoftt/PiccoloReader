@@ -76,6 +76,39 @@ public static class PagedViewport
         return Clamp(target, container, scale, start, end, fitToExtent);
     }
 
+    // Zoom kept across a page turn, relative to the page base scale: null
+    // when the view is at (or below) the base, i.e. nothing to carry.
+    public static double? CarryRatio(double currentScale, double baseScale, double threshold)
+    {
+        if (baseScale <= 0)
+        {
+            return null;
+        }
+
+        var ratio = currentScale / baseScale;
+        return ratio > threshold ? ratio : null;
+    }
+
+    // The scale on the new page for a carried ratio.
+    public static double CarryScale(double newBaseScale, double ratio, double maxScale) =>
+        Math.Clamp(newBaseScale * ratio, 1, maxScale);
+
+    // Where the view sits within its pan range: 0 = left/top edge of the
+    // range (translation at max), 1 = right/bottom edge (translation at min).
+    // A range with no room is centered.
+    public static double PanFraction(double translation, double min, double max)
+    {
+        if (max - min <= 0.5)
+        {
+            return 0.5;
+        }
+
+        return Math.Clamp((max - translation) / (max - min), 0, 1);
+    }
+
+    public static double TranslationFromFraction(double fraction, double min, double max) =>
+        max - Math.Clamp(fraction, 0, 1) * (max - min);
+
     // Whether the page overflows the container along the axis.
     public static bool Overflows(double container, double scale, double start, double end) =>
         (end - start) * scale > container + Epsilon;

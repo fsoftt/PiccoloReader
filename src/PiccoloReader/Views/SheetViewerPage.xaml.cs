@@ -902,8 +902,31 @@ public partial class SheetViewerPage : ContentPage
     private bool HasPendingPageTurn =>
         _pendingPageAlignBottom is not null && _pendingPageIndex == _viewModel.CurrentPageIndex;
 
+    // The zoom a page turn keeps (see PagedViewport.CarryRatio): the ratio to
+    // the page base scale and where in the horizontal pan range the view was.
+    private readonly record struct ZoomCarry(double Ratio, double XFraction);
+
+    private ZoomCarry? _pendingCarry;
+
+    private ZoomCarry? CaptureZoomCarry()
+    {
+        if (PageContainer.Width <= 0 || PageContainer.Height <= 0
+            || PagedViewport.CarryRatio(_currentScale, _baseScale, ZoomedInThreshold) is not { } ratio)
+        {
+            return null;
+        }
+
+        var visible = EditorVisibleRect();
+        var (min, max) = PagedViewport.Range(
+            PageContainer.Width, _currentScale, visible.Left, visible.Right, FitToPageExtent);
+        return new ZoomCarry(ratio, PagedViewport.PanFraction(PageContainer.TranslationX, min, max));
+    }
+
+    // Reset to the base zoom of the current page (opening, rotation, mode
+    // switch, crop...): nothing is carried.
     private void ResetZoom()
     {
+        _pendingCarry = null;
         if (HasPendingPageTurn)
         {
             // E.g. a rotation while the next page loads: its base zoom is
@@ -919,29 +942,33 @@ public partial class SheetViewerPage : ContentPage
     // After a page turn the new page aspect ratio/crop may not be known yet
     // (it renders asynchronously); when so, the base zoom is applied once its
     // image arrives (OnPageImageShown).
-    private void ResetZoomForNewPage(bool alignBottom)
+    private void ResetZoomForNewPage(bool alignBottom, ZoomCarry? carry)
     {
         if (_viewModel.CurrentPageIndex != _pageShownIndex)
         {
             _pendingPageAlignBottom = alignBottom;
             _pendingPageIndex = _viewModel.CurrentPageIndex;
+            _pendingCarry = carry;
             HideDetail();
             return;
         }
 
         _pendingPageAlignBottom = null;
-        ApplyBaseZoom(alignBottom);
+        _pendingCarry = null;
+        ApplyBaseZoom(alignBottom, carry);
     }
 
     private void OnPageImageShown()
     {
         _pageShownIndex = _viewModel.CurrentPageIndex;
         var pending = HasPendingPageTurn ? _pendingPageAlignBottom : null;
+        var carry = HasPendingPageTurn ? _pendingCarry : null;
         // A pending turn for another page was superseded.
         _pendingPageAlignBottom = null;
+        _pendingCarry = null;
         if (pending is { } alignBottom)
         {
-            ApplyBaseZoom(alignBottom);
+            ApplyBaseZoom(alignBottom, carry);
         }
     }
 
@@ -952,7 +979,7 @@ public partial class SheetViewerPage : ContentPage
         return new Rect(frame.X * width, frame.Y * height, frame.Width * width, frame.Height * height);
     }
 
-    private void ApplyBaseZoom(bool alignBottom)
+    private void ApplyBaseZoom(bool alignBottom, ZoomCarry? carry = null)
     {
         HideDetail();
         var width = PageContainer.Width;
@@ -960,15 +987,27 @@ public partial class SheetViewerPage : ContentPage
         _baseScale = width > 0 && height > 0
             ? PagedViewport.BaseScale(width, height, _viewModel.CurrentPageAspectRatio, _viewModel.CurrentPageCrop, MaxPagedZoom)
             : 1;
-        _currentScale = _baseScale;
+        // A page turn keeps the zoom relative to the new page's base scale.
+        _currentScale = carry is { } kept && width > 0 && height > 0
+            ? PagedViewport.CarryScale(_baseScale, kept.Ratio, MaxPagedZoom)
+            : _baseScale;
         PageContainer.AnchorX = 0;
         PageContainer.AnchorY = 0;
-        PageContainer.Scale = _baseScale;
-        if (FitToPageExtent)
+        PageContainer.Scale = _currentScale;
+        if (_currentScale > 1.0001)
         {
             var visible = EditorVisibleRect();
-            PageContainer.TranslationX = PagedViewport.AlignY(width, _baseScale, visible.Left, visible.Right, false, true);
-            PageContainer.TranslationY = PagedViewport.AlignY(height, _baseScale, visible.Top, visible.Bottom, alignBottom, true);
+            var fit = FitToPageExtent;
+            PageContainer.TranslationY = PagedViewport.AlignY(height, _currentScale, visible.Top, visible.Bottom, alignBottom, fit);
+            if (carry is { } c)
+            {
+                var (minX, maxX) = PagedViewport.Range(width, _currentScale, visible.Left, visible.Right, fit);
+                PageContainer.TranslationX = PagedViewport.TranslationFromFraction(c.XFraction, minX, maxX);
+            }
+            else
+            {
+                PageContainer.TranslationX = PagedViewport.AlignY(width, _currentScale, visible.Left, visible.Right, false, fit);
+            }
         }
         else
         {
@@ -2264,8 +2303,9 @@ public partial class SheetViewerPage : ContentPage
     {
         if (_viewModel.NextPageCommand.CanExecute(null))
         {
+            var carry = CaptureZoomCarry();
             _viewModel.NextPageCommand.Execute(null);
-            ResetZoomForNewPage(alignBottom: false);
+            ResetZoomForNewPage(alignBottom: false, carry);
         }
     }
 
@@ -2273,8 +2313,9 @@ public partial class SheetViewerPage : ContentPage
     {
         if (_viewModel.PreviousPageCommand.CanExecute(null))
         {
+            var carry = CaptureZoomCarry();
             _viewModel.PreviousPageCommand.Execute(null);
-            ResetZoomForNewPage(alignBottom);
+            ResetZoomForNewPage(alignBottom, carry);
         }
     }
 
@@ -2898,7 +2939,8 @@ public partial class SheetViewerPage : ContentPage
         }
         else
         {
-            ResetZoom();
+            // The jump already changed the page: keep the zoom on the new one.
+            ResetZoomForNewPage(alignBottom: false, CaptureZoomCarry());
         }
     }
 

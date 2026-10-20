@@ -166,4 +166,45 @@ public class PagedViewportTests
         r = PagedViewport.PedalTurn(0, 400, 3, 0, 400, PageTurnIntent.Previous);
         Assert.Equal(PagedScrollAction.PreviousPage, r.Action);
     }
+
+    [Fact]
+    public void CarryRatio_is_null_at_base_and_the_ratio_when_zoomed()
+    {
+        Assert.Null(PagedViewport.CarryRatio(2.0, 2.0, 1.05));
+        Assert.Null(PagedViewport.CarryRatio(1.0, 2.0, 1.05));
+        Assert.Equal(1.5, PagedViewport.CarryRatio(3.0, 2.0, 1.05)!.Value, 6);
+        Assert.Equal(2.5, PagedViewport.CarryRatio(2.5, 1.0, 1.05)!.Value, 6);
+    }
+
+    [Fact]
+    public void CarryScale_applies_the_ratio_to_the_new_base_and_clamps()
+    {
+        Assert.Equal(3.0, PagedViewport.CarryScale(2.0, 1.5, 5), 6);
+        Assert.Equal(5.0, PagedViewport.CarryScale(4.0, 2.0, 5), 6);
+        Assert.Equal(1.0, PagedViewport.CarryScale(1.0, 0.5, 5), 6);
+    }
+
+    [Fact]
+    public void PanFraction_round_trips_through_a_different_range()
+    {
+        // At the left edge of one range, the left edge of another.
+        var left = PagedViewport.PanFraction(0, -400, 0);
+        Assert.Equal(0, left, 6);
+        Assert.Equal(-100, PagedViewport.TranslationFromFraction(left, -300, -100), 6);
+
+        var right = PagedViewport.PanFraction(-400, -400, 0);
+        Assert.Equal(1, right, 6);
+        Assert.Equal(-300, PagedViewport.TranslationFromFraction(right, -300, -100), 6);
+
+        var mid = PagedViewport.PanFraction(-200, -400, 0);
+        Assert.Equal(0.5, mid, 6);
+        Assert.Equal(-200, PagedViewport.TranslationFromFraction(mid, -300, -100), 6);
+    }
+
+    [Fact]
+    public void PanFraction_without_room_is_centered()
+    {
+        Assert.Equal(0.5, PagedViewport.PanFraction(-50, -50, -50), 6);
+        Assert.Equal(-50, PagedViewport.TranslationFromFraction(0.2, -50, -50), 6);
+    }
 }
