@@ -455,6 +455,7 @@ public partial class SheetViewerViewModel : ObservableObject
                 page.IsLoadRequested = false;
                 page.ImageBytes = null;
                 page.Annotations = Array.Empty<Annotation>();
+                page.AnnotationsLoaded = false;
             }
         }
 
@@ -516,7 +517,7 @@ public partial class SheetViewerViewModel : ObservableObject
             var annotations = await LoadPageAnnotationsAsync(page.PageIndex, page.FullAspectRatio);
             if (page.IsLoadRequested)
             {
-                page.Annotations = annotations.ToList();
+                SetLoadedAnnotations(page, annotations.ToList());
             }
         }
     }
@@ -566,7 +567,7 @@ public partial class SheetViewerViewModel : ObservableObject
         {
             var page = ContinuousPages[CurrentPageIndex];
             var annotations = await LoadPageAnnotationsAsync(page.PageIndex, page.FullAspectRatio);
-            page.Annotations = annotations.ToList();
+            SetLoadedAnnotations(page, annotations.ToList());
         }
     }
 
@@ -902,20 +903,31 @@ public partial class SheetViewerViewModel : ObservableObject
     }
 
     // Direct stylus drawing/erasing on the continuous list, without opening
-    // the editor. The page's annotations are replaced (the list repaints on
-    // that). These are not added to the undo history: the editor's history is
-    // tied to the single page it edits.
-    public async Task AddStrokeToContinuousPageAsync(ContinuousPage page, int sheetId, string colorHex, double strokeWidth, IReadOnlyList<StrokePoint> points)
+    // the editor. The page annotations are replaced (the list repaints on
+    // that). Strokes are not added to the undo history (it belongs to the
+    // single page the editor has open); the view offers a one-level undo of
+    // the last erase gesture instead.
+    private static void SetLoadedAnnotations(ContinuousPage page, List<Annotation> loaded)
     {
-        var added = new List<Annotation>();
-        foreach (var piece in StrokeClipper.Clip(points, page.Crop))
+        if (!page.AnnotationsLoaded)
         {
-            added.Add(await _annotationService.AddStrokeAsync(sheetId, page.PageIndex, colorHex, strokeWidth, piece));
+            // Strokes saved while the load was in flight may or may not be in
+            // the result, depending on timing: keep them, once.
+            loaded.AddRange(page.Annotations.Where(added => loaded.All(l => l.Id != added.Id)));
         }
 
-        if (added.Count > 0)
+        page.Annotations = loaded;
+        page.AnnotationsLoaded = true;
+    }
+
+    public async Task AddStrokeToContinuousPageAsync(ContinuousPage page, int sheetId, string colorHex, double strokeWidth, IReadOnlyList<StrokePoint> points)
+    {
+        foreach (var piece in StrokeClipper.Clip(points, page.Crop))
         {
-            page.Annotations = page.Annotations.Concat(added).ToList();
+            var annotation = await _annotationService.AddStrokeAsync(sheetId, page.PageIndex, colorHex, strokeWidth, piece);
+
+            // Shown as soon as it is stored, so a later failure cannot hide it.
+            page.Annotations = page.Annotations.Append(annotation).ToList();
         }
     }
 
@@ -923,8 +935,33 @@ public partial class SheetViewerViewModel : ObservableObject
     {
         // Removed from the page first, so a drag over it again finds nothing.
         page.Annotations = page.Annotations.Where(a => !ReferenceEquals(a, annotation)).ToList();
-        await _annotationService.DeleteAnnotationAsync(annotation);
+        try
+        {
+            await _annotationService.DeleteAnnotationAsync(annotation);
+        }
+        catch
+        {
+            if (!page.Annotations.Contains(annotation))
+            {
+                page.Annotations = page.Annotations.Append(annotation).ToList();
+            }
+
+            throw;
+        }
     }
+
+    public async Task RestoreContinuousAnnotationsAsync(IEnumerable<(ContinuousPage Page, Annotation Annotation)> erased)
+    {
+        foreach (var (page, annotation) in erased)
+        {
+            await _annotationService.InsertAnnotationAsync(annotation);
+            if (!page.Annotations.Contains(annotation))
+            {
+                page.Annotations = page.Annotations.Append(annotation).ToList();
+            }
+        }
+    }
+
 
     public void BeginEraseBatch()
     {
@@ -1183,6 +1220,7 @@ public partial class SheetViewerViewModel : ObservableObject
             page.IsLoadRequested = false;
             page.ImageBytes = null;
             page.Annotations = Array.Empty<Annotation>();
+            page.AnnotationsLoaded = false;
             // Keep the row's height plausible until the new image arrives.
             page.Crop = crop;
             page.AspectRatio = crop.CroppedAspectRatio(fullAspect);

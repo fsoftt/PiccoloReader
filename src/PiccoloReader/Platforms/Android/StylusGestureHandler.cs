@@ -58,6 +58,7 @@ public sealed class StylusGestureHandler
     private float _downX;
     private float _downY;
     private long _downTime;
+    private long _gestureDownTime;
     private double _maxTravelPx;
 
     public StylusGestureHandler(
@@ -104,6 +105,9 @@ public sealed class StylusGestureHandler
             buttons.HasFlag(MotionEventButtonState.StylusSecondary));
     }
 
+    // Abandons any gesture in progress (the page is going away).
+    public void Cancel() => Abort();
+
     public bool Handle(View v, MotionEvent e)
     {
         var action = e.ActionMasked;
@@ -116,6 +120,13 @@ public sealed class StylusGestureHandler
         // A gesture is being handled here.
         if (action == MotionEventActions.Down)
         {
+            // The same DOWN seen twice (intercept, then replayed to the touch
+            // handler) is not a new gesture.
+            if (e.DownTime == _gestureDownTime)
+            {
+                return true;
+            }
+
             // Stale state (a missed Up): drop it and start over.
             Abort();
             return Handle(v, e);
@@ -266,6 +277,7 @@ public sealed class StylusGestureHandler
         _downX = e.GetX(index);
         _downY = e.GetY(index);
         _downTime = e.EventTime;
+        _gestureDownTime = e.DownTime;
         _maxTravelPx = 0;
         v.Parent?.RequestDisallowInterceptTouchEvent(true);
         var x = Dp(v, _downX);

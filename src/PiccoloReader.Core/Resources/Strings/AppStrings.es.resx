@@ -176,6 +176,7 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="ReadingModeNameVerticalPaged" xml:space="preserve"><value>Vertical por páginas</value></data>
   <data name="ReadingModeNameVerticalContinuous" xml:space="preserve"><value>Continuo vertical</value></data>
   <data name="UndoAction" xml:space="preserve"><value>Deshacer</value></data>
+  <data name="AnnotationsErased" xml:space="preserve"><value>Borrado</value></data>
   <data name="RedoAction" xml:space="preserve"><value>Rehacer</value></data>
   <data name="ToolSettingsAction" xml:space="preserve"><value>Ajustes de herramienta</value></data>
   <data name="StopToolAction" xml:space="preserve"><value>Dejar la herramienta</value></data>

@@ -79,10 +79,23 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
         {
             // The tap/pan bookkeeping starts first, so a stylus tap is still a tap.
             var intercepted = InterceptFingerGesture(rv, e);
-            return Stylus?.Handle(rv, e) == true || intercepted;
+            return HandleStylus(rv, e) || intercepted;
         }
 
-        return Stylus?.Handle(rv, e) == true || InterceptFingerGesture(rv, e);
+        return HandleStylus(rv, e) || InterceptFingerGesture(rv, e);
+    }
+
+    // A finished stylus gesture must not leave a stale IsTap behind for the
+    // next reader (the tap itself is reported before this runs).
+    private bool HandleStylus(RecyclerView rv, MotionEvent e)
+    {
+        var handled = Stylus?.Handle(rv, e) == true;
+        if (handled && e.ActionMasked is MotionEventActions.Up or MotionEventActions.Cancel)
+        {
+            IsTap = false;
+        }
+
+        return handled;
     }
 
     // Called when a stylus takes over a gesture a palm or finger started.
@@ -142,7 +155,7 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
 
     public void OnTouchEvent(RecyclerView rv, MotionEvent e)
     {
-        if (Stylus?.Handle(rv, e) == true)
+        if (HandleStylus(rv, e))
         {
             return;
         }

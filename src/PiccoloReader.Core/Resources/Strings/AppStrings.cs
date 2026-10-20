@@ -188,6 +188,7 @@ public static class AppStrings
     public static string ReadingModeNameVerticalPaged => Get(nameof(ReadingModeNameVerticalPaged));
     public static string ReadingModeNameVerticalContinuous => Get(nameof(ReadingModeNameVerticalContinuous));
     public static string UndoAction => Get(nameof(UndoAction));
+    public static string AnnotationsErased => Get(nameof(AnnotationsErased));
     public static string RedoAction => Get(nameof(RedoAction));
     public static string ToolSettingsAction => Get(nameof(ToolSettingsAction));
     public static string StopToolAction => Get(nameof(StopToolAction));

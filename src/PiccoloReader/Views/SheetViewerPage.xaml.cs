@@ -100,6 +100,15 @@ public partial class SheetViewerPage : ContentPage
         _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => InvalidateAnnotations();
         _viewModel.PropertyChanged += (_, e) =>
         {
+#if ANDROID
+            // A mode change (reading mode, editor opening/closing) ends any
+            // stylus gesture in flight.
+            if (e.PropertyName is nameof(SheetViewerViewModel.ReadingMode) or nameof(SheetViewerViewModel.IsContinuousEditing))
+            {
+                AbortStylusGestures();
+            }
+#endif
+
             if (e.PropertyName == nameof(SheetViewerViewModel.ReadingMode))
             {
                 HideDetail();
@@ -228,6 +237,9 @@ public partial class SheetViewerPage : ContentPage
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
+#if ANDROID
+        AbortStylusGestures();
+#endif
         _viewModel.SaveCurrentPageThumbnail();
         _viewModel.StopSpinnerWatchdog();
         _metronome.PropertyChanged -= OnMetronomePropertyChanged;
@@ -2041,7 +2053,7 @@ public partial class SheetViewerPage : ContentPage
                     onPinchUpdate: ContinuousPinchRunning,
                     onPinchEnd: ContinuousPinchEnded,
                     onHorizontalPan: ContinuousPanHorizontally);
-                _continuousZoomTouchListener.Stylus = CreateContinuousStylusHandler();
+                _continuousZoomTouchListener.Stylus = TrackStylusHandler(CreateContinuousStylusHandler());
                 recyclerView.AddOnItemTouchListener(_continuousZoomTouchListener);
             }
         };
@@ -2062,7 +2074,7 @@ public partial class SheetViewerPage : ContentPage
                     onPinchEnd: AndroidHandlePinchEnded,
                     onPanUpdate: AndroidHandlePanRunning,
                     onPanEnd: AndroidHandlePanEnded);
-                _pageContainerTouchListener.Stylus = CreateStylusHandler(nativePencil: false);
+                _pageContainerTouchListener.Stylus = TrackStylusHandler(CreateStylusHandler(nativePencil: false));
                 platformView.SetOnTouchListener(_pageContainerTouchListener);
             }
         };
@@ -2085,7 +2097,7 @@ public partial class SheetViewerPage : ContentPage
                         _pageContainerTouchListener is not null && PageContainer.Handler?.PlatformView is global::Android.Views.View pageView
                             ? (_pageContainerTouchListener, pageView)
                             : null);
-                _pencilPinchTouchListener.Stylus = CreateStylusHandler(nativePencil: true);
+                _pencilPinchTouchListener.Stylus = TrackStylusHandler(CreateStylusHandler(nativePencil: true));
                 platformView.SetOnTouchListener(_pencilPinchTouchListener);
             }
         };
@@ -2143,6 +2155,8 @@ public partial class SheetViewerPage : ContentPage
     private global::Android.Views.View? _stylusContinuousChild;
     private int _stylusContinuousPosition;
     private int _stylusContinuousTop;
+    private int _stylusContinuousWidth;
+    private int _stylusContinuousHeight;
     private bool _stylusContinuousDropped;
     private bool _stylusContinuousInvalidatePending;
 
@@ -2154,9 +2168,9 @@ public partial class SheetViewerPage : ContentPage
             drawMove: OnContinuousStylusDrawMove,
             drawEnd: OnContinuousStylusDrawEnd,
             drawCancel: OnContinuousStylusDrawCancel,
-            eraseBegin: () => { },
+            eraseBegin: OnContinuousStylusEraseBegin,
             eraseMove: EraseAtContinuousPoint,
-            eraseEnd: () => { },
+            eraseEnd: OnContinuousStylusEraseEnd,
             onTap: OnContinuousStylusTap,
             cancelOngoing: (_, _) => _continuousZoomTouchListener?.ResetGesture());
 
@@ -2231,6 +2245,8 @@ public partial class SheetViewerPage : ContentPage
         _stylusContinuousChild = hit.Child;
         _stylusContinuousPosition = hit.Position;
         _stylusContinuousTop = hit.Child.Top;
+        _stylusContinuousWidth = hit.Child.Width;
+        _stylusContinuousHeight = hit.Child.Height;
         _stylusLiveStroke.Add(hit.Point);
         ViewOfContinuousPage(hit.Page)?.SetLiveStroke(_stylusLiveStroke, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth);
     }
@@ -2247,11 +2263,13 @@ public partial class SheetViewerPage : ContentPage
 
         // The list scrolled (pedal, fling) or the item was recycled: the
         // stroke no longer lines up with the page, so it is dropped.
-        if (child.Top != _stylusContinuousTop || rv.GetChildAdapterPosition(child) != _stylusContinuousPosition)
+        if (child.Top != _stylusContinuousTop || child.Width != _stylusContinuousWidth || child.Height != _stylusContinuousHeight
+            || rv.GetChildAdapterPosition(child) != _stylusContinuousPosition)
         {
             _stylusContinuousDropped = true;
+            var droppedStroke = _stylusLiveStroke;
             _stylusLiveStroke = new List<StrokePoint>();
-            ViewOfContinuousPage(page)?.SetLiveStroke(null, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth);
+            ViewOfContinuousPage(page)?.ClearLiveStroke(droppedStroke);
             return;
         }
 
@@ -2285,10 +2303,11 @@ public partial class SheetViewerPage : ContentPage
         var page = _stylusContinuousPage;
         _stylusContinuousPage = null;
         _stylusContinuousChild = null;
+        var cancelled = _stylusLiveStroke;
         _stylusLiveStroke = new List<StrokePoint>();
         if (page is not null)
         {
-            ViewOfContinuousPage(page)?.SetLiveStroke(null, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth);
+            ViewOfContinuousPage(page)?.ClearLiveStroke(cancelled);
         }
     }
 
@@ -2326,9 +2345,21 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
+    // The annotations erased by the stylus gesture in progress, so the whole
+    // gesture can be undone from one snackbar.
+    private List<(ContinuousPage Page, Annotation Annotation)> _continuousErased = new();
+    private List<Task> _continuousEraseTasks = new();
+
+    private void OnContinuousStylusEraseBegin()
+    {
+        _continuousErased = new List<(ContinuousPage, Annotation)>();
+        _continuousEraseTasks = new List<Task>();
+    }
+
     private void EraseAtContinuousPoint(float xDp, float yDp)
     {
-        if (ContinuousPageAt(xDp, yDp) is not { } hit || !hit.Page.Crop.Contains(hit.Point.X, hit.Point.Y))
+        // Only pages whose stored annotations are all loaded can be erased.
+        if (ContinuousPageAt(xDp, yDp) is not { } hit || !hit.Page.AnnotationsLoaded || !hit.Page.Crop.Contains(hit.Point.X, hit.Point.Y))
         {
             return;
         }
@@ -2336,20 +2367,79 @@ public partial class SheetViewerPage : ContentPage
         var annotation = FindErasableAnnotation(hit.Page.Annotations, hit.Point.X, hit.Point.Y, hit.Page.FullAspectRatio, _viewModel.EraserRadius);
         if (annotation is not null)
         {
-            _ = EraseContinuousAnnotationSafeAsync(hit.Page, annotation);
+            _continuousEraseTasks.Add(EraseContinuousAnnotationSafeAsync(hit.Page, annotation, _continuousErased));
         }
     }
 
-    private async Task EraseContinuousAnnotationSafeAsync(ContinuousPage page, Annotation annotation)
+    private async Task EraseContinuousAnnotationSafeAsync(ContinuousPage page, Annotation annotation, List<(ContinuousPage Page, Annotation Annotation)> erased)
     {
         try
         {
             await _viewModel.EraseContinuousAnnotationAsync(page, annotation);
+            erased.Add((page, annotation));
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Continuous stylus erase failed: {ex}");
         }
+    }
+
+    // After the gesture: offers a one-level undo of what it erased (the
+    // editor undo bar is not on screen while reading).
+    private async void OnContinuousStylusEraseEnd()
+    {
+        var erased = _continuousErased;
+        var tasks = _continuousEraseTasks;
+        try
+        {
+            await Task.WhenAll(tasks);
+            if (erased.Count == 0)
+            {
+                return;
+            }
+
+            await CommunityToolkit.Maui.Alerts.Snackbar.Make(
+                AppStrings.AnnotationsErased,
+                () => _ = RestoreContinuousErasedAsync(erased),
+                AppStrings.UndoAction,
+                TimeSpan.FromSeconds(6)).Show();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Continuous erase undo offer failed: {ex}");
+        }
+    }
+
+    private async Task RestoreContinuousErasedAsync(List<(ContinuousPage Page, Annotation Annotation)> erased)
+    {
+        try
+        {
+            await _viewModel.RestoreContinuousAnnotationsAsync(erased);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Continuous erase undo failed: {ex}");
+        }
+    }
+
+    // Stylus gestures in flight must not outlive their page or mode.
+    private readonly List<PiccoloReader.Platforms.Android.StylusGestureHandler> _stylusHandlers = new();
+
+    private PiccoloReader.Platforms.Android.StylusGestureHandler TrackStylusHandler(PiccoloReader.Platforms.Android.StylusGestureHandler handler)
+    {
+        _stylusHandlers.Add(handler);
+        return handler;
+    }
+
+    private void AbortStylusGestures()
+    {
+        foreach (var handler in _stylusHandlers)
+        {
+            handler.Cancel();
+        }
+
+        _stylusContinuousPage = null;
+        _stylusContinuousChild = null;
     }
 
     // A stylus tap acts like a finger tap on the page under it.
@@ -2438,21 +2528,8 @@ public partial class SheetViewerPage : ContentPage
         });
     }
 
-    // The first annotation within the eraser radius of a page-normalized
-    // point. aspect is the full page height / width.
     private static Annotation? FindErasableAnnotation(IEnumerable<Annotation> annotations, double normalizedX, double normalizedY, double aspect, double radius) =>
-        annotations.FirstOrDefault(a =>
-        {
-            if (a.IsStroke)
-            {
-                var points = AnnotationService.DeserializePoints(a.Points);
-                return StrokeHitTester.DistanceToPolyline(normalizedX, normalizedY, points, aspect) <= radius;
-            }
-
-            var radiusY = radius / aspect;
-            return normalizedX >= a.X - radius && normalizedX <= a.X + a.Width + radius &&
-                   normalizedY >= a.Y - radiusY && normalizedY <= a.Y + a.Height + radiusY;
-        });
+        AnnotationHitTester.FindErasable(annotations, normalizedX, normalizedY, aspect, radius);
 
     // localX/localY are PageContainer-local. The radius is a fraction of the
     // page's width, so hit-testing happens in page-width units (Y is scaled

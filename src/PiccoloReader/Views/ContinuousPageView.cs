@@ -244,6 +244,16 @@ public class ContinuousPageView : ContentView
         InvalidateCanvases();
     }
 
+    // Clears the preview only if it still shows this stroke, so the end of one
+    // stroke cannot wipe the preview of the next.
+    public void ClearLiveStroke(IReadOnlyList<StrokePoint> stroke)
+    {
+        if (ReferenceEquals(_liveStroke, stroke))
+        {
+            SetLiveStroke(null, _liveColorHex, _liveStrokeWidth);
+        }
+    }
+
     private void DrawLive(SkiaSharp.SKCanvas canvas, float width, float height, PageFrame frame)
     {
         if (_liveStroke is { Count: >= 2 } points)
