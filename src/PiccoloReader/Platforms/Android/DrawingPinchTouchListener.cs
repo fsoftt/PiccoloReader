@@ -24,6 +24,9 @@ public sealed class DrawingPinchTouchListener : Java.Lang.Object, View.IOnTouchL
 
     private bool _isForwarding;
 
+    // Stylus gestures (eraser tip / side button) are handled before the pinch logic.
+    public StylusGestureHandler? Stylus { get; set; }
+
     public DrawingPinchTouchListener(Action onPinchBegin, Func<(View.IOnTouchListener Listener, View View)?> pinchTarget)
     {
         _onPinchBegin = onPinchBegin;
@@ -35,6 +38,11 @@ public sealed class DrawingPinchTouchListener : Java.Lang.Object, View.IOnTouchL
         if (v is null || e is null)
         {
             return false;
+        }
+
+        if (Stylus?.Handle(v, e) == true)
+        {
+            return true;
         }
 
         if (e.ActionMasked == MotionEventActions.Down)

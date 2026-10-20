@@ -258,6 +258,8 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="TunerStripPositionRight" xml:space="preserve"><value>Right</value></data>
   <data name="TunerStripPositionBottom" xml:space="preserve"><value>Bottom</value></data>
   <data name="TunerStripPositionTop" xml:space="preserve"><value>Top</value></data>
+  <data name="StylusDrawsDirectlyLabel" xml:space="preserve"><value>Stylus draws directly</value></data>
+  <data name="StylusDrawsDirectlyDescription" xml:space="preserve"><value>Draw with a stylus without opening the pencil tool. The pen side button or eraser end erases.</value></data>
   <data name="Metronome" xml:space="preserve"><value>Metronome</value></data>
   <data name="MetronomeBeatsPerBar" xml:space="preserve"><value>Beats per bar</value></data>
   <data name="MetronomeSubdivision" xml:space="preserve"><value>Subdivision</value></data>

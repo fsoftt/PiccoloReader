@@ -56,6 +56,9 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
     private readonly Action _onPanEnd;
     private readonly float _density;
 
+    // Stylus gestures are handled first and never reach the pan/pinch/tap logic.
+    public StylusGestureHandler? Stylus { get; set; }
+
     private bool _isPossiblePanOrTap;
     private bool _isPinching;
     private float _panStartX;
@@ -97,6 +100,11 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
         if (v is null || e is null)
         {
             return false;
+        }
+
+        if (Stylus?.Handle(v, e) == true)
+        {
+            return true;
         }
 
         switch (e.ActionMasked)

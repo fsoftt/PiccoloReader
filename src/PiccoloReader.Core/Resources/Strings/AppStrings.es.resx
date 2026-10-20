@@ -258,6 +258,8 @@ Si quieres darme una propina, toca el botón de abajo — se mostrará un anunci
   <data name="TunerStripPositionRight" xml:space="preserve"><value>Derecha</value></data>
   <data name="TunerStripPositionBottom" xml:space="preserve"><value>Abajo</value></data>
   <data name="TunerStripPositionTop" xml:space="preserve"><value>Arriba</value></data>
+  <data name="StylusDrawsDirectlyLabel" xml:space="preserve"><value>El lápiz óptico dibuja directamente</value></data>
+  <data name="StylusDrawsDirectlyDescription" xml:space="preserve"><value>Dibuja con el lápiz óptico sin abrir la herramienta de lápiz. El botón lateral o el extremo borrador borra.</value></data>
   <data name="Metronome" xml:space="preserve"><value>Metrónomo</value></data>
   <data name="MetronomeBeatsPerBar" xml:space="preserve"><value>Pulsos por compás</value></data>
   <data name="MetronomeSubdivision" xml:space="preserve"><value>Subdivisión</value></data>

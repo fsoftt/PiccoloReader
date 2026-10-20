@@ -4,6 +4,7 @@ using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Services.Metronome;
 using PiccoloReader.Core.Services.PageTurn;
+using PiccoloReader.Core.Services.Stylus;
 using PiccoloReader.Core.Services.Tuner;
 using PiccoloReader.Core.ViewModels;
 using SkiaSharp;
@@ -62,11 +63,12 @@ public partial class SheetViewerPage : ContentPage
     private readonly IPageTurnInput _pageTurnInput;
     private readonly TunerStripController _tunerStrip;
     private readonly ITunerStripPreferenceService _tunerStripPreferences;
+    private readonly IStylusPreferenceService _stylusPreferences;
     // Cached from the preference in OnAppearing so toolbar show/hide does not read it.
     private TunerStripPosition _tunerStripPosition;
     private Window? _window;
 
-    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput, TunerStripController tunerStrip, ITunerStripPreferenceService tunerStripPreferences)
+    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput, TunerStripController tunerStrip, ITunerStripPreferenceService tunerStripPreferences, IStylusPreferenceService stylusPreferences)
     {
         InitializeComponent();
         Unloaded += (_, _) => _pageTurnInput.Requested -= OnPageTurnRequested;
@@ -77,6 +79,7 @@ public partial class SheetViewerPage : ContentPage
         _pageTurnInput = pageTurnInput;
         _tunerStrip = tunerStrip;
         _tunerStripPreferences = tunerStripPreferences;
+        _stylusPreferences = stylusPreferences;
         SetUpTunerStripView();
         BindingContext = _viewModel;
 
@@ -2058,6 +2061,7 @@ public partial class SheetViewerPage : ContentPage
                     onPinchEnd: AndroidHandlePinchEnded,
                     onPanUpdate: AndroidHandlePanRunning,
                     onPanEnd: AndroidHandlePanEnded);
+                _pageContainerTouchListener.Stylus = CreateStylusHandler(nativePencil: false);
                 platformView.SetOnTouchListener(_pageContainerTouchListener);
             }
         };
@@ -2080,10 +2084,51 @@ public partial class SheetViewerPage : ContentPage
                         _pageContainerTouchListener is not null && PageContainer.Handler?.PlatformView is global::Android.Views.View pageView
                             ? (_pageContainerTouchListener, pageView)
                             : null);
+                _pencilPinchTouchListener.Stylus = CreateStylusHandler(nativePencil: true);
                 platformView.SetOnTouchListener(_pencilPinchTouchListener);
             }
         };
     }
+
+    // Stylus input (see StylusGestureHandler). Erasing (eraser tip or side
+    // button) always works while Pencil is active, and with direct drawing on
+    // it also works on the plain page; there a plain stylus stroke draws
+    // without entering annotation mode. Pencil mode leaves plain strokes to
+    // its DrawingView.
+    private PiccoloReader.Platforms.Android.StylusGestureHandler CreateStylusHandler(bool nativePencil) =>
+        new(
+            canDraw: () => !nativePencil && CanStylusActOnPage(),
+            canErase: () => nativePencil || CanStylusActOnPage(),
+            drawBegin: OnStylusDrawBegin,
+            drawMove: OnStylusDrawMove,
+            drawEnd: OnStylusDrawEnd,
+            drawCancel: OnStylusDrawCancel,
+            eraseBegin: OnStylusEraseBegin,
+            eraseMove: (x, y) => EraseAtDrawingViewPoint(new PointF(x, y)),
+            eraseEnd: OnStylusEraseEnd,
+            cancelNativeStroke: nativePencil
+                ? (view, e) =>
+                {
+                    // Same as a pinch: end the DrawingView's stroke and drop it.
+                    _discardPencilLine = true;
+                    var up = global::Android.Views.MotionEvent.Obtain(e.DownTime, e.EventTime, global::Android.Views.MotionEventActions.Up, e.GetX(0), e.GetY(0), e.MetaState);
+                    if (up is not null)
+                    {
+                        view.OnTouchEvent(up);
+                        up.Recycle();
+                    }
+                }
+                : null);
+
+    // Direct stylus use on the plain page: setting on, no tool active and a
+    // single-page view (the continuous list is not covered).
+    private bool CanStylusActOnPage() =>
+        _stylusPreferences.DrawsDirectly
+        && _viewModel.ActiveTool == AnnotationTool.MusicIcons
+        && !IsContinuousListActive
+        && PageContainer.Width > 0
+        && PageContainer.Height > 0
+        && int.TryParse(SheetId, out _);
 
     // SelectionBorder (icon move) and ResizeHandle (icon resize) are both
     // nested inside PageContainer's live zoom transform - and, one level
@@ -3663,8 +3708,88 @@ public partial class SheetViewerPage : ContentPage
             .Select(p => new StrokePoint((p.X - pageRect.Left) / pageRect.Width, (p.Y - pageRect.Top) / pageRect.Height))
             .ToList();
 
+        await SavePencilStrokeAsync(sheetId, normalizedPoints);
+    }
+
+    // Shared by the Pencil tool and direct stylus drawing: one place that
+    // saves a stroke with the current pencil color/width (and records undo).
+    private async Task SavePencilStrokeAsync(int sheetId, IReadOnlyList<StrokePoint> normalizedPoints)
+    {
         await _viewModel.AddClippedStrokeAsync(sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, normalizedPoints);
         InvalidateAnnotations();
+    }
+
+    // Direct stylus drawing (no tool active). The stroke is kept in page-
+    // normalized points and painted by the annotation canvases on top of the
+    // saved annotations until it has been saved.
+    private List<StrokePoint> _stylusLiveStroke = new();
+
+    private void OnStylusDrawBegin(float x, float y)
+    {
+        _stylusLiveStroke = new List<StrokePoint>();
+        AddStylusPoint(x, y);
+    }
+
+    private void OnStylusDrawMove(float x, float y)
+    {
+        AddStylusPoint(x, y);
+        InvalidateAnnotations();
+    }
+
+    private void AddStylusPoint(float x, float y)
+    {
+        var pageRect = EditorPageRect();
+        if (pageRect.Width <= 0 || pageRect.Height <= 0)
+        {
+            return;
+        }
+
+        _stylusLiveStroke.Add(new StrokePoint((x - pageRect.Left) / pageRect.Width, (y - pageRect.Top) / pageRect.Height));
+    }
+
+    private void OnStylusDrawCancel()
+    {
+        _stylusLiveStroke = new List<StrokePoint>();
+        InvalidateAnnotations();
+    }
+
+    private async void OnStylusDrawEnd()
+    {
+        var stroke = _stylusLiveStroke;
+        try
+        {
+            if (stroke.Count >= 2 && int.TryParse(SheetId, out var sheetId))
+            {
+                await SavePencilStrokeAsync(sheetId, stroke);
+            }
+        }
+        finally
+        {
+            // A newer stroke may already have started; leave it alone.
+            if (ReferenceEquals(stroke, _stylusLiveStroke))
+            {
+                _stylusLiveStroke = new List<StrokePoint>();
+            }
+
+            InvalidateAnnotations();
+        }
+    }
+
+    private void OnStylusEraseBegin() => _viewModel.BeginEraseBatch();
+
+    private void OnStylusEraseEnd()
+    {
+        _viewModel.EndEraseBatch();
+        EraserRadiusIndicator.IsVisible = false;
+    }
+
+    private void DrawLiveStylusStroke(SKCanvas canvas, float width, float height)
+    {
+        if (_stylusLiveStroke.Count >= 2)
+        {
+            _annotationPainter.DrawLiveStroke(
+                canvas, width, height, _stylusLiveStroke, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, EditorPageFrame());
+        }
     }
 
     private async Task EnsureBravuraTypefaceLoadedAsync()
@@ -3720,6 +3845,7 @@ public partial class SheetViewerPage : ContentPage
         }
 
         _annotationPainter.DrawAnnotations(canvas, e.Info, _viewModel.CurrentPageAnnotations, EditorPageFrame(), _viewModel.CurrentPageCrop);
+        DrawLiveStylusStroke(canvas, e.Info.Width, e.Info.Height);
     }
 
     // Draws the part of the page area in _annotationDetailArea: the same
@@ -3745,6 +3871,7 @@ public partial class SheetViewerPage : ContentPage
             _viewModel.CurrentPageAnnotations,
             EditorPageFrame(),
             _viewModel.CurrentPageCrop);
+        DrawLiveStylusStroke(canvas, (float)(PageContainer.Width * k), (float)(PageContainer.Height * k));
 
         MarkAnnotationDetailPainted();
     }

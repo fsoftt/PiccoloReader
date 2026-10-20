@@ -100,6 +100,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ITunerPreferenceService, MauiTunerPreferenceService>();
 		builder.Services.AddSingleton<IMicrophonePermissionService, MauiMicrophonePermissionService>();
 		builder.Services.AddSingleton<ITunerStripPreferenceService, MauiTunerStripPreferenceService>();
+		builder.Services.AddSingleton<PiccoloReader.Core.Services.Stylus.IStylusPreferenceService, MauiStylusPreferenceService>();
 #if ANDROID
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.Android.PdfPageRenderer>();
 		builder.Services.AddSingleton<IMetronomePlayer, PiccoloReader.Platforms.Android.AndroidMetronomePlayer>();
