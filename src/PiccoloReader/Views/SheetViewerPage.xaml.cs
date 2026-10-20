@@ -110,6 +110,11 @@ public partial class SheetViewerPage : ContentPage
             }
             else if (e.PropertyName == nameof(SheetViewerViewModel.CurrentPageImageBytes))
             {
+                if (_viewModel.CurrentPageImageBytes is not null)
+                {
+                    OnPageImageShown();
+                }
+
                 RestartPagedDetail();
                 // The pencil's on-screen width follows the page's size.
                 UpdatePencilDrawingViewLineWidth();
@@ -525,6 +530,11 @@ public partial class SheetViewerPage : ContentPage
         {
             ResetZoom();
         }
+        else if (Math.Abs(_currentScale - _baseScale) < 0.001)
+        {
+            // Not zoomed beyond the base: the fit-width scale follows the new size.
+            ApplyBaseZoom(alignBottom: false);
+        }
         else
         {
             UpdateSelectionOverlay();
@@ -878,16 +888,102 @@ public partial class SheetViewerPage : ContentPage
         return false;
     }
 
+    // Landscape pages are shown fit to width (see PagedViewport.BaseScale):
+    // the zoom a "reset" returns to, 1 otherwise. _currentScale is always the
+    // absolute scale of PageContainer, so annotation mapping and detail
+    // rendering (which compare against 1) need no knowledge of it.
+    private double _baseScale = 1;
+    private int _pageShownIndex = -1;
+    private bool? _pendingPageAlignBottom;
+
+    private bool FitToPageExtent => _baseScale > 1.0001;
+
     private void ResetZoom()
     {
+        _pendingPageAlignBottom = null;
+        ApplyBaseZoom(alignBottom: false);
+    }
+
+    // After a page turn the new page's aspect ratio/crop may not be known yet
+    // (it renders asynchronously); when so, the base zoom is applied once its
+    // image arrives (OnPageImageShown).
+    private void ResetZoomForNewPage(bool alignBottom)
+    {
+        if (_viewModel.CurrentPageIndex != _pageShownIndex)
+        {
+            _pendingPageAlignBottom = alignBottom;
+            HideDetail();
+            return;
+        }
+
+        _pendingPageAlignBottom = null;
+        ApplyBaseZoom(alignBottom);
+    }
+
+    private void OnPageImageShown()
+    {
+        _pageShownIndex = _viewModel.CurrentPageIndex;
+        if (_pendingPageAlignBottom is { } alignBottom)
+        {
+            _pendingPageAlignBottom = null;
+            ApplyBaseZoom(alignBottom);
+        }
+    }
+
+    private void ApplyBaseZoom(bool alignBottom)
+    {
         HideDetail();
-        _currentScale = 1;
-        _xOffset = 0;
-        _yOffset = 0;
-        PageContainer.Scale = 1;
-        PageContainer.TranslationX = 0;
-        PageContainer.TranslationY = 0;
+        var width = PageContainer.Width;
+        var height = PageContainer.Height;
+        _baseScale = width > 0 && height > 0
+            ? PagedViewport.BaseScale(width, height, _viewModel.CurrentPageAspectRatio, _viewModel.CurrentPageCrop, MaxPagedZoom)
+            : 1;
+        _currentScale = _baseScale;
+        PageContainer.AnchorX = 0;
+        PageContainer.AnchorY = 0;
+        PageContainer.Scale = _baseScale;
+        if (FitToPageExtent)
+        {
+            var visible = EditorVisibleRect();
+            PageContainer.TranslationX = PagedViewport.AlignY(width, _baseScale, visible.Left, visible.Right, false, true);
+            PageContainer.TranslationY = PagedViewport.AlignY(height, _baseScale, visible.Top, visible.Bottom, alignBottom, true);
+        }
+        else
+        {
+            PageContainer.TranslationX = 0;
+            PageContainer.TranslationY = 0;
+        }
+
+        _xOffset = PageContainer.TranslationX;
+        _yOffset = PageContainer.TranslationY;
+        UpdateResizeHandleScale();
         UpdateSelectionOverlay();
+        ScheduleDetail();
+    }
+
+    // Keeps PageContainer's translation inside the allowed pan range.
+    private void ClampPageTranslation()
+    {
+        var visible = EditorVisibleRect();
+        PageContainer.TranslationX = PagedViewport.Clamp(
+            PageContainer.TranslationX, PageContainer.Width, _currentScale, visible.Left, visible.Right, FitToPageExtent);
+        PageContainer.TranslationY = PagedViewport.Clamp(
+            PageContainer.TranslationY, PageContainer.Height, _currentScale, visible.Top, visible.Bottom, FitToPageExtent);
+    }
+
+    // Whether a drag along an axis can move the page (it has room to pan).
+    private bool CanPanAxis(bool horizontal)
+    {
+        if (_currentScale <= ZoomedInThreshold)
+        {
+            return false;
+        }
+
+        var visible = EditorVisibleRect();
+        var (min, max) = horizontal
+            ? PagedViewport.Range(PageContainer.Width, _currentScale, visible.Left, visible.Right, FitToPageExtent)
+            : PagedViewport.Range(PageContainer.Height, _currentScale, visible.Top, visible.Bottom, FitToPageExtent);
+        return max - min > 2;
     }
 
     // Tap lives on PageContainer itself, alongside its own Pinch and Pan
@@ -967,22 +1063,20 @@ public partial class SheetViewerPage : ContentPage
         }
 
         // In vertical reading the same 30% zones sit at the top (previous)
-        // and bottom (next) edges instead of left/right.
-        var tapPosition = _viewModel.IsVerticalPaged ? normalizedY : normalizedX;
+        // and bottom (next) edges instead of left/right. The zones are
+        // measured on the visible viewport, not the (zoomed, shifted) page,
+        // and turn the page at any zoom.
+        var tapPosition = _viewModel.IsVerticalPaged
+            ? PageContainer.TranslationY / PageContainer.Height + normalizedY * _currentScale
+            : PageContainer.TranslationX / PageContainer.Width + normalizedX * _currentScale;
 
         if (tapPosition < SideTapZoneFraction)
         {
-            if (_currentScale <= ZoomedInThreshold)
-            {
-                TryGoToPreviousPage();
-            }
+            TryGoToPreviousPage();
         }
         else if (tapPosition > 1 - SideTapZoneFraction)
         {
-            if (_currentScale <= ZoomedInThreshold)
-            {
-                TryGoToNextPage();
-            }
+            TryGoToNextPage();
         }
         else
         {
@@ -1577,9 +1671,10 @@ public partial class SheetViewerPage : ContentPage
         var targetX = previousTranslationX - localX * scaleDelta;
         var targetY = previousTranslationY - localY * scaleDelta;
 
-        PageContainer.TranslationX = Math.Clamp(targetX, -PageContainer.Width * (_currentScale - 1), 0);
-        PageContainer.TranslationY = Math.Clamp(targetY, -PageContainer.Height * (_currentScale - 1), 0);
+        PageContainer.TranslationX = targetX;
+        PageContainer.TranslationY = targetY;
         PageContainer.Scale = _currentScale;
+        ClampPageTranslation();
         UpdateResizeHandleScale();
     }
 
@@ -1646,8 +1741,9 @@ public partial class SheetViewerPage : ContentPage
         if (_currentScale > ZoomedInThreshold)
         {
             HideDetail();
-            PageContainer.TranslationX = Math.Clamp(_xOffset + totalX, -PageContainer.Width * (_currentScale - 1), 0);
-            PageContainer.TranslationY = Math.Clamp(_yOffset + totalY, -PageContainer.Height * (_currentScale - 1), 0);
+            PageContainer.TranslationX = _xOffset + totalX;
+            PageContainer.TranslationY = _yOffset + totalY;
+            ClampPageTranslation();
         }
 
         _panTotalX = totalX;
@@ -1662,17 +1758,26 @@ public partial class SheetViewerPage : ContentPage
             _yOffset = PageContainer.TranslationY;
             ScheduleDetail();
         }
-        else
+
+        // A drag along the mode's axis turns the page only when the page
+        // has nothing left to pan on that axis (portrait at scale 1,
+        // landscape fit-width horizontally).
+        // Horizontal: swipe left = next. Vertical: swipe up = next.
+        var vertical = _viewModel.IsVerticalPaged;
+        if (!CanPanAxis(horizontal: !vertical))
         {
-            // Horizontal: swipe left = next. Vertical: swipe up = next.
-            var pageTurnDrag = _viewModel.IsVerticalPaged ? _panTotalY : _panTotalX;
-            if (pageTurnDrag <= -PageTurnDragThreshold)
+            var pageTurnDrag = vertical ? _panTotalY : _panTotalX;
+            var crossDrag = vertical ? _panTotalX : _panTotalY;
+            if (!CanPanAxis(horizontal: vertical) || Math.Abs(pageTurnDrag) > Math.Abs(crossDrag))
             {
-                TryGoToNextPage();
-            }
-            else if (pageTurnDrag >= PageTurnDragThreshold)
-            {
-                TryGoToPreviousPage();
+                if (pageTurnDrag <= -PageTurnDragThreshold)
+                {
+                    TryGoToNextPage();
+                }
+                else if (pageTurnDrag >= PageTurnDragThreshold)
+                {
+                    TryGoToPreviousPage();
+                }
             }
         }
 
@@ -2019,6 +2124,22 @@ public partial class SheetViewerPage : ContentPage
 
         if (!_viewModel.IsContinuousReading)
         {
+            // A page taller than the screen (landscape fit-width, or zoomed)
+            // is read in overlapping chunks before the page itself turns.
+            var visible = EditorVisibleRect();
+            var result = PagedViewport.PedalTurn(
+                PageContainer.TranslationY, PageContainer.Height, _currentScale, visible.Top, visible.Bottom, intent);
+            if (result.Action == PagedScrollAction.ScrollTo)
+            {
+                HideDetail();
+                PageContainer.TranslationY = PagedViewport.Clamp(
+                    result.Translation, PageContainer.Height, _currentScale, visible.Top, visible.Bottom, true);
+                _yOffset = PageContainer.TranslationY;
+                UpdateSelectionOverlay();
+                ScheduleDetail();
+                return true;
+            }
+
             // At the first/last page this is a consumed no-op, so a pedal
             // press never activates a focused control.
             if (intent == PageTurnIntent.Next)
@@ -2027,29 +2148,13 @@ public partial class SheetViewerPage : ContentPage
             }
             else
             {
-                TryGoToPreviousPage();
+                TryGoToPreviousPage(alignBottom: true);
             }
 
             return true;
         }
 
-        var width = ContinuousPagesView.Width;
-        var height = ContinuousPagesView.Height;
-        if (width <= 0 || height <= 0)
-        {
-            return false; // list not laid out yet
-        }
-
-        _continuousScrollRemainderPx = 0;
-        var scroll = ContinuousScrollOffset();
-        var target = ContinuousPageTurn.TargetOffset(
-            _viewModel.ContinuousPages, width, ContinuousPageView.Spacing, scroll, height / _continuousZoom, intent);
-        if (target is { } offset)
-        {
-            ScrollContinuousBy(offset - scroll);
-        }
-
-        return true;
+        return ContinuousPageTurnBy(intent);
     }
 
     // False while something else owns the keys: annotation editing (the tool
@@ -2068,16 +2173,16 @@ public partial class SheetViewerPage : ContentPage
         if (_viewModel.NextPageCommand.CanExecute(null))
         {
             _viewModel.NextPageCommand.Execute(null);
-            ResetZoom();
+            ResetZoomForNewPage(alignBottom: false);
         }
     }
 
-    private void TryGoToPreviousPage()
+    private void TryGoToPreviousPage(bool alignBottom = false)
     {
         if (_viewModel.PreviousPageCommand.CanExecute(null))
         {
             _viewModel.PreviousPageCommand.Execute(null);
-            ResetZoom();
+            ResetZoomForNewPage(alignBottom);
         }
     }
 
@@ -2398,7 +2503,7 @@ public partial class SheetViewerPage : ContentPage
     // A tap on an annotation opens that page in the editor with the
     // annotation selected (to move, resize or delete it); anywhere else
     // toggles the toolbar, like a center tap in the paged modes.
-    private async void OnContinuousPageTapped(ContinuousPage page, double normalizedX, double normalizedY)
+    private async void OnContinuousPageTapped(ContinuousPage page, double normalizedX, double normalizedY, double listLocalX)
     {
 #if ANDROID
         // A pan/scroll that ends over the page is not a tap (see IsTap).
@@ -2443,7 +2548,49 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
+        // Side zones, measured on screen (the list may be zoomed and panned):
+        // the tap's list-local X is mapped through the list's zoom/translation.
+        var hostWidth = ContinuousHost.Width;
+        if (hostWidth > 0)
+        {
+            var screenX = (ContinuousPagesView.TranslationX + listLocalX * ContinuousPagesView.Width * _continuousZoom) / hostWidth;
+            if (screenX < SideTapZoneFraction)
+            {
+                ContinuousPageTurnBy(PageTurnIntent.Previous);
+                return;
+            }
+
+            if (screenX > 1 - SideTapZoneFraction)
+            {
+                ContinuousPageTurnBy(PageTurnIntent.Next);
+                return;
+            }
+        }
+
         SetToolbarVisible(!_isToolbarVisible);
+    }
+
+    // Pedal / side-tap page turn of the continuous list: one viewport (or to
+    // the next page) at a time.
+    private bool ContinuousPageTurnBy(PageTurnIntent intent)
+    {
+        var width = ContinuousPagesView.Width;
+        var height = ContinuousPagesView.Height;
+        if (width <= 0 || height <= 0)
+        {
+            return false; // list not laid out yet
+        }
+
+        _continuousScrollRemainderPx = 0;
+        var scroll = ContinuousScrollOffset();
+        var target = ContinuousPageTurn.TargetOffset(
+            _viewModel.ContinuousPages, width, ContinuousPageView.Spacing, scroll, height / _continuousZoom, intent);
+        if (target is { } offset)
+        {
+            ScrollContinuousBy(offset - scroll);
+        }
+
+        return true;
     }
 
     // Opens a page of the continuous list in the single-page editor, keeping

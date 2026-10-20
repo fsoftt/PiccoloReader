@@ -1,0 +1,110 @@
+using PiccoloReader.Core.ViewModels;
+
+namespace PiccoloReader.Core.Services.PageTurn;
+
+public enum PagedScrollAction
+{
+    None,
+    ScrollTo,
+    NextPage,
+    PreviousPage,
+}
+
+public readonly record struct PagedScrollResult(PagedScrollAction Action, double Translation);
+
+// Zoom/pan math of the paged reading modes. The page view is scaled around
+// its top-left corner (anchor 0,0) by `scale`, so a local point p is drawn
+// at `translation + p * scale`. `start`/`end` are the visible page's extent
+// along one axis in the view's unscaled local units.
+public static class PagedViewport
+{
+    public const double DefaultOverlap = 0.1;
+    private const double Epsilon = 1;
+
+    // In landscape the fitted page is narrower than the screen: scale it up
+    // so it spans the full width. 1 otherwise.
+    public static double BaseScale(double containerWidth, double containerHeight, double aspectRatio, PageCrop crop, double maxScale)
+    {
+        if (containerWidth <= containerHeight || containerHeight <= 0 || aspectRatio <= 0)
+        {
+            return 1;
+        }
+
+        var frame = PageFrame.Fit(containerWidth, containerHeight, aspectRatio, crop).VisibleRegion(crop);
+        var pageWidth = frame.Width * containerWidth;
+        if (pageWidth <= 0 || pageWidth >= containerWidth - 0.5)
+        {
+            return 1;
+        }
+
+        return Math.Min(containerWidth / pageWidth, maxScale);
+    }
+
+    // Allowed translation range along an axis. With fitToExtent, a page that
+    // overflows the container is never dragged past its own edges (no empty
+    // bands); otherwise the whole container may be panned (min..0).
+    public static (double Min, double Max) Range(double container, double scale, double start, double end, bool fitToExtent)
+    {
+        if (fitToExtent && (end - start) * scale >= container - 0.5)
+        {
+            var min = container - end * scale;
+            var max = -start * scale;
+            return min <= max ? (min, max) : (max, max);
+        }
+
+        return (Math.Min(0, -container * (scale - 1)), 0);
+    }
+
+    public static double Clamp(double translation, double container, double scale, double start, double end, bool fitToExtent)
+    {
+        var (min, max) = Range(container, scale, start, end, fitToExtent);
+        return Math.Clamp(translation, min, max);
+    }
+
+    // Translation that puts the page's top (or bottom) edge at the top
+    // (bottom) of the container, clamped to the allowed range.
+    public static double AlignY(double container, double scale, double start, double end, bool bottom, bool fitToExtent)
+    {
+        var target = bottom ? container - end * scale : -start * scale;
+        return Clamp(target, container, scale, start, end, fitToExtent);
+    }
+
+    // Whether the page overflows the container along the axis.
+    public static bool Overflows(double container, double scale, double start, double end) =>
+        (end - start) * scale > container + Epsilon;
+
+    // Pedal press on a paged view whose page overflows vertically: scroll by a
+    // viewport (minus overlap) or, at the page's end/start, turn the page.
+    // Action None means no vertical overflow: the caller turns the page.
+    public static PagedScrollResult PedalTurn(
+        double translationY, double containerHeight, double scale, double start, double end,
+        PageTurnIntent intent, double overlap = DefaultOverlap)
+    {
+        if (intent == PageTurnIntent.None || !Overflows(containerHeight, scale, start, end))
+        {
+            return new PagedScrollResult(PagedScrollAction.None, translationY);
+        }
+
+        var step = containerHeight * (1 - overlap);
+        var top = translationY + start * scale;
+        var bottom = translationY + end * scale;
+        if (intent == PageTurnIntent.Next)
+        {
+            if (bottom > containerHeight + Epsilon)
+            {
+                var target = Math.Max(translationY - step, containerHeight - end * scale);
+                return new PagedScrollResult(PagedScrollAction.ScrollTo, target);
+            }
+
+            return new PagedScrollResult(PagedScrollAction.NextPage, translationY);
+        }
+
+        if (top < -Epsilon)
+        {
+            var target = Math.Min(translationY + step, -start * scale);
+            return new PagedScrollResult(PagedScrollAction.ScrollTo, target);
+        }
+
+        return new PagedScrollResult(PagedScrollAction.PreviousPage, translationY);
+    }
+}

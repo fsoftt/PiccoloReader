@@ -36,7 +36,7 @@ public class ContinuousPageView : ContentView
     // so it's divided back out.
     public ContinuousPageView(
         AnnotationPainter painter,
-        Action<ContinuousPage, double, double> onTapped,
+        Action<ContinuousPage, double, double, double> onTapped,
         Func<double> listZoom)
     {
         _painter = painter;
@@ -90,7 +90,8 @@ public class ContinuousPageView : ContentView
             onTapped(
                 _page,
                 frame.ToPageX(position.Value.X / zoom / _pageArea.Width),
-                frame.ToPageY(position.Value.Y / zoom / _pageArea.Height));
+                frame.ToPageY(position.Value.Y / zoom / _pageArea.Height),
+                position.Value.X / zoom / _pageArea.Width);
         };
         GestureRecognizers.Add(tap);
 
