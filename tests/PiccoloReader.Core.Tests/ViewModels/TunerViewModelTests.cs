@@ -214,8 +214,26 @@ public class TunerViewModelTests
         _input.Raise(default);
 
         Assert.Equal(TunerState.Silent, sut.State);
-        Assert.Equal(string.Empty, sut.NoteName);
+        Assert.Equal("A", sut.NoteName);
+        Assert.Equal(5, sut.Octave);
+        Assert.Equal(0f, sut.Cents);
+        Assert.Equal(0f, sut.FrequencyHz);
         Assert.False(sut.IsInTune);
+    }
+
+    [Fact]
+    public async Task NewNoteAfterSilence_ReplacesHeldNote()
+    {
+        var sut = Create();
+        await sut.AttachAsync();
+        _input.Raise(Reading(880));
+        _input.Raise(default);
+
+        _input.Raise(Reading(1046.5));
+
+        Assert.Equal(TunerState.Listening, sut.State);
+        Assert.Equal("C", sut.NoteName);
+        Assert.Equal(6, sut.Octave);
     }
 
     [Fact]

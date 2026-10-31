@@ -158,8 +158,10 @@ public partial class TunerPage : ContentPage
         var state = _viewModel.State;
         var hasPitch = state == TunerState.Listening;
 
-        var noteChanged = SetText(NoteLabel, ref _shownNote, hasPitch ? _viewModel.NoteName : "-");
-        noteChanged |= SetText(OctaveLabel, ref _shownOctaveText, hasPitch ? OctaveText(_viewModel.Octave) : string.Empty);
+        // While silent the last note stays, dimmed; "-" only before any note.
+        var hasNote = _viewModel.NoteName.Length > 0;
+        var noteChanged = SetText(NoteLabel, ref _shownNote, hasNote ? _viewModel.NoteName : "-");
+        noteChanged |= SetText(OctaveLabel, ref _shownOctaveText, hasNote ? OctaveText(_viewModel.Octave) : string.Empty);
 
         UpdateHz(hasPitch, hasPitch ? _viewModel.FrequencyHz : 0f, noteChanged);
 
