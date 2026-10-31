@@ -190,13 +190,13 @@ public partial class TunerPage : ContentPage
 
     private void UpdateHz(bool hasPitch, float hz, bool noteChanged)
     {
-        if (!hasPitch)
+        if (!hasPitch || hz <= 0f)
         {
             _hzTimer.Stop();
             _hzPending = false;
-            if (_shownHz != 0f)
+            _shownHz = 0f;
+            if (!string.IsNullOrEmpty(HzLabel.Text))
             {
-                _shownHz = 0f;
                 HzLabel.Text = string.Empty;
             }
 
@@ -297,7 +297,7 @@ public partial class TunerPage : ContentPage
     {
         _needleQueued = false;
         _lastNeedleMs = Environment.TickCount64;
-        var hasPitch = _viewModel.State == TunerState.Listening;
+        var hasPitch = _viewModel.State == TunerState.Listening && _viewModel.FrequencyHz > 0f;
         if (_needle.SetReading(hasPitch, _viewModel.Cents, (float)NeedleView.Width, _density))
         {
             NeedleView.Invalidate();

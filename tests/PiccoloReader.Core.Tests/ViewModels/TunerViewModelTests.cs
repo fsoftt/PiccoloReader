@@ -222,6 +222,30 @@ public class TunerViewModelTests
     }
 
     [Fact]
+    public async Task NoPitchReading_NeverShowsListeningWithZeroedValues()
+    {
+        var sut = Create();
+        await sut.AttachAsync();
+        _input.Raise(Reading(880));
+        var transients = new List<string>();
+        sut.PropertyChanged += (_, e) =>
+        {
+            var zeroed = e.PropertyName == nameof(TunerViewModel.FrequencyHz) && sut.FrequencyHz == 0f
+                || e.PropertyName == nameof(TunerViewModel.Cents) && sut.Cents == 0f;
+            if (zeroed && sut.State != TunerState.Silent)
+            {
+                transients.Add(e.PropertyName!);
+            }
+        };
+
+        _input.Raise(default);
+
+        Assert.Empty(transients);
+        Assert.Equal(TunerState.Silent, sut.State);
+        Assert.Equal(0f, sut.FrequencyHz);
+    }
+
+    [Fact]
     public async Task NewNoteAfterSilence_ReplacesHeldNote()
     {
         var sut = Create();

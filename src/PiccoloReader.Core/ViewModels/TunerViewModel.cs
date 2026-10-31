@@ -314,9 +314,10 @@ public partial class TunerViewModel : ObservableObject
         if (!reading.HasPitch)
         {
             // Keep the last note (and _lastHz, so a settings change can still
-            // rename it) on screen until a new note sounds.
-            HoldNote();
+            // rename it) on screen until a new note sounds. State flips first so
+            // the view never sees Listening with zeroed values.
             State = TunerState.Silent;
+            HoldNote();
             return;
         }
 
