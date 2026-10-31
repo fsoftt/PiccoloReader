@@ -271,6 +271,10 @@ public partial class TunerViewModel : ObservableObject
         if (_lastHz > 0f)
         {
             ShowNote(_lastHz);
+            if (State == TunerState.Silent)
+            {
+                HoldNote();
+            }
         }
     }
 
@@ -309,8 +313,11 @@ public partial class TunerViewModel : ObservableObject
 
         if (!reading.HasPitch)
         {
-            ClearNote();
+            // Keep the last note (and _lastHz, so a settings change can still
+            // rename it) on screen until a new note sounds. State flips first so
+            // the view never sees Listening with zeroed values.
             State = TunerState.Silent;
+            HoldNote();
             return;
         }
 
@@ -329,6 +336,14 @@ public partial class TunerViewModel : ObservableObject
         Cents = MathF.Round(note.Cents, 1);
         FrequencyHz = MathF.Round(hz, 1);
         IsInTune = MathF.Abs(Cents) <= 5f;
+    }
+
+    // Silence: keep the note name and octave, drop the live values.
+    private void HoldNote()
+    {
+        Cents = 0f;
+        FrequencyHz = 0f;
+        IsInTune = false;
     }
 
     private void ClearNote()
