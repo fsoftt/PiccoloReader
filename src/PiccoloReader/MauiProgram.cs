@@ -2,8 +2,6 @@
 using CommunityToolkit.Maui;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
-using Plugin.AdMob;
-using Plugin.AdMob.Configuration;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 using UraniumUI;
 using PiccoloReader.Core.Data;
@@ -28,9 +26,6 @@ public static class MauiProgram
 			.UseMauiApp<App>()
 			.UseMauiCommunityToolkit()
 			.UseSkiaSharp()
-			.UseAdMob(
-				androidDefaultBannerAdUnitId: "ca-app-pub-5615495156288390/6193524124",
-				androidDefaultRewardedAdUnitId: "ca-app-pub-5615495156288390/3206424820")
 #if ANDROID
 			.ConfigureMauiHandlers(handlers => handlers.AddHandler<TunerStripView, PiccoloReader.Platforms.Android.TunerStripHandler>())
 #endif
@@ -48,12 +43,6 @@ public static class MauiProgram
 #endif
 
 		Batteries_V2.Init();
-
-#if QA_BUILD
-		AdConfig.UseTestAdUnitIds = true;
-#else
-		AdConfig.UseTestAdUnitIds = false;
-#endif
 
 		var savedLanguageCode = Preferences.Default.Get("AppLanguage", (string?)null);
 #if ANDROID
@@ -90,8 +79,6 @@ public static class MauiProgram
 
 		builder.Services.AddSingleton<IAppStorageProvider, MauiAppStorageProvider>();
 		builder.Services.AddSingleton<ILanguagePreferenceService, MauiLanguagePreferenceService>();
-		builder.Services.AddSingleton<IDonateAdService, MauiDonateAdService>();
-		builder.Services.AddSingleton<IAdsPreferenceService, MauiAdsPreferenceService>();
 		builder.Services.AddSingleton<ITutorialPreferenceService, MauiTutorialPreferenceService>();
 		builder.Services.AddSingleton<IReadingPreferenceService, MauiReadingPreferenceService>();
 		builder.Services.AddSingleton<IPageThumbnailStore>(_ => new PiccoloReader.Services.SkiaPageThumbnailStore(Path.Combine(FileSystem.AppDataDirectory, "thumbnails")));
@@ -170,7 +157,6 @@ public static class MauiProgram
 			sp.GetRequiredService<ITunerInput>(),
 			sp.GetRequiredService<ITunerPreferenceService>(),
 			sp.GetRequiredService<IMicrophonePermissionService>(),
-			sp.GetRequiredService<IAdsPreferenceService>(),
 			static action => MainThread.BeginInvokeOnMainThread(action)));
 		// One controller per viewer; it posts audio-thread readings to the UI thread fire-and-forget.
 		builder.Services.AddTransient(sp => new TunerStripController(
@@ -183,14 +169,12 @@ public static class MauiProgram
 		builder.Services.AddTransient<FolderViewModel>();
 		builder.Services.AddTransient<SheetViewerViewModel>();
 		builder.Services.AddTransient<SettingsViewModel>();
-		builder.Services.AddTransient<DonateViewModel>();
 		builder.Services.AddTransient<TutorialViewModel>();
 
 		builder.Services.AddTransient<LibraryPage>();
 		builder.Services.AddTransient<FolderPage>();
 		builder.Services.AddTransient<SheetViewerPage>();
 		builder.Services.AddTransient<SettingsPage>();
-		builder.Services.AddTransient<DonatePage>();
 		builder.Services.AddTransient<MetronomePage>();
 		builder.Services.AddTransient<TunerPage>();
 		builder.Services.AddTransient<TutorialPage>();

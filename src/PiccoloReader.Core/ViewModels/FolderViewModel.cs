@@ -11,15 +11,13 @@ public partial class FolderViewModel : ObservableObject
 {
     private readonly LibraryService _libraryService;
     private readonly PdfImportService _importService;
-    private readonly IAdsPreferenceService _adsPreferenceService;
 
     private List<Sheet> _allSheets = new();
 
-    public FolderViewModel(LibraryService libraryService, PdfImportService importService, IAdsPreferenceService adsPreferenceService)
+    public FolderViewModel(LibraryService libraryService, PdfImportService importService)
     {
         _libraryService = libraryService;
         _importService = importService;
-        _adsPreferenceService = adsPreferenceService;
     }
 
     [ObservableProperty]
@@ -41,9 +39,6 @@ public partial class FolderViewModel : ObservableObject
     private SortDirection _sortDirection = SortDirection.Ascending;
 
     [ObservableProperty]
-    private bool _showAdsBanner;
-
-    [ObservableProperty]
     private string _summaryText = string.Empty;
 
     [ObservableProperty]
@@ -63,8 +58,6 @@ public partial class FolderViewModel : ObservableObject
     // list is then emptied and the view should leave the folder.
     public async Task<bool> LoadAsync()
     {
-        ShowAdsBanner = _adsPreferenceService.GetSupportWithAdsEnabled();
-
         if (!(await _libraryService.GetFoldersAsync()).Any(f => f.Id == FolderId))
         {
             _allSheets = new List<Sheet>();

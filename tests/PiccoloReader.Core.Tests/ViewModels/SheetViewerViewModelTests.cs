@@ -25,7 +25,7 @@ public class SheetViewerViewModelTests : IDisposable
         _libraryService = new LibraryService(_database, _storage);
         _annotationService = new AnnotationService(_database);
         _bookmarkService = new BookmarkService(_database);
-        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database));
+        _sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, _readingPreferences, new PageCropService(_database));
     }
 
     public void Dispose() => _storage.Dispose();
@@ -157,7 +157,7 @@ public class SheetViewerViewModelTests : IDisposable
     public async Task LoadAsync_KeepsOpeningThumbnailUntilViewClearsIt_AndNeverBlanksThePage()
     {
         var thumbnail = new byte[] { 9, 9, 9 };
-        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database), new StubThumbnailStore { Thumbnail = thumbnail });
+        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, _readingPreferences, new PageCropService(_database), new StubThumbnailStore { Thumbnail = thumbnail });
         var sheet = await InsertSheetAsync(pageCount: 3, lastViewedPageIndex: 1);
         var blankedAfterThumbnail = false;
         var thumbnailShown = false;
@@ -180,7 +180,7 @@ public class SheetViewerViewModelTests : IDisposable
         Assert.Same(thumbnail, sut.OpeningThumbnailBytes);
     }
     private SheetViewerViewModel CreateWithTime(ManualTimeProvider time) =>
-        new(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database), null, time);
+        new(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, _readingPreferences, new PageCropService(_database), null, time);
 
     // Timer callbacks complete the delay asynchronously; let the watchdog continuation run.
     private static async Task AdvanceAsync(ManualTimeProvider time, TimeSpan amount)
@@ -255,7 +255,7 @@ public class SheetViewerViewModelTests : IDisposable
     public async Task LoadAsync_RendersWithoutWaitingForThumbnail_AndLateThumbnailNeverReplacesFullPage()
     {
         var store = new GatedThumbnailStore();
-        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database), store);
+        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, _readingPreferences, new PageCropService(_database), store);
         var sheet = await InsertSheetAsync(pageCount: 3, lastViewedPageIndex: 1);
 
         // The thumbnail never completes before the load: LoadAsync must still finish.
@@ -274,7 +274,7 @@ public class SheetViewerViewModelTests : IDisposable
     public async Task LoadAsync_ThumbnailArrivingBeforeFullRenderIsShown()
     {
         var store = new GatedThumbnailStore();
-        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database), store);
+        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, _readingPreferences, new PageCropService(_database), store);
         var sheet = await InsertSheetAsync(pageCount: 3, lastViewedPageIndex: 1);
         _renderer.RenderGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var thumbnail = new byte[] { 9, 9, 9 };
@@ -299,7 +299,7 @@ public class SheetViewerViewModelTests : IDisposable
     {
         _readingPreferences.Mode = ReadingMode.VerticalPaged;
 
-        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, new FakeAdsPreferenceService(), _readingPreferences, new PageCropService(_database));
+        var sut = new SheetViewerViewModel(_libraryService, _storage, _renderer, _annotationService, _bookmarkService, _readingPreferences, new PageCropService(_database));
 
         Assert.Equal(ReadingMode.VerticalPaged, sut.ReadingMode);
         Assert.True(sut.IsVerticalPaged);

@@ -9,9 +9,8 @@ public class TunerViewModelTests
     private readonly FakeTunerInput _input = new();
     private readonly FakeTunerPreferenceService _prefs = new();
     private readonly FakeMicrophonePermissionService _permission = new();
-    private readonly FakeAdsPreferenceService _ads = new();
 
-    private TunerViewModel Create(Action<Action>? post = null) => new(_input, _prefs, _permission, _ads, post);
+    private TunerViewModel Create(Action<Action>? post = null) => new(_input, _prefs, _permission, post);
 
     private static TunerReading Reading(double hz) => new(true, (float)hz, (float)(1200 * Math.Log2(hz / 440)));
 
@@ -56,19 +55,6 @@ public class TunerViewModelTests
         Assert.Equal(0, _input.SubscriberCount);
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Attach_SetsShowAdsBannerFromPreference(bool enabled)
-    {
-        _ads.Enabled = enabled;
-        var sut = Create();
-
-        await sut.AttachAsync();
-
-        Assert.Equal(enabled, sut.ShowAdsBanner);
-    }
-
     [Fact]
     public async Task Detach_StopsInputAndUnsubscribes()
     {
@@ -111,7 +97,7 @@ public class TunerViewModelTests
     public void PersistIfDirty_RetriesAfterAFailedSave()
     {
         var failing = new ThrowingOncePreferenceService();
-        var sut = new TunerViewModel(_input, failing, _permission, _ads);
+        var sut = new TunerViewModel(_input, failing, _permission);
 
         sut.A4Hz = 442;
         Assert.NotEqual(442, failing.Stored.A4Hz);
@@ -146,7 +132,7 @@ public class TunerViewModelTests
         using var release = new ManualResetEventSlim(false);
         using var entered = new ManualResetEventSlim(false);
         var input = new BlockingStartInput(entered, release);
-        var sut = new TunerViewModel(input, _prefs, _permission, _ads);
+        var sut = new TunerViewModel(input, _prefs, _permission);
 
         var attach = sut.AttachAsync();
         Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));

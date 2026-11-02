@@ -11,7 +11,6 @@ namespace PiccoloReader.Core.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly ILanguagePreferenceService _languagePreferenceService;
-    private readonly IAdsPreferenceService _adsPreferenceService;
     private readonly ITunerStripPreferenceService _tunerStripPreferenceService;
     private readonly IStylusPreferenceService _stylusPreferenceService;
 
@@ -60,20 +59,15 @@ public partial class SettingsViewModel : ObservableObject
     private TunerStripPosition _tunerStripPosition;
 
     [ObservableProperty]
-    private bool _supportWithAdsEnabled;
-
-    [ObservableProperty]
     private bool _stylusDrawsDirectly;
 
-    public SettingsViewModel(ILanguagePreferenceService languagePreferenceService, IAdsPreferenceService adsPreferenceService, ITunerStripPreferenceService tunerStripPreferenceService, IStylusPreferenceService stylusPreferenceService)
+    public SettingsViewModel(ILanguagePreferenceService languagePreferenceService, ITunerStripPreferenceService tunerStripPreferenceService, IStylusPreferenceService stylusPreferenceService)
     {
         _languagePreferenceService = languagePreferenceService;
-        _adsPreferenceService = adsPreferenceService;
         _tunerStripPreferenceService = tunerStripPreferenceService;
         _stylusPreferenceService = stylusPreferenceService;
         _stylusDrawsDirectly = stylusPreferenceService.DrawsDirectly;
         _selectedLanguageCode = languagePreferenceService.GetSavedLanguageCode() ?? "en";
-        _supportWithAdsEnabled = adsPreferenceService.GetSupportWithAdsEnabled();
         _tunerStripPosition = tunerStripPreferenceService.Position;
     }
 
@@ -86,9 +80,6 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnTunerStripPositionChanged(TunerStripPosition value) =>
         _tunerStripPreferenceService.Position = value;
-
-    partial void OnSupportWithAdsEnabledChanged(bool value) =>
-        _adsPreferenceService.SetSupportWithAdsEnabled(value);
 
     partial void OnStylusDrawsDirectlyChanged(bool value) =>
         _stylusPreferenceService.DrawsDirectly = value;

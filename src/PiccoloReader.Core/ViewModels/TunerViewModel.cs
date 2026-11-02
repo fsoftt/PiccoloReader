@@ -29,7 +29,6 @@ public partial class TunerViewModel : ObservableObject
     private readonly ITunerInput _input;
     private readonly ITunerPreferenceService _preferences;
     private readonly IMicrophonePermissionService _permission;
-    private readonly IAdsPreferenceService _adsPreferenceService;
     private readonly Action<Action> _post;
     private readonly Action _applyLatest;
     private readonly object _latestLock = new();
@@ -61,9 +60,6 @@ public partial class TunerViewModel : ObservableObject
     private bool _isInTune;
 
     [ObservableProperty]
-    private bool _showAdsBanner;
-
-    [ObservableProperty]
     private int _a4Hz;
 
     [ObservableProperty]
@@ -85,13 +81,11 @@ public partial class TunerViewModel : ObservableObject
         ITunerInput input,
         ITunerPreferenceService preferences,
         IMicrophonePermissionService permission,
-        IAdsPreferenceService adsPreferenceService,
         Action<Action>? post = null)
     {
         _input = input;
         _preferences = preferences;
         _permission = permission;
-        _adsPreferenceService = adsPreferenceService;
         _post = post ?? (static action => action());
         _applyLatest = ApplyLatest;
 
@@ -118,8 +112,6 @@ public partial class TunerViewModel : ObservableObject
             _applyPending = false;
             _latest = default;
         }
-
-        ShowAdsBanner = _adsPreferenceService.GetSupportWithAdsEnabled();
 
         var granted = await _permission.EnsureGrantedAsync();
         if (version != _attachVersion || !_attached)

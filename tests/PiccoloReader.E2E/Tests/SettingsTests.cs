@@ -5,7 +5,7 @@ using PiccoloReader.E2E.Infrastructure;
 
 namespace PiccoloReader.E2E.Tests;
 
-/// <summary>Settings tab: language, ads switch, tutorial, legal rows.</summary>
+/// <summary>Settings tab: language, tutorial, legal rows.</summary>
 [TestFixture]
 public class SettingsTests : E2ETestBase
 {
@@ -69,22 +69,6 @@ public class SettingsTests : E2ETestBase
         AppSession.Relaunch();
         OpenSettingsTab(AppStrings.Settings);
         Assert.That(Ui.TextExists(AppStrings.ShowTutorial), Is.True, "labels are back in English");
-    }
-
-    [Test]
-    public void AdsSwitch_PersistsAcrossRelaunch()
-    {
-        OpenSettingsTab(AppStrings.Settings);
-        Assert.That(Ui.IsChecked("SettingsAdsSwitch"), Is.False, "ads are opt-in");
-
-        Ui.Tap("SettingsAdsSwitch");
-        Ui.Poll(() => Ui.IsChecked("SettingsAdsSwitch"), 10, "the switch to turn on");
-        Ui.Poll(() => AppSession.ReadBoolPreference("SupportWithAds") == true, 10, "the preference to be saved");
-
-        AppSession.Relaunch();
-        OpenSettingsTab(AppStrings.Settings);
-
-        Assert.That(Ui.IsChecked("SettingsAdsSwitch"), Is.True, "the switch is still on after a restart");
     }
 
     [Test]

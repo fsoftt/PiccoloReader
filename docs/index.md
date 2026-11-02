@@ -23,7 +23,7 @@ Piccolo Music Reader is available on [Google Play](https://play.google.com/store
 **Piccolo Music Reader is private by design:**
 - All your sheets stored **locally on your device**
 - No cloud sync, no account required
-- Ads only on the optional Donate page, and you can turn them off in Settings
+- No ads and no third-party advertising SDK
 - Your PDFs never leave your phone
 - Open source on GitHub (GPL-3.0)
 {: .checks}
@@ -52,8 +52,7 @@ Piccolo Music Reader is available on [Google Play](https://play.google.com/store
    - Device-level encryption protects your data
 
 3. **What Gets Shared**
-   - Only **anonymous, aggregated statistics** (via AdMob on Donate page)
-   - Google collects device/interest data for ad targeting
+   - **Nothing.** The app contains no ads or analytics and sends no data anywhere
    - We never see your personal information
 
 ### How to Use Piccolo Music Reader Legally
@@ -79,21 +78,13 @@ Piccolo Music Reader is available on [Google Play](https://play.google.com/store
 
 ---
 
-## Google AdMob & Advertising
+## No Advertising
 
-The **Donate page** includes ads powered by Google AdMob.
+Piccolo Music Reader contains **no ads** and no third-party advertising SDK.
 
-**Google collects:**
-- Advertising ID (GAID/IDFA)
-- IP address, device type, OS version
-- General location (city/country-level)
-- Browsing behavior for ad personalization
-
-**To disable ads:**
-- Settings → "Support with Ads" toggle → OFF
-- Or uninstall Piccolo Music Reader entirely
-
-**Google's Privacy Policy:** https://policies.google.com/privacy
+- No advertising ID is used or collected
+- No personal data is collected through ads
+- The app does not request the Internet permission
 
 ---
 
@@ -104,14 +95,14 @@ The **Donate page** includes ads powered by Google AdMob.
 Piccolo Music Reader complies with GDPR:
 - No mandatory user data collection
 - Full "right to be forgotten" (delete app = all data deleted)
-- Transparent about AdMob data sharing
+- No ads and no third-party advertising SDK
 - No third-party data sales
 
 **Your Rights:**
 - Access: Request what data we store (we'll tell you we store nothing about you on servers)
 - Delete: Uninstall the app to delete all local data
 - Portability: Export your PDFs from the app
-- Withdraw Consent: Disable ads anytime
+- Withdraw Consent: Nothing to withdraw, the app collects no data that requires consent
 
 ### CCPA (California Users)
 
@@ -143,12 +134,10 @@ Piccolo Music Reader complies with Australian Privacy Principles:
 **Our Commitments:**
 - No intentional collection of children's personal data
 - Compliance with COPPA (US) and equivalent laws
-- No targeted advertising at children under 13
-- Ads can be disabled (Settings → "Support with Ads" OFF)
+- No advertising of any kind
 
 **For Parents:**
 - Monitor your child's usage
-- Disable ads if desired
 - Local data is private to the app sandbox
 - Uninstall anytime to delete all app data
 
@@ -159,7 +148,6 @@ Piccolo Music Reader complies with Australian Privacy Principles:
 | Data Type | Where Stored | Retention | Deletion |
 |-----------|--------------|-----------|----------|
 | PDF Files & Annotations | Your Device | Until you delete | Uninstall app OR manually delete in app |
-| Ad Serving Data | Google AdMob | Per Google's policy | By Google (see their privacy policy) |
 
 **Important:** We never store your personal files. Once uninstalled, all app data is gone permanently.
 
@@ -176,7 +164,6 @@ Piccolo Music Reader complies with Australian Privacy Principles:
 ### Server Communications
 
 - **No app servers:** The app does not communicate with any server of ours
-- **AdMob Secure:** Google AdMob uses HTTPS for ad requests
 - **No Unencrypted Transmission:** No personal data sent in plain text
 
 ### What We Don't Offer
@@ -191,7 +178,6 @@ Piccolo Music Reader complies with Australian Privacy Principles:
 
 | Service | Purpose | Privacy Policy |
 |---------|---------|-----------------|
-| Google AdMob | Ads on Donate page | https://policies.google.com/privacy |
 | Google Play Services | App distribution (Android vitals, opt-in) | https://policies.google.com/privacy |
 
 **Note:** Each service has its own privacy policy. By using Piccolo Music Reader, you accept their terms as well.
@@ -207,7 +193,7 @@ Piccolo Music Reader complies with Australian Privacy Principles:
 **Include:**
 - Your question or concern
 - Device model and Android version
-- Device ID or GAID (optional)
+- Device ID (optional)
 
 **Response time:** Within 30 days
 
@@ -255,7 +241,7 @@ Each third-party library is licensed under its own license. We comply with all o
 
 ## Updates & Changelog
 
-**Last Updated:** January 2026
+**Last Updated:** November 2, 2026
 
 - **v1.0** — Initial privacy policy and terms creation
 
@@ -274,13 +260,13 @@ For version history and changelog, see:
 **A:** No. Once deleted from your device, they're permanently gone. We don't have backups.
 
 ### Q: What data does Piccolo Music Reader collect?
-**A:** We collect nothing about you personally. Only aggregate, anonymous ad data via Google AdMob on the Donate page.
+**A:** We collect nothing about you personally. The app has no ads and no analytics.
 
 ### Q: How do I delete my data?
 **A:** Uninstall Piccolo Music Reader. All local data is automatically deleted.
 
-### Q: Can I disable ads?
-**A:** Yes. Settings → "Support with Ads" → Toggle OFF.
+### Q: Does the app show ads?
+**A:** No. Piccolo Music Reader has no ads and no advertising SDK.
 
 ### Q: Is Piccolo Music Reader open source?
 **A:** Yes. See https://github.com/fsoftt/PiccoloReader
