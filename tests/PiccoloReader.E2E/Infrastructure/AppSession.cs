@@ -152,7 +152,7 @@ public static class AppSession
     {
         _ = Driver; // installs the APK
         Wipe();
-        WritePreferences(tutorialCompleted: false, "Horizontal", "en", null);
+        WritePreferences(tutorialCompleted: false, "Horizontal", "en");
         Launch();
         WaitForLibrary(skipTutorial: true);
         Thread.Sleep(1500);
@@ -233,12 +233,5 @@ public static class AppSession
         var match = Regex.Match(
             ReadPreferencesXml() ?? "", $"<string name=\"{Regex.Escape(name)}\">([^<]*)</string>");
         return match.Success ? match.Groups[1].Value : null;
-    }
-
-    public static bool? ReadBoolPreference(string name)
-    {
-        var match = Regex.Match(
-            ReadPreferencesXml() ?? "", $"<boolean name=\"{Regex.Escape(name)}\" value=\"(true|false)\"");
-        return match.Success ? match.Groups[1].Value == "true" : null;
     }
 }

@@ -21,7 +21,7 @@
     </ContentPage.Resources>
 
     <!-- Columns 0 and 2 stay empty (zero width) unless the tuner strip sits on the left or right edge. -->
-    <Grid RowDefinitions="*,Auto,Auto" ColumnDefinitions="Auto,*,Auto">
+    <Grid RowDefinitions="*,Auto" ColumnDefinitions="Auto,*,Auto">
     <Grid Grid.Row="0" Grid.Column="1" BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
 
         <Grid
