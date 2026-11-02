@@ -103,6 +103,12 @@ public partial class SettingsPage : ContentPage
     private void OnTesterCreditLinkTapped(object? sender, TappedEventArgs e) =>
         OpenCreditUrl("https://github.com/Giomelchors");
 
+    private void OnMuseScoreCreditClicked(object? sender, TappedEventArgs e) =>
+        OpenCreditUrl("https://github.com/fsoftt/PiccoloReader/blob/main/licenses/MuseScore_General-LICENSE.md");
+
+    private void OnMeltySynthCreditClicked(object? sender, TappedEventArgs e) =>
+        OpenCreditUrl("https://github.com/fsoftt/PiccoloReader/blob/main/licenses/MeltySynth-LICENSE.txt");
+
     private static async void OpenCreditUrl(string url)
     {
         try

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using PiccoloReader.Core.Services.Metronome;
+using PiccoloReader.Core.Services.Piano;
 using PiccoloReader.Core.ViewModels;
 using PiccoloReader.Views;
 
@@ -16,15 +17,18 @@ public partial class App : Application
 	{
 		var window = new Window(new SplashPage());
 		window.Stopped += (_, _) => StopMetronome();
+		window.Resumed += (_, _) => IPlatformApplication.Current?.Services.GetService<IPianoService>()?.Resume();
 		return window;
 	}
 
-	// The metronome only plays while the app is in the foreground.
+	// The metronome and the piano only sound while the app is in the foreground.
 	private static void StopMetronome()
 	{
 		var services = IPlatformApplication.Current?.Services;
 		services?.GetService<IMetronomePlayer>()?.Stop();
 		services?.GetService<MetronomeViewModel>()?.PersistIfDirty();
 		services?.GetService<TunerViewModel>()?.PersistIfDirty();
+		services?.GetService<IPianoService>()?.Suspend();
+		services?.GetService<PianoViewModel>()?.PersistIfDirty();
 	}
 }

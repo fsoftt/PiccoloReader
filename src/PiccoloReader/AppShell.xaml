@@ -39,6 +39,13 @@
             <ShellContent ContentTemplate="{DataTemplate views:TunerPage}" />
         </Tab>
 
+        <Tab AutomationId="TabPiano" Title="{x:Static strings:AppStrings.Piano}" Route="piano" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
+            <Tab.Icon>
+                <FontImageSource Glyph="&#xE521;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+            </Tab.Icon>
+            <ShellContent ContentTemplate="{DataTemplate views:PianoPage}" />
+        </Tab>
+
         <Tab AutomationId="TabSettings" Title="{x:Static strings:AppStrings.Settings}" Route="settings">
             <Tab.Icon>
                 <FontImageSource Glyph="&#xE429;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
