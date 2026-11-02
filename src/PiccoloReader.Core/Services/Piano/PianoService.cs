@@ -56,6 +56,9 @@ public sealed class PianoService : IPianoService
 {
     public static readonly TimeSpan IdleStopDelay = TimeSpan.FromSeconds(2);
 
+    /// <summary>How long after the stream stopped the SoundFont and engine are dropped (about 30 MB).</summary>
+    public static readonly TimeSpan IdleUnloadDelay = TimeSpan.FromSeconds(60);
+
     /// <summary>Minimum gap between two automatic stream restarts (dead audio thread, note on a stopped stream).</summary>
     private const long RestartThrottleMilliseconds = 1000;
 
@@ -65,6 +68,7 @@ public sealed class PianoService : IPianoService
     private readonly IPianoAudioOutput _output;
     private readonly Func<Task<Stream>> _openSoundFont;
     private readonly TimeSpan _idleDelay;
+    private readonly TimeSpan _unloadDelay;
     private readonly object _gate = new();
     private readonly object _outputGate = new();
     private PianoSynthEngine? _engine;
@@ -79,8 +83,9 @@ public sealed class PianoService : IPianoService
     private int _idleVersion;
 
     /// <param name="openSoundFont">Opens the SoundFont stream; called on a pool thread, disposed after the load.</param>
-    public PianoService(IPianoAudioOutput output, Func<Task<Stream>> openSoundFont, TimeSpan? idleDelay = null)
+    public PianoService(IPianoAudioOutput output, Func<Task<Stream>> openSoundFont, TimeSpan? idleDelay = null, TimeSpan? unloadDelay = null)
     {
+        _unloadDelay = unloadDelay ?? IdleUnloadDelay;
         _output = output;
         _openSoundFont = openSoundFont;
         _idleDelay = idleDelay ?? IdleStopDelay;
@@ -294,6 +299,20 @@ public sealed class PianoService : IPianoService
 
         RaiseStateChanged();
         Reconcile();
+
+        // Released while loading: nobody will start the idle countdown, so start it now.
+        int version;
+        lock (_gate)
+        {
+            if (_leases > 0)
+            {
+                return;
+            }
+
+            version = ++_idleVersion;
+        }
+
+        _ = Task.Run(() => StopWhenIdleAsync(version));
     }
 
     // MeltySynth needs a seekable stream. A packaged asset usually is not, so it is copied once into a
@@ -333,6 +352,67 @@ public sealed class PianoService : IPianoService
         }
 
         Reconcile();
+
+        try
+        {
+            await Task.Delay(_unloadDelay).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            return;
+        }
+
+        if (Unload(version))
+        {
+            RaiseStateChanged();
+
+            // Same as after the load: the SoundFont is garbage now, collect it off the UI thread.
+            GC.Collect();
+        }
+    }
+
+    // Drops the engine and the SoundFont when nobody came back since the countdown began. The audio
+    // thread is stopped before the engine is released; an Acquire racing with this either cancels it
+    // (version check under the gate) or finds NotLoaded and reloads.
+    private bool Unload(int version)
+    {
+        try
+        {
+            lock (_outputGate)
+            {
+                lock (_gate)
+                {
+                    if (version != _idleVersion || _leases > 0 || _engine is null || _state == PianoLoadState.Loading)
+                    {
+                        return false;
+                    }
+                }
+
+                if (_output.IsRunning)
+                {
+                    _output.Stop();
+                }
+
+                lock (_gate)
+                {
+                    if (version != _idleVersion || _leases > 0)
+                    {
+                        return false;
+                    }
+
+                    _engine = null;
+                    _state = PianoLoadState.NotLoaded;
+                    _idleExpired = false;
+                }
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Piano unload failed: {ex.Message}");
+            return false;
+        }
     }
 
     // Brings the stream in line with the leases; idempotent, so overlapping calls are harmless.

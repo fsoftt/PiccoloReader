@@ -8,7 +8,8 @@ public class PianoServiceTests
 
     private readonly FakePianoAudioOutput _output = new();
 
-    private PianoService Create(Func<Task<Stream>>? open = null) => new(_output, open ?? PianoAsset.OpenAsync, Short);
+    private PianoService Create(Func<Task<Stream>>? open = null, TimeSpan? unload = null) =>
+        new(_output, open ?? PianoAsset.OpenAsync, Short, unload ?? TimeSpan.FromMinutes(10));
 
     private static async Task WaitUntil(Func<bool> condition)
     {
@@ -204,6 +205,58 @@ public class PianoServiceTests
         sut.Acquire();
 
         await WaitUntil(() => sut.State == PianoLoadState.Ready && _output.IsRunning);
+    }
+
+    [Fact]
+    public async Task Idle_LongEnough_UnloadsTheSounds()
+    {
+        var sut = Create(unload: TimeSpan.FromMilliseconds(150));
+        sut.Acquire();
+        await WaitUntil(() => _output.IsRunning);
+
+        sut.Release();
+
+        await WaitUntil(() => sut.State == PianoLoadState.NotLoaded);
+        Assert.False(_output.IsRunning);
+    }
+
+    [Fact]
+    public async Task Acquire_BeforeTheUnloadDelay_KeepsTheSounds()
+    {
+        var sut = Create(unload: TimeSpan.FromMilliseconds(400));
+        sut.Acquire();
+        await WaitUntil(() => _output.IsRunning);
+        sut.Release();
+        await WaitUntil(() => !_output.IsRunning);
+
+        sut.Acquire();
+        await Task.Delay(700);
+
+        Assert.Equal(PianoLoadState.Ready, sut.State);
+        Assert.True(_output.IsRunning);
+    }
+
+    [Fact]
+    public async Task Acquire_AfterUnload_ReloadsTheSounds()
+    {
+        var opened = 0;
+        var sut = Create(
+            () =>
+            {
+                opened++;
+                return PianoAsset.OpenAsync();
+            },
+            TimeSpan.FromMilliseconds(150));
+        sut.SetInstrument(PianoInstruments.ById("flute"));
+        sut.Acquire();
+        await WaitUntil(() => _output.IsRunning);
+        sut.Release();
+        await WaitUntil(() => sut.State == PianoLoadState.NotLoaded);
+
+        sut.Acquire();
+
+        await WaitUntil(() => sut.State == PianoLoadState.Ready && _output.IsRunning);
+        Assert.Equal(2, opened);
     }
 
     private sealed class ForwardOnlyStream(Stream inner) : Stream

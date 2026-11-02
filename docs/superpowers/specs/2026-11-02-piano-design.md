@@ -143,6 +143,10 @@ PianoViewModel / PianoStripViewModel
 - **PianoService** is a singleton with `Acquire()`/`Release()` (tab page and viewer strip
   each hold a lease while visible). The audio stream starts on the first lease and stops
   2 s after the last release, so switching tab ↔ viewer does not rebuild the track.
+  60 s after the stream stopped (no lease came back) the engine and SoundFont are dropped
+  (state back to `NotLoaded`, about 30 MB freed after a GC); the next `Acquire` reloads in the
+  background. The audio thread is stopped before the engine is released; the instrument and
+  sustain flag stay in the service.
   Window Stopped → all notes off, stream stopped; Resumed → restarted if leases remain.
 - **No audio focus request**: the metronome stops on focus loss; the musician must be
   able to play the piano over a running metronome. The piano is user-driven and silent
