@@ -296,6 +296,7 @@
   <data name="PianoLabelsOff" xml:space="preserve"><value>Note labels: off</value></data>
   <data name="PianoLabelsCOnly" xml:space="preserve"><value>Note labels: C only</value></data>
   <data name="PianoLabelsAll" xml:space="preserve"><value>Note labels: all</value></data>
+  <data name="PianoLabelsChipFormat" xml:space="preserve"><value>Names: {0}</value></data>
   <data name="PianoLoading" xml:space="preserve"><value>Loading sounds…</value></data>
   <data name="PianoLoadFailed" xml:space="preserve"><value>Sound unavailable</value></data>
   <data name="PianoMiniMap" xml:space="preserve"><value>Keyboard overview</value></data>

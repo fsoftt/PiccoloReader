@@ -296,6 +296,7 @@
   <data name="PianoLabelsOff" xml:space="preserve"><value>Etiquetas de notas: no</value></data>
   <data name="PianoLabelsCOnly" xml:space="preserve"><value>Etiquetas de notas: solo Do</value></data>
   <data name="PianoLabelsAll" xml:space="preserve"><value>Etiquetas de notas: todas</value></data>
+  <data name="PianoLabelsChipFormat" xml:space="preserve"><value>Nombres: {0}</value></data>
   <data name="PianoLoading" xml:space="preserve"><value>Cargando sonidos…</value></data>
   <data name="PianoLoadFailed" xml:space="preserve"><value>Sonido no disponible</value></data>
   <data name="PianoMiniMap" xml:space="preserve"><value>Vista general del teclado</value></data>

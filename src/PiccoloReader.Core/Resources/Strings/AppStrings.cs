@@ -334,6 +334,7 @@ public static class AppStrings
     public static string PianoSustain => Get(nameof(PianoSustain));
     public static string PianoLabelsOff => Get(nameof(PianoLabelsOff));
     public static string PianoLabelsCOnly => Get(nameof(PianoLabelsCOnly));
+    public static string PianoLabelsChipFormat => Get(nameof(PianoLabelsChipFormat));
     public static string PianoLabelsAll => Get(nameof(PianoLabelsAll));
     public static string PianoLoading => Get(nameof(PianoLoading));
     public static string PianoLoadFailed => Get(nameof(PianoLoadFailed));

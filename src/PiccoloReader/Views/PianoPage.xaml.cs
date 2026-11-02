@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.ComponentModel;
 using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
@@ -176,7 +177,7 @@ public partial class PianoPage : ContentPage
             PianoLabels.All => ($"{NoteNames.Get(0, naming)} {NoteNames.Get(2, naming)} {NoteNames.Get(4, naming)}", AppStrings.PianoLabelsAll),
             _ => ("–", AppStrings.PianoLabelsOff)
         };
-        LabelsButton.Text = text;
+        LabelsButton.Text = _isLandscape ? text : string.Format(CultureInfo.CurrentCulture, AppStrings.PianoLabelsChipFormat, text);
         SemanticProperties.SetDescription(LabelsButton, description);
     }
 
@@ -288,6 +289,7 @@ public partial class PianoPage : ContentPage
 
         _readoutLength = -1;
         UpdateReadout();
+        UpdateLabels();
     }
 
     private static void Place(View view, int row, int column, int columnSpan, Thickness margin)
