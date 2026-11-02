@@ -323,6 +323,54 @@ public static class AppStrings
     public static string TunerTransposeKey => Get(nameof(TunerTransposeKey));
     public static string TunerTransposeOctave => Get(nameof(TunerTransposeOctave));
 
+    public static string Piano => Get(nameof(Piano));
+    public static string PianoInstrument => Get(nameof(PianoInstrument));
+    public static string PianoChooseInstrument => Get(nameof(PianoChooseInstrument));
+    public static string PianoOctaveDown => Get(nameof(PianoOctaveDown));
+    public static string PianoOctaveUp => Get(nameof(PianoOctaveUp));
+    public static string PianoKeysMinus => Get(nameof(PianoKeysMinus));
+    public static string PianoKeysPlus => Get(nameof(PianoKeysPlus));
+    public static string PianoKeysCountFormat => Get(nameof(PianoKeysCountFormat));
+    public static string PianoSustain => Get(nameof(PianoSustain));
+    public static string PianoLabelsButton => Get(nameof(PianoLabelsButton));
+    public static string PianoLabelsOff => Get(nameof(PianoLabelsOff));
+    public static string PianoLabelsCOnly => Get(nameof(PianoLabelsCOnly));
+    public static string PianoLabelsAll => Get(nameof(PianoLabelsAll));
+    public static string PianoLoading => Get(nameof(PianoLoading));
+    public static string PianoLoadFailed => Get(nameof(PianoLoadFailed));
+    public static string PianoMiniMap => Get(nameof(PianoMiniMap));
+    public static string PianoKeyboard => Get(nameof(PianoKeyboard));
+    public static string PianoReadoutHint => Get(nameof(PianoReadoutHint));
+    public static string PianoFamilyKeyboards => Get(nameof(PianoFamilyKeyboards));
+    public static string PianoFamilyWoodwinds => Get(nameof(PianoFamilyWoodwinds));
+    public static string PianoFamilyBrass => Get(nameof(PianoFamilyBrass));
+    public static string PianoFamilyStrings => Get(nameof(PianoFamilyStrings));
+    public static string PianoFamilyVoices => Get(nameof(PianoFamilyVoices));
+    public static string PianoGrand => Get(nameof(PianoGrand));
+    public static string PianoElectric => Get(nameof(PianoElectric));
+    public static string PianoOrgan => Get(nameof(PianoOrgan));
+    public static string PianoPiccolo => Get(nameof(PianoPiccolo));
+    public static string PianoFlute => Get(nameof(PianoFlute));
+    public static string PianoOboe => Get(nameof(PianoOboe));
+    public static string PianoClarinet => Get(nameof(PianoClarinet));
+    public static string PianoAltoSax => Get(nameof(PianoAltoSax));
+    public static string PianoTenorSax => Get(nameof(PianoTenorSax));
+    public static string PianoTrumpet => Get(nameof(PianoTrumpet));
+    public static string PianoTrombone => Get(nameof(PianoTrombone));
+    public static string PianoFrenchHorn => Get(nameof(PianoFrenchHorn));
+    public static string PianoViolin => Get(nameof(PianoViolin));
+    public static string PianoCello => Get(nameof(PianoCello));
+    public static string PianoStrings => Get(nameof(PianoStrings));
+    public static string PianoNylonGuitar => Get(nameof(PianoNylonGuitar));
+    public static string PianoChoir => Get(nameof(PianoChoir));
+    public static string SettingsMuseScoreCreditTitle => Get(nameof(SettingsMuseScoreCreditTitle));
+    public static string SettingsMuseScoreCreditDescription => Get(nameof(SettingsMuseScoreCreditDescription));
+    public static string SettingsMeltySynthCreditTitle => Get(nameof(SettingsMeltySynthCreditTitle));
+    public static string SettingsMeltySynthCreditDescription => Get(nameof(SettingsMeltySynthCreditDescription));
+
+    /// <summary>Looks a string up by its resource key (for catalogs that store the key).</summary>
+    public static string GetString(string key) => Get(key);
+
     private static string Get(string key) =>
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;
 }
