@@ -22,6 +22,7 @@ public partial class PianoPage : ContentPage
     private Window? _window;
     private bool _isLandscape;
     private bool _orientationApplied;
+    private int _readoutLength = -1;
 
     public PianoPage(PianoViewModel viewModel)
     {
@@ -77,9 +78,12 @@ public partial class PianoPage : ContentPage
 
         _viewModel.IsLandscape = width > height;
         ApplyOrientation();
+        // Portrait: about 44 % of the page, never under 260 dp, so the keys stay big and near the thumb.
         Keyboard.HeightRequest = _isLandscape
             ? Math.Max(120, height - 125)
-            : Math.Clamp(height - 250, 150, 300);
+            : Math.Max(260, height * 0.44);
+        _readoutLength = -1;
+        UpdateReadout();
     }
 
     private void OnWindowStopped(object? sender, EventArgs e) => Keyboard.ReleaseAll();
@@ -165,7 +169,7 @@ public partial class PianoPage : ContentPage
         Keyboard.Naming = naming;
         Keyboard.Labels = _viewModel.Labels;
 
-        // Off shows a dash, C only the name of C, All a short run of names, so the chip reads as the state.
+        // The chip is neutral in every mode: it shows the mode as text (a dash, C, or a short run of names).
         var (text, description) = _viewModel.Labels switch
         {
             PianoLabels.COnly => (NoteNames.Get(0, naming), AppStrings.PianoLabelsCOnly),
@@ -173,19 +177,17 @@ public partial class PianoPage : ContentPage
             _ => ("–", AppStrings.PianoLabelsOff)
         };
         LabelsButton.Text = text;
-        LabelsButton.Style = (Style)Application.Current!.Resources[_viewModel.Labels == PianoLabels.Off ? "Chip" : "ChipSelected"];
         SemanticProperties.SetDescription(LabelsButton, description);
     }
 
     private void UpdateSustain()
     {
+        // Off is the neutral chip, on the filled Primary tint, with the icon in the matching colour.
         var on = _viewModel.SustainOn;
-        SustainButton.Source = on
-            ? Icon(SustainGlyph, 24, "OnPrimaryContainerLight", "OnPrimaryContainerDark")
-            : Icon(SustainGlyph, 24, "TextPrimaryLight", "TextPrimaryDark");
-        SustainButton.BackgroundColor = on
-            ? Themed("PrimaryContainerLight", "PrimaryContainerDark")
-            : Colors.Transparent;
+        SustainButton.Style = (Style)Application.Current!.Resources[on ? "ChipSelected" : "Chip"];
+        SustainButton.ImageSource = on
+            ? Icon(SustainGlyph, 22, "OnPrimaryContainerLight", "OnPrimaryContainerDark")
+            : Icon(SustainGlyph, 22, "TextSecondaryLight", "TextSecondaryDark");
         SemanticProperties.SetDescription(SustainButton, AppStrings.PianoSustain);
     }
 
@@ -203,8 +205,15 @@ public partial class PianoPage : ContentPage
             ? Themed("TextMutedLight", "TextMutedDark")
             : Themed("TextPrimaryLight", "TextPrimaryDark");
 
-        // Four long names ("Sol#4 · La#4 ...") must still fit on one line.
-        var baseSize = _isLandscape ? 28d : 40d;
+        // Four long names ("Sol#4 · La#4 ...") must still fit on one line. The size only depends on
+        // the text length, so it is recomputed when the length changes, not on every press.
+        if (text.Length == _readoutLength)
+        {
+            return;
+        }
+
+        _readoutLength = text.Length;
+        var baseSize = _isLandscape ? 28d : 68d;
         var available = Math.Max(Root.Width - (_isLandscape ? 300 : 24), 100);
         ReadoutLabel.FontSize = Math.Clamp(available / (Math.Max(text.Length, 1) * 0.6), 16, baseSize);
     }
@@ -230,25 +239,54 @@ public partial class PianoPage : ContentPage
         _isLandscape = landscape;
         _orientationApplied = true;
         TitleLabel.IsVisible = !landscape;
+        var rows = Root.RowDefinitions;
+        var columns = ControlsRow.ColumnDefinitions;
         if (landscape)
         {
+            rows[1].Height = new GridLength(0);
             Place(InstrumentButton, 0, 0, 1, new Thickness(0, 8, 0, 0));
             Place(ReadoutLabel, 0, 1, 1, new Thickness(8, 8, 8, 0));
             Place(ControlsRow, 0, 2, 1, new Thickness(0, 8, 0, 0));
-            Place(MiniMap, 1, 0, 3, new Thickness(0, 4, 0, 4));
+            Place(MiniMap, 2, 0, 3, new Thickness(0, 4, 0, 4));
+            Place(OctaveGroup, 0, 0, 1, default);
+            Place(KeysGroup, 0, 2, 1, default);
+            Place(TogglesRow, 0, 4, 1, default);
+            columns[1].Width = new GridLength(12);
+            columns[3].Width = new GridLength(12);
+            TogglesRow.ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Auto)];
+            TogglesRow.ColumnSpacing = 4;
+            SustainButton.Text = string.Empty;
+            SustainButton.WidthRequest = 48;
+            SustainButton.HeightRequest = 36;
+            LabelsButton.HeightRequest = 36;
+            LabelsButton.MinimumWidthRequest = 56;
             ReadoutLabel.HeightRequest = 44;
-            ControlsRow.ColumnSpacing = 4;
+            ReadoutLabel.VerticalOptions = LayoutOptions.Fill;
         }
         else
         {
+            rows[1].Height = GridLength.Star;
             Place(InstrumentButton, 0, 2, 1, new Thickness(0, 16, 0, 0));
-            Place(ReadoutLabel, 1, 0, 3, new Thickness(0, 8, 0, 4));
-            Place(ControlsRow, 3, 0, 3, new Thickness(0, 4));
+            Place(ReadoutLabel, 1, 0, 3, new Thickness(0, 8));
+            Place(ControlsRow, 3, 0, 3, new Thickness(0, 8, 0, 10));
             Place(MiniMap, 2, 0, 3, new Thickness(0, 4, 0, 4));
-            ReadoutLabel.HeightRequest = 64;
-            ControlsRow.ColumnSpacing = 0;
+            Place(OctaveGroup, 0, 0, 1, default);
+            Place(KeysGroup, 0, 4, 1, default);
+            Place(TogglesRow, 1, 0, 5, new Thickness(0, 8, 0, 0));
+            columns[1].Width = GridLength.Star;
+            columns[3].Width = GridLength.Star;
+            TogglesRow.ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star)];
+            TogglesRow.ColumnSpacing = 12;
+            SustainButton.Text = AppStrings.PianoSustain;
+            SustainButton.WidthRequest = -1;
+            SustainButton.HeightRequest = 44;
+            LabelsButton.HeightRequest = 44;
+            LabelsButton.MinimumWidthRequest = 0;
+            ReadoutLabel.HeightRequest = -1;
+            ReadoutLabel.VerticalOptions = LayoutOptions.Center;
         }
 
+        _readoutLength = -1;
         UpdateReadout();
     }
 

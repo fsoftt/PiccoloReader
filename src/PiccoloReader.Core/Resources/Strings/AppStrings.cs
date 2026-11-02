@@ -332,7 +332,6 @@ public static class AppStrings
     public static string PianoKeysPlus => Get(nameof(PianoKeysPlus));
     public static string PianoKeysCountFormat => Get(nameof(PianoKeysCountFormat));
     public static string PianoSustain => Get(nameof(PianoSustain));
-    public static string PianoLabelsButton => Get(nameof(PianoLabelsButton));
     public static string PianoLabelsOff => Get(nameof(PianoLabelsOff));
     public static string PianoLabelsCOnly => Get(nameof(PianoLabelsCOnly));
     public static string PianoLabelsAll => Get(nameof(PianoLabelsAll));

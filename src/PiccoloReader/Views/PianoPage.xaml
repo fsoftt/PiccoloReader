@@ -17,10 +17,11 @@
     </ContentPage.Resources>
 
     <!--
-        Portrait: title and instrument chip, readout, mini-map, controls, keyboard anchored to the
-        bottom. Landscape: the code-behind moves the chip, readout and controls into row 0.
+        Portrait: header (title, instrument chip) on top, the readout centred in the flexible
+        middle, then mini-map, controls and keyboard grouped at the bottom within thumb reach.
+        Landscape: the code-behind moves the chip, readout and controls into row 0 and collapses row 1.
     -->
-    <Grid x:Name="Root" Padding="12,0,12,8" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+    <Grid x:Name="Root" Padding="12,0,12,8" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,*,Auto,Auto,Auto">
 
         <Label
             x:Name="TitleLabel"
@@ -47,9 +48,9 @@
             Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
             AutomationId="PianoReadout"
             FontFamily="OpenSansSemibold"
-            FontSize="40"
-            HeightRequest="64"
-            Margin="0,8,0,4"
+            FontSize="68"
+            Margin="0,8"
+            VerticalOptions="Center"
             HorizontalTextAlignment="Center"
             VerticalTextAlignment="Center"
             LineBreakMode="TailTruncation"
@@ -66,69 +67,82 @@
         <Grid
             x:Name="ControlsRow"
             Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
-            ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,*,Auto,Auto"
-            Margin="0,4">
-            <ImageButton
-                x:Name="OctaveDownButton"
-                Grid.Column="0"
-                Style="{StaticResource PianoIconButton}"
-                AutomationId="PianoOctaveDown"
-                SemanticProperties.Description="{x:Static strings:AppStrings.PianoOctaveDown}"
-                Command="{Binding OctaveDownCommand}" />
-            <ImageButton
-                x:Name="OctaveUpButton"
-                Grid.Column="1"
-                Style="{StaticResource PianoIconButton}"
-                AutomationId="PianoOctaveUp"
-                SemanticProperties.Description="{x:Static strings:AppStrings.PianoOctaveUp}"
-                Command="{Binding OctaveUpCommand}" />
-            <ImageButton
-                x:Name="KeysMinusButton"
-                Grid.Column="3"
-                Style="{StaticResource PianoIconButton}"
-                AutomationId="PianoKeysMinus"
-                SemanticProperties.Description="{x:Static strings:AppStrings.PianoKeysMinus}"
-                Command="{Binding KeysMinusCommand}" />
-            <Label
-                Grid.Column="4"
-                x:Name="KeysLabel"
-                AutomationId="PianoKeysLabel"
-                Text="{Binding KeysLabel}"
-                Style="{StaticResource Caption}"
-                FontSize="14"
-                MinimumWidthRequest="64"
-                HorizontalTextAlignment="Center"
-                VerticalOptions="Center" />
-            <ImageButton
-                x:Name="KeysPlusButton"
-                Grid.Column="5"
-                Style="{StaticResource PianoIconButton}"
-                AutomationId="PianoKeysPlus"
-                SemanticProperties.Description="{x:Static strings:AppStrings.PianoKeysPlus}"
-                Command="{Binding KeysPlusCommand}" />
-            <ImageButton
-                x:Name="SustainButton"
-                Grid.Column="7"
-                Style="{StaticResource PianoIconButton}"
-                AutomationId="PianoSustainButton"
-                CornerRadius="22"
-                SemanticProperties.Description="{x:Static strings:AppStrings.PianoSustain}"
-                Command="{Binding ToggleSustainCommand}" />
-            <Button
-                x:Name="LabelsButton"
-                Grid.Column="8"
-                AutomationId="PianoLabelsButton"
-                Style="{StaticResource Chip}"
-                HeightRequest="36"
-                MinimumWidthRequest="56"
-                Margin="4,0,0,0"
-                VerticalOptions="Center"
-                Command="{Binding CycleLabelsCommand}" />
+            ColumnDefinitions="Auto,*,Auto,*,Auto"
+            RowDefinitions="Auto,Auto"
+            Margin="0,8,0,10">
+            <HorizontalStackLayout x:Name="OctaveGroup" Grid.Row="0" Grid.Column="0" VerticalOptions="Center">
+                <ImageButton
+                    x:Name="OctaveDownButton"
+                    Style="{StaticResource PianoIconButton}"
+                    AutomationId="PianoOctaveDown"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.PianoOctaveDown}"
+                    Command="{Binding OctaveDownCommand}" />
+                <Label
+                    x:Name="RangeLabel"
+                    AutomationId="PianoRangeLabel"
+                    Text="{Binding RangeLabel}"
+                    Style="{StaticResource Caption}"
+                    FontSize="14"
+                    MinimumWidthRequest="68"
+                    HorizontalTextAlignment="Center"
+                    VerticalOptions="Center" />
+                <ImageButton
+                    x:Name="OctaveUpButton"
+                    Style="{StaticResource PianoIconButton}"
+                    AutomationId="PianoOctaveUp"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.PianoOctaveUp}"
+                    Command="{Binding OctaveUpCommand}" />
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout x:Name="KeysGroup" Grid.Row="0" Grid.Column="4" VerticalOptions="Center">
+                <ImageButton
+                    x:Name="KeysMinusButton"
+                    Style="{StaticResource PianoIconButton}"
+                    AutomationId="PianoKeysMinus"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.PianoKeysMinus}"
+                    Command="{Binding KeysMinusCommand}" />
+                <Label
+                    x:Name="KeysLabel"
+                    AutomationId="PianoKeysLabel"
+                    Text="{Binding KeysLabel}"
+                    Style="{StaticResource Caption}"
+                    FontSize="14"
+                    MinimumWidthRequest="64"
+                    HorizontalTextAlignment="Center"
+                    VerticalOptions="Center" />
+                <ImageButton
+                    x:Name="KeysPlusButton"
+                    Style="{StaticResource PianoIconButton}"
+                    AutomationId="PianoKeysPlus"
+                    SemanticProperties.Description="{x:Static strings:AppStrings.PianoKeysPlus}"
+                    Command="{Binding KeysPlusCommand}" />
+            </HorizontalStackLayout>
+
+            <Grid x:Name="TogglesRow" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,8,0,0">
+                <Button
+                    x:Name="SustainButton"
+                    Grid.Column="0"
+                    AutomationId="PianoSustainButton"
+                    Style="{StaticResource Chip}"
+                    HeightRequest="44"
+                    CornerRadius="22"
+                    Padding="10,0"
+                    ContentLayout="Left,8"
+                    Command="{Binding ToggleSustainCommand}" />
+                <Button
+                    x:Name="LabelsButton"
+                    Grid.Column="1"
+                    AutomationId="PianoLabelsButton"
+                    Style="{StaticResource Chip}"
+                    HeightRequest="44"
+                    CornerRadius="22"
+                    Command="{Binding CycleLabelsCommand}" />
+            </Grid>
         </Grid>
 
         <views:PianoKeyboardView
             x:Name="Keyboard"
-            Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3"
+            Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
             AutomationId="PianoKeyboard"
             VerticalOptions="End"
             HeightRequest="280"

@@ -22,6 +22,8 @@ public partial class PianoViewModel : ObservableObject
     private readonly ITunerPreferenceService _tunerPreferences;
     private readonly Action<Action> _post;
     private readonly List<int> _held = [];
+    private readonly System.Text.StringBuilder _readoutBuilder = new();
+    private readonly string?[] _noteNames = new string?[PianoKeyboardLayout.HighestNote + 1];
     private PianoSettings _settings;
     private NoteNaming _resolvedNaming;
     private int _portraitCount;
@@ -99,6 +101,7 @@ public partial class PianoViewModel : ObservableObject
             OnPropertyChanged(nameof(FirstWhiteKey));
             OnPropertyChanged(nameof(WhiteKeyCount));
             OnPropertyChanged(nameof(KeysLabel));
+            OnPropertyChanged(nameof(RangeLabel));
         }
     }
 
@@ -107,6 +110,10 @@ public partial class PianoViewModel : ObservableObject
 
     /// <summary>Visible white keys for the current orientation.</summary>
     public int WhiteKeyCount => IsLandscape ? _landscapeCount : _portraitCount;
+
+    /// <summary>Visible range for the octave arrows, e.g. C4–E5 or Do4–Mi5.</summary>
+    public string RangeLabel =>
+        NoteName(FirstWhiteKey) + "–" + NoteName(PianoKeyboardLayout.LastWhiteKeyOf(FirstWhiteKey, WhiteKeyCount));
 
     public string KeysLabel => string.Format(CultureInfo.CurrentCulture, AppStrings.PianoKeysCountFormat, WhiteKeyCount);
 
@@ -126,7 +133,9 @@ public partial class PianoViewModel : ObservableObject
         if (naming != _resolvedNaming)
         {
             _resolvedNaming = naming;
+            Array.Clear(_noteNames);
             OnPropertyChanged(nameof(ResolvedNaming));
+            OnPropertyChanged(nameof(RangeLabel));
             RefreshReadout();
         }
 
@@ -187,7 +196,8 @@ public partial class PianoViewModel : ObservableObject
             return;
         }
 
-        // The engine releases the notes in flight; the fingers still down stay on the readout until lifted.
+        // The engine releases the notes in flight, so the readout lets go of them too.
+        ReleaseAll();
         Instrument = instrument;
         _service.SetInstrument(instrument);
         _isDirty = true;
@@ -213,6 +223,7 @@ public partial class PianoViewModel : ObservableObject
 
         _isDirty = true;
         OnPropertyChanged(nameof(FirstWhiteKey));
+        OnPropertyChanged(nameof(RangeLabel));
     }
 
     [RelayCommand]
@@ -286,6 +297,7 @@ public partial class PianoViewModel : ObservableObject
         OnPropertyChanged(nameof(WhiteKeyCount));
         OnPropertyChanged(nameof(FirstWhiteKey));
         OnPropertyChanged(nameof(KeysLabel));
+        OnPropertyChanged(nameof(RangeLabel));
     }
 
     private void RefreshReadout()
@@ -297,19 +309,32 @@ public partial class PianoViewModel : ObservableObject
             return;
         }
 
-        var names = new List<string>(Math.Min(_held.Count, MaxReadoutNotes));
+        _readoutBuilder.Clear();
         for (var i = 0; i < _held.Count && i < MaxReadoutNotes; i++)
         {
-            names.Add(NoteName(_held[i]));
+            if (i > 0)
+            {
+                _readoutBuilder.Append(ReadoutSeparator);
+            }
+
+            _readoutBuilder.Append(NoteName(_held[i]));
         }
 
-        ReadoutText = string.Join(ReadoutSeparator, names);
+        ReadoutText = _readoutBuilder.ToString();
         ReadoutIsDim = false;
     }
 
     /// <summary>Name plus octave in scientific pitch notation, e.g. La4 or A4.</summary>
-    public string NoteName(int note) =>
-        NoteNames.Get(note % 12, _resolvedNaming) + ((note / 12) - 1).ToString(CultureInfo.InvariantCulture);
+    public string NoteName(int note)
+    {
+        if ((uint)note >= (uint)_noteNames.Length)
+        {
+            return NoteNames.Get(note % 12, _resolvedNaming) + ((note / 12) - 1).ToString(CultureInfo.InvariantCulture);
+        }
+
+        // Cached per naming, so a key press builds no name string.
+        return _noteNames[note] ??= NoteNames.Get(note % 12, _resolvedNaming) + ((note / 12) - 1).ToString(CultureInfo.InvariantCulture);
+    }
 
     private NoteNaming ResolveNaming() =>
         NoteNames.Resolve(_tunerPreferences.Load().NoteNaming, CultureInfo.CurrentUICulture);

@@ -198,6 +198,30 @@ public class PianoViewModelTests
     }
 
     [Fact]
+    public void RangeLabel_NamesTheVisibleRange_AndFollowsOctaveShifts()
+    {
+        var sut = Create();
+
+        Assert.Equal("C4–E5", sut.RangeLabel);
+        sut.OctaveUpCommand.Execute(null);
+        Assert.Equal("C5–E6", sut.RangeLabel);
+        sut.IsLandscape = true;
+        Assert.Equal("C3–E5", sut.RangeLabel);
+    }
+
+    [Fact]
+    public void SelectInstrument_ReleasesTheHeldNotes()
+    {
+        var sut = Create();
+        sut.NoteOn(60, 100);
+
+        sut.SelectInstrument(PianoInstruments.ById("flute"));
+
+        Assert.Contains(60, _service.NotesOff);
+        Assert.True(sut.ReadoutIsDim);
+    }
+
+    [Fact]
     public void SelectInstrument_UpdatesTheServiceAndIsPersisted()
     {
         var sut = Create();

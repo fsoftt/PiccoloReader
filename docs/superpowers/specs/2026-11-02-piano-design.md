@@ -57,20 +57,23 @@ Portrait, top to bottom:
    bottom-sheet popup (CommunityToolkit.Maui `Popup`) with the grouped list; the current
    instrument has a check mark. Selection applies immediately (notes in flight are
    released) and closes the sheet.
-2. **Note readout**: large name(s) of the sounding notes, e.g. `La4` or `Do4 · Mi4 · Sol4`
+2. **Note readout** (centred in the flexible space between header and controls, 68 sp): large name(s) of the sounding notes, e.g. `La4` or `Do4 · Mi4 · Sol4`
    (max 4, low to high). The last note stays dimmed after release so the user can read
    it. Naming follows the existing tuner `NoteNaming` preference (Auto/Letter/Solfege),
    so the whole app speaks one notation.
 3. **Mini-map**: the full 88 keys (A0–C8) as a thin strip (~32 dp) with a highlighted
    window for the visible range. Drag the window or tap to jump. Pressed keys and the
    instrument range also show here.
-4. **Control row**: `‹` / `›` shift one octave (clamped to A0–C8); key-count stepper
-   `− 14 keys +` (white keys, 7–36); sustain toggle (pedal icon, filled when on); labels
-   button cycling Off → C only → All (icon + toast-free state shown by the icon).
-5. **Keyboard**: fills the rest; in portrait its height is capped (~300 dp) and
-   anchored to the bottom so keys keep a playable aspect ratio.
+4. **Control row** (grouped with the mini-map and keyboard at the bottom, 8-12 dp above
+   the keys): `‹ C4–E5 ›` shifts one octave (clamped to A0–C8) and shows the visible range
+   (naming from the tuner preference, e.g. `Do4–Mi5`); key-count stepper `− 14 keys +`
+   (white keys, 7–36). Second line in portrait: two half-width chips, sustain (`Chip` when
+   off, `ChipSelected` Primary tint when on) and labels (always neutral `Chip`, showing its
+   mode as text: `–`, `C`, `C D E` / `Do Re Mi`) cycling Off → C only → All.
+5. **Keyboard**: anchored to the bottom; in portrait its height is 44 % of the page
+   (min 260 dp), so keys stay big and near the thumb.
 
-Landscape: header + control row merge into one row; mini-map above the keyboard;
+Landscape: header + control row merge into one row (sustain icon-only); mini-map above the keyboard;
 the keyboard takes all remaining height.
 
 Key count is stored per orientation (portrait default 10 white keys = C4–E5,
@@ -109,7 +112,7 @@ Core (testable)                          Android
 ───────────────                          ───────
 PianoInstruments  (catalog)              AndroidPianoAudioOutput : IPianoAudioOutput
 PianoKeyboardLayout (geometry, hit test)   AudioTrack PCM float stereo, LowLatency,
-PianoSynthEngine  (MeltySynth wrapper)      buffer = max(minBuffer, 2 bursts),
+PianoSynthEngine  (MeltySynth wrapper)      buffer = max(minBuffer, 4 bursts),
   - command queue (ConcurrentQueue)         Usage Media / ContentType Music,
   - Render(float[] l, float[] r)            dedicated thread, Audio priority,
 PianoService (ref-counted session)          pulls engine.Render per block
@@ -120,11 +123,23 @@ PianoViewModel / PianoStripViewModel
 - **PianoSynthEngine** owns the MeltySynth `Synthesizer` (channel 0). NoteOn/NoteOff/
   program change/CC64 are enqueued from any thread and applied by the audio thread at
   the start of each render block, so the synthesizer is touched by one thread only (no
-  lock on the hot path). Block size 128–256 frames → command latency ≤ ~5 ms on top of
+  lock on the hot path). Polyphony is capped at 32 voices. When no voice is sounding, no command
+  is queued and the reverb tail (1.5 s) is over, `Render` returns false without running the
+  synthesizer and the output keeps writing a zeroed buffer (idle CPU about 1 %; the track is not
+  stopped, to keep latency). Block size 128–256 frames → command latency ≤ ~5 ms on top of
   the device output latency.
 - **SoundFont load**: on first acquire, `Task.Run` → `FileSystem.OpenAppPackageFileAsync
-  ("piano.sf2")` → copy to `MemoryStream` → `new SoundFont(stream)`. Loaded once and kept
+  ("piano.sf2")` → `new SoundFont(stream)` (a non-seekable asset stream goes through one pre-sized buffer that is freed and collected right after parsing). Loaded once and kept
   for the process. Never on the UI thread (CLAUDE.md rule).
+- **Failure handling**: the service keeps the sustain flag (source of truth) and re-applies it
+  after the engine is published and after every start-time silence (stream start, Suspend,
+  Resume). If the audio thread dies (write error, render exception) the output raises `Died`
+  and the service restarts the stream, at most once per second; a note pressed while the stream
+  is down also triggers a throttled restart and is dropped (the command queue cannot grow). A
+  stale thread that outlived its join timeout cannot render: renders are serialised and checked
+  against the stop flag. A stream that cannot start sets `PianoLoadState.Failed`; the keyboard
+  shows "Sound unavailable" and the next `Acquire` retries (without reloading the SoundFont).
+  Preferences are written on the thread pool.
 - **PianoService** is a singleton with `Acquire()`/`Release()` (tab page and viewer strip
   each hold a lease while visible). The audio stream starts on the first lease and stops
   2 s after the last release, so switching tab ↔ viewer does not rebuild the track.

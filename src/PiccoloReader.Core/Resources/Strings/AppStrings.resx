@@ -293,12 +293,11 @@
   <data name="PianoKeysPlus" xml:space="preserve"><value>More keys</value></data>
   <data name="PianoKeysCountFormat" xml:space="preserve"><value>{0} keys</value></data>
   <data name="PianoSustain" xml:space="preserve"><value>Sustain pedal</value></data>
-  <data name="PianoLabelsButton" xml:space="preserve"><value>Note labels</value></data>
   <data name="PianoLabelsOff" xml:space="preserve"><value>Note labels: off</value></data>
   <data name="PianoLabelsCOnly" xml:space="preserve"><value>Note labels: C only</value></data>
   <data name="PianoLabelsAll" xml:space="preserve"><value>Note labels: all</value></data>
   <data name="PianoLoading" xml:space="preserve"><value>Loading sounds…</value></data>
-  <data name="PianoLoadFailed" xml:space="preserve"><value>Could not load the piano sounds.</value></data>
+  <data name="PianoLoadFailed" xml:space="preserve"><value>Sound unavailable</value></data>
   <data name="PianoMiniMap" xml:space="preserve"><value>Keyboard overview</value></data>
   <data name="PianoKeyboard" xml:space="preserve"><value>Piano keyboard</value></data>
   <data name="PianoReadoutHint" xml:space="preserve"><value>Tap a key</value></data>

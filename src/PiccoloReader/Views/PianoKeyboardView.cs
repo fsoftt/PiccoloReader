@@ -6,11 +6,19 @@ using SkiaSharp.Views.Maui.Controls;
 
 namespace PiccoloReader.Views;
 
+/// <summary>Raised synchronously and reused for every event: handlers must not keep the instance.</summary>
 public sealed class PianoKeyEventArgs(int note, int velocity) : EventArgs
 {
-    public int Note { get; } = note;
+    public int Note { get; private set; } = note;
 
-    public int Velocity { get; } = velocity;
+    public int Velocity { get; private set; } = velocity;
+
+    internal PianoKeyEventArgs Set(int note, int velocity)
+    {
+        Note = note;
+        Velocity = velocity;
+        return this;
+    }
 }
 
 /// <summary>
@@ -27,6 +35,8 @@ public class PianoKeyboardView : SKCanvasView
     private const float LabelSizeDp = 12f;
     private const float MinLabelKeyWidthDp = 16f;
 
+    private readonly PianoKeyEventArgs _pressedArgs = new(0, 0);
+    private readonly PianoKeyEventArgs _releasedArgs = new(0, 0);
     private readonly Dictionary<long, int> _pointers = new();
     private readonly int[] _pressCounts = new int[PianoKeyboardLayout.HighestNote + 1];
     private readonly string[] _fullLabels = new string[PianoKeyboardLayout.HighestNote + 1];
@@ -157,20 +167,14 @@ public class PianoKeyboardView : SKCanvasView
             return;
         }
 
-        var held = new List<int>();
+        _pointers.Clear();
         for (var note = 0; note < _pressCounts.Length; note++)
         {
             if (_pressCounts[note] > 0)
             {
-                held.Add(note);
                 _pressCounts[note] = 0;
+                KeyReleased?.Invoke(this, _releasedArgs.Set(note, 0));
             }
-        }
-
-        _pointers.Clear();
-        foreach (var note in held)
-        {
-            KeyReleased?.Invoke(this, new PianoKeyEventArgs(note, 0));
         }
 
         InvalidateSurface();
@@ -296,7 +300,7 @@ public class PianoKeyboardView : SKCanvasView
             _pressCounts[target]++;
             if (_pressCounts[target] == 1)
             {
-                KeyPressed?.Invoke(this, new PianoKeyEventArgs(target, velocity));
+                KeyPressed?.Invoke(this, _pressedArgs.Set(target, velocity));
             }
         }
 
@@ -323,7 +327,7 @@ public class PianoKeyboardView : SKCanvasView
         _pressCounts[note]--;
         if (_pressCounts[note] == 0)
         {
-            KeyReleased?.Invoke(this, new PianoKeyEventArgs(note, 0));
+            KeyReleased?.Invoke(this, _releasedArgs.Set(note, 0));
         }
     }
 

@@ -293,12 +293,11 @@
   <data name="PianoKeysPlus" xml:space="preserve"><value>Más teclas</value></data>
   <data name="PianoKeysCountFormat" xml:space="preserve"><value>{0} teclas</value></data>
   <data name="PianoSustain" xml:space="preserve"><value>Pedal de resonancia</value></data>
-  <data name="PianoLabelsButton" xml:space="preserve"><value>Etiquetas de notas</value></data>
   <data name="PianoLabelsOff" xml:space="preserve"><value>Etiquetas de notas: no</value></data>
   <data name="PianoLabelsCOnly" xml:space="preserve"><value>Etiquetas de notas: solo Do</value></data>
   <data name="PianoLabelsAll" xml:space="preserve"><value>Etiquetas de notas: todas</value></data>
   <data name="PianoLoading" xml:space="preserve"><value>Cargando sonidos…</value></data>
-  <data name="PianoLoadFailed" xml:space="preserve"><value>No se pudieron cargar los sonidos del piano.</value></data>
+  <data name="PianoLoadFailed" xml:space="preserve"><value>Sonido no disponible</value></data>
   <data name="PianoMiniMap" xml:space="preserve"><value>Vista general del teclado</value></data>
   <data name="PianoKeyboard" xml:space="preserve"><value>Teclado de piano</value></data>
   <data name="PianoReadoutHint" xml:space="preserve"><value>Toca una tecla</value></data>
