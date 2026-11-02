@@ -126,21 +126,11 @@
   <data name="LanguageSectionHeader" xml:space="preserve"><value>Language</value></data>
   <data name="RestartRequiredTitle" xml:space="preserve"><value>Restart Required</value></data>
   <data name="RestartRequiredMessage" xml:space="preserve"><value>Restart PiccoloReader for the new language to take effect.</value></data>
-  <data name="DonateMenuItem" xml:space="preserve"><value>Donate</value></data>
-  <data name="DonatePageTitle" xml:space="preserve"><value>Donate</value></data>
-  <data name="DonateExplanation" xml:space="preserve"><value>I don't like subscriptions. I built this app to be free because that's the right choice.
-
-If you'd like to give me a tip, tap the button below — it'll show a short ad.</value></data>
-  <data name="SeeAdButton" xml:space="preserve"><value>See ad</value></data>
-  <data name="SupportWithAdsOption" xml:space="preserve"><value>Support with ads</value></data>
-  <data name="DonateSupportWithAdsExplanation" xml:space="preserve"><value>There's also a "Support with ads" option in Settings — turn it on and a small ad banner will show up while you use the app. It helps me out.</value></data>
   <data name="LegalSectionHeader" xml:space="preserve"><value>Legal &amp; Compliance</value></data>
   <data name="PrivacyPolicyLabel" xml:space="preserve"><value>Privacy Policy</value></data>
   <data name="PrivacyPolicyDescription" xml:space="preserve"><value>How we collect, use, and protect your information</value></data>
   <data name="TermsOfServiceLabel" xml:space="preserve"><value>Terms of Service</value></data>
   <data name="TermsOfServiceDescription" xml:space="preserve"><value>Usage rights, restrictions, and liability disclaimers</value></data>
-  <data name="AdPrivacyOptionsLabel" xml:space="preserve"><value>Ad Privacy Options</value></data>
-  <data name="AdPrivacyOptionsDescription" xml:space="preserve"><value>Review or change your consent for personalized ads</value></data>
   <data name="OpenPrivacyPolicy" xml:space="preserve"><value>Open in Browser</value></data>
   <data name="TutorialSkip" xml:space="preserve"><value>Skip</value></data>
   <data name="TutorialNext" xml:space="preserve"><value>Next</value></data>
@@ -156,8 +146,8 @@ If you'd like to give me a tip, tap the button below — it'll show a short ad.<
   <data name="TutorialAnnotationsText" xml:space="preserve"><value>Add music symbols, draw with the pencil or erase with the eraser. Made a mistake? Undo and redo any change.</value></data>
   <data name="TutorialBookmarksTitle" xml:space="preserve"><value>Bookmarks</value></data>
   <data name="TutorialBookmarksText" xml:space="preserve"><value>Bookmark the pages you come back to most and jump straight to them whenever you need.</value></data>
-  <data name="TutorialSettingsTitle" xml:space="preserve"><value>Settings and support</value></data>
-  <data name="TutorialSettingsText" xml:space="preserve"><value>Change the app language in Settings. If you enjoy Piccolo Reader, you can support it by turning on ads. You can reopen this tutorial any time from Settings.</value></data>
+  <data name="TutorialSettingsTitle" xml:space="preserve"><value>Settings</value></data>
+  <data name="TutorialSettingsText" xml:space="preserve"><value>Change the app language in Settings. You can reopen this tutorial any time from Settings.</value></data>
   <data name="ImportPdf" xml:space="preserve"><value>Import PDF</value></data>
   <data name="NewFolder" xml:space="preserve"><value>New folder</value></data>
   <data name="MoreOptions" xml:space="preserve"><value>More options</value></data>

@@ -6,7 +6,6 @@
     xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
     xmlns:converters="clr-namespace:PiccoloReader.Converters"
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
-    xmlns:admob="clr-namespace:Plugin.AdMob;assembly=Plugin.AdMob"
     xmlns:local="clr-namespace:PiccoloReader"
     x:Name="ThisPage"
     Shell.TabBarIsVisible="False"
@@ -18,7 +17,7 @@
         <converters:SheetMetaConverter x:Key="SheetMeta" />
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid>
         <CollectionView
             Grid.Row="0"
             ItemsSource="{Binding Sheets}"
@@ -239,8 +238,5 @@
             </CollectionView.Footer>
         </CollectionView>
 
-        <Grid Grid.Row="1" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
-            <admob:BannerAd IsVisible="{Binding ShowAdsBanner}" />
-        </Grid>
     </Grid>
 </ContentPage>

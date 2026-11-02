@@ -2,7 +2,7 @@
 
 # Política de Privacidad
 
-**Última actualización:** 18 de octubre de 2026
+**Última actualización:** 2 de noviembre de 2026
 
 **Fecha de entrada en vigor:** enero de 2026
 
@@ -44,22 +44,9 @@ Cuando compartes una partitura (la original o un PDF anotado), la App entrega el
 
 ### 1.4 Información recopilada automáticamente
 
-**Google AdMob (solo en la página Donar):**
+**Sin publicidad:** La app no contiene anuncios ni ningún SDK de publicidad de terceros. No usa ni recopila el ID de publicidad, y no recopila datos personales a través de anuncios.
 
-La página Donar, que es opcional, muestra anuncios proporcionados por Google AdMob. Los anuncios nunca se muestran en el lector. Cuando se cargan anuncios, Google puede recopilar:
-- Identificadores del dispositivo, como el ID de publicidad
-- Dirección IP
-- Información del dispositivo y de la app (por ejemplo, modelo del dispositivo, versión del sistema operativo y versión de la app)
-
-Google utiliza estos datos conforme a su propia política de privacidad, por ejemplo para entregar y medir anuncios, prevenir el fraude y, si lo permites, personalizar los anuncios. Más información:
-- https://policies.google.com/privacy
-- https://support.google.com/admob/answer/6128543
-
-**Lo que recopilamos:**
-- NO tenemos acceso a los datos detallados de usuario de Google
-- NO recibimos estos datos nosotros mismos; solo vemos cifras agregadas de rendimiento de anuncios en nuestra cuenta de AdMob
-
-**Importante:** Los anuncios son opcionales. Puedes desactivarlos en Ajustes → interruptor "Apoyar con anuncios". Los permisos de Internet y de estado de red se usan solo para cargar anuncios.
+**Sin otra recopilación automática:** La app no solicita el permiso de Internet y no envía a ningún sitio información sobre ti ni sobre tu dispositivo.
 
 ### 1.5 Datos de fallos y rendimiento
 
@@ -77,9 +64,6 @@ La App usa los datos de tu dispositivo para:
    - Almacenar tus partituras localmente en tu dispositivo
    - Renderizar PDFs y anotaciones
    - Detectar la altura de las notas en el afinador
-
-2. **Publicidad (página Donar):**
-   - Mostrar anuncios para apoyar el desarrollo, mediante Google AdMob, si dejas los anuncios activados
 
 **NO hacemos lo siguiente:**
 - Vender tus datos
@@ -115,28 +99,19 @@ La App usa los datos de tu dispositivo para:
 ### 3.4 Comunicaciones de red
 
 - La App no tiene servidores y no se comunica con ningún servidor nuestro
-- El único tráfico de red son las solicitudes de anuncios que realiza el SDK de Google AdMob en la página Donar, que usa HTTPS
+- La app no solicita el permiso de Internet y no realiza solicitudes de red
 
 ---
 
 ## 4. Servicios de terceros
 
-### 4.1 Google AdMob
-
-- **Servicio:** Entrega de publicidad (solo en la página Donar)
-- **Datos compartidos:** Identificadores del dispositivo como el ID de publicidad, dirección IP, información del dispositivo y de la app, recopilados por Google
-- **Política de privacidad:** https://policies.google.com/privacy
-- **Más información:** https://support.google.com/admob/answer/6128543
-- **Cómo desactivarlo:** Ajustes → Desactiva "Apoyar con anuncios"
-- **Consentimiento (EEE, Reino Unido y Suiza):** Cuando es obligatorio, el formulario de consentimiento de Google (User Messaging Platform) pregunta si los anuncios pueden personalizarse. Puedes cambiar tu elección en cualquier momento en Ajustes → "Opciones de privacidad de anuncios", que aparece solo en esas regiones
-
-### 4.2 Google Play
+### 4.1 Google Play
 
 - **Servicio:** Distribución de la app
 - **Datos:** Google Play puede compartir con nosotros datos agregados de fallos y rendimiento (Android vitals) de los usuarios que optaron por compartir datos de uso y diagnóstico en los ajustes de Android
 - **Política de privacidad:** https://policies.google.com/privacy
 
-### 4.3 Bibliotecas de código abierto
+### 4.2 Bibliotecas de código abierto
 
 Piccolo Music Reader utiliza bibliotecas de código abierto (SkiaSharp, SQLite, etc.) que se ejecutan en tu dispositivo. La App no las usa para enviar datos a ningún lugar.
 
@@ -151,13 +126,7 @@ Piccolo Music Reader utiliza bibliotecas de código abierto (SkiaSharp, SQLite, 
 - **Eliminación:** Eliminar una partitura en la app también elimina su PDF de Documentos/PiccoloReader. Desinstalar la app elimina sus datos privados pero no la carpeta Documentos/PiccoloReader, que puedes borrar tú mismo en cualquier momento
 - **Exportación:** Tus PDFs son archivos normales en Documentos/PiccoloReader; puedes copiarlos a cualquier lugar
 
-### 5.2 Preferencias de publicidad
-
-- **Desactivar anuncios:** Ajustes → desactiva "Apoyar con anuncios"
-- **Personalización de anuncios de Google:** Administra en https://myaccount.google.com/ads
-- **Restablecer o limitar el ID de publicidad:** Ajustes de Android → Privacidad → Anuncios → Eliminar ID de publicidad (la ruta exacta varía según el dispositivo)
-
-### 5.3 Derechos bajo el RGPD y la CCPA (usuarios de la UE y California)
+### 5.2 Derechos bajo el RGPD y la CCPA (usuarios de la UE y California)
 
 Si resides en la UE (RGPD) o en California (CCPA), tienes:
 - **Derecho de acceso:** Solicitar qué datos tenemos sobre ti
@@ -165,15 +134,15 @@ Si resides en la UE (RGPD) o en California (CCPA), tienes:
 - **Derecho a la portabilidad:** Solicitar tus datos en un formato portable
 - **Derecho de oposición:** Excluirte del tratamiento
 
-**Nota:** Como no tenemos tus datos personales, la mayoría de las solicitudes se cumplen automáticamente. Las solicitudes sobre los datos que Google recopila para anuncios deben dirigirse a Google.
+**Nota:** Como no tenemos tus datos personales, la mayoría de las solicitudes se cumplen automáticamente.
 
-### 5.4 Contáctanos para solicitudes de privacidad
+### 5.3 Contáctanos para solicitudes de privacidad
 
 Correo electrónico: **fsilva@duck.com**
 
 Por favor incluye:
 - El modelo de tu dispositivo y la versión de Android
-- El ID del dispositivo o GAID (opcional)
+- El ID del dispositivo (opcional)
 - La descripción de tu solicitud
 
 Tiempo de respuesta: dentro de 30 días
@@ -188,8 +157,7 @@ Piccolo Music Reader es una app de público general para músicos de todas las e
 - **NO recopilamos a sabiendas datos de menores de 13 años** (COPPA)
 - Recomendamos la supervisión de los padres para menores de 13 años
 
-La única recopilación de datos por terceros es la de Google AdMob en la página Donar, que es opcional. Los padres pueden:
-- Desactivar los anuncios (Ajustes → desactivar "Apoyar con anuncios")
+La app no contiene anuncios ni recopilación de datos por terceros. Los padres pueden:
 - Revocar el permiso de micrófono en los ajustes de Android
 - Eliminar los datos de la app en cualquier momento desinstalándola
 
@@ -201,13 +169,12 @@ Como no tenemos datos, no hay nada que eliminar de nuestro lado. Si crees que un
 
 - **Datos locales:** Se almacenan en tu dispositivo hasta que los elimines (incluida la carpeta Documentos/PiccoloReader)
 - **Desarrollador:** No conservamos ningún dato de los usuarios
-- **Datos de entrega de anuncios:** Los conserva Google según https://policies.google.com/privacy
 
 ---
 
 ## 8. Transferencia internacional de datos
 
-No recopilamos ni transferimos tus datos. Tus archivos PDF y anotaciones permanecen en tu dispositivo. Los datos que Google recopila para anuncios los procesa Google, que puede transferirlos internacionalmente conforme a su propia política de privacidad.
+No recopilamos ni transferimos tus datos. Tus archivos PDF y anotaciones permanecen en tu dispositivo.
 
 ---
 
@@ -250,19 +217,18 @@ Si resides en California, tienes derecho a:
 **Cumplimiento de la CCPA de Piccolo Music Reader:**
 - NO vendemos tu información personal
 - Tus partituras se almacenan localmente (nunca las recibimos)
-- Los anuncios de la página Donar los entrega Google AdMob; puedes desactivarlos en Ajustes
+- La app no contiene anuncios ni SDK de publicidad
 - Los residentes de California pueden ejercer sus derechos escribiendo a: fsilva@duck.com
 
 ### 11.2 Reglamento General de Protección de Datos (RGPD) de la Unión Europea
 
 Si te encuentras en la UE, el tratamiento se basa en:
 - Intereses legítimos (funcionamiento de la app)
-- Consentimiento (para los datos de publicidad a través de AdMob, recabado mediante el formulario de consentimiento de Google)
 - Cumplimiento legal
 
 **Tus derechos:**
 - Acceso, rectificación, supresión o portabilidad de los datos personales
-- Retirar tu consentimiento en cualquier momento (Ajustes → "Opciones de privacidad de anuncios" o desactivar los anuncios)
+- Retirar tu consentimiento en cualquier momento (la app no recopila datos que requieran consentimiento)
 - Presentar reclamaciones ante tu autoridad local de protección de datos
 
 ### 11.3 Ley de Privacidad de Australia

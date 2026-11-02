@@ -2,7 +2,7 @@
 
 # Terms of Service
 
-**Last Updated:** January 2026
+**Last Updated:** November 2, 2026
 
 **Effective Date:** January 2026
 
@@ -215,15 +215,7 @@ Piccolo Music Reader may link to external resources:
 - Third-party privacy policies or terms
 - Use of third-party platforms at your own risk
 
-### 7.2 Google AdMob (Ads)
-
-The Donate page includes ads from Google AdMob:
-- **Google's Privacy Policy:** https://policies.google.com/privacy
-- **Google's Terms:** https://policies.google.com/terms
-- Ads are not endorsed by fsoftt; Google controls ad content
-- You interact with ads at your own risk
-
-### 7.3 Third-Party Libraries
+### 7.2 Third-Party Libraries
 
 Piccolo Music Reader includes open-source libraries:
 - Each library is licensed under its own license (see LICENSE file in repo)

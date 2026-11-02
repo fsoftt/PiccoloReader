@@ -9,16 +9,12 @@ public partial class MetronomeViewModel : ObservableObject
 {
     private readonly IMetronomePlayer _player;
     private readonly IMetronomePreferenceService _preferences;
-    private readonly IAdsPreferenceService _adsPreferenceService;
     private readonly Func<long> _clock;
     private readonly TapTempo _tapTempo = new();
     private bool _isDirty;
 
     [ObservableProperty]
     private int _bpm;
-
-    [ObservableProperty]
-    private bool _showAdsBanner;
 
     [ObservableProperty]
     private int _beatsPerBar;
@@ -39,11 +35,10 @@ public partial class MetronomeViewModel : ObservableObject
     [ObservableProperty]
     private bool _currentBeatIsAccent;
 
-    public MetronomeViewModel(IMetronomePlayer player, IMetronomePreferenceService preferences, IAdsPreferenceService adsPreferenceService, Func<long>? clock = null)
+    public MetronomeViewModel(IMetronomePlayer player, IMetronomePreferenceService preferences, Func<long>? clock = null)
     {
         _player = player;
         _preferences = preferences;
-        _adsPreferenceService = adsPreferenceService;
         _clock = clock ?? (() => Environment.TickCount64);
 
         var settings = preferences.Load();
@@ -74,7 +69,6 @@ public partial class MetronomeViewModel : ObservableObject
     /// <summary>Starts following beats. Call when the metronome UI becomes visible.</summary>
     public void Attach()
     {
-        ShowAdsBanner = _adsPreferenceService.GetSupportWithAdsEnabled();
         _player.BeatTicked -= OnBeatTicked;
         _player.BeatTicked += OnBeatTicked;
         IsPlaying = _player.IsPlaying;

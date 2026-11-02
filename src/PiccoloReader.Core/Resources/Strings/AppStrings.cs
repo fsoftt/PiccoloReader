@@ -112,12 +112,6 @@ public static class AppStrings
     public static string LanguageSectionHeader => Get(nameof(LanguageSectionHeader));
     public static string RestartRequiredTitle => Get(nameof(RestartRequiredTitle));
     public static string RestartRequiredMessage => Get(nameof(RestartRequiredMessage));
-    public static string DonateMenuItem => Get(nameof(DonateMenuItem));
-    public static string DonatePageTitle => Get(nameof(DonatePageTitle));
-    public static string DonateExplanation => Get(nameof(DonateExplanation));
-    public static string SeeAdButton => Get(nameof(SeeAdButton));
-    public static string SupportWithAdsOption => Get(nameof(SupportWithAdsOption));
-    public static string DonateSupportWithAdsExplanation => Get(nameof(DonateSupportWithAdsExplanation));
     public static string LegalSectionHeader => Get(nameof(LegalSectionHeader));
     public static string TutorialSkip => Get(nameof(TutorialSkip));
     public static string TutorialNext => Get(nameof(TutorialNext));
@@ -139,8 +133,6 @@ public static class AppStrings
     public static string PrivacyPolicyDescription => Get(nameof(PrivacyPolicyDescription));
     public static string TermsOfServiceLabel => Get(nameof(TermsOfServiceLabel));
     public static string TermsOfServiceDescription => Get(nameof(TermsOfServiceDescription));
-    public static string AdPrivacyOptionsLabel => Get(nameof(AdPrivacyOptionsLabel));
-    public static string AdPrivacyOptionsDescription => Get(nameof(AdPrivacyOptionsDescription));
     public static string OpenPrivacyPolicy => Get(nameof(OpenPrivacyPolicy));
 
     public static string ImportPdf => Get(nameof(ImportPdf));

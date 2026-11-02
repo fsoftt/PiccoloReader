@@ -1,5 +1,4 @@
 using System.Globalization;
-using Plugin.AdMob.Services;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.ViewModels;
@@ -11,14 +10,12 @@ public partial class SettingsPage : ContentPage
 {
     private readonly SettingsViewModel _viewModel;
     private readonly LibraryRecoveryFlow _recoveryFlow;
-    private readonly IAdConsentService _adConsentService;
 
-    public SettingsPage(SettingsViewModel viewModel, LibraryRecoveryFlow recoveryFlow, IAdConsentService adConsentService)
+    public SettingsPage(SettingsViewModel viewModel, LibraryRecoveryFlow recoveryFlow)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _recoveryFlow = recoveryFlow;
-        _adConsentService = adConsentService;
         BindingContext = _viewModel;
     }
 
@@ -27,7 +24,6 @@ public partial class SettingsPage : ContentPage
         base.OnAppearing();
         RefreshLanguageValue();
         RefreshTunerStripPositionValue();
-        RefreshAdPrivacyOptionsVisibility();
         await RefreshStorageStatusAsync();
         VersionLabel.Text = string.Format(CultureInfo.CurrentUICulture, AppStrings.AppVersionFormat, AppInfo.VersionString);
     }
@@ -143,18 +139,6 @@ public partial class SettingsPage : ContentPage
             System.Diagnostics.Debug.WriteLine($"Failed to open privacy policy URL: {ex.Message}");
         }
     }
-
-    // UMP decides per region whether users must be able to revisit their ad
-    // consent; the row stays hidden everywhere that isn't required.
-    private void RefreshAdPrivacyOptionsVisibility()
-    {
-        var required = _adConsentService.IsPrivacyOptionsRequired();
-        AdPrivacyOptionsRow.IsVisible = required;
-        AdPrivacyOptionsDivider.IsVisible = required;
-    }
-
-    private void OnAdPrivacyOptionsClicked(object? sender, TappedEventArgs e) =>
-        _adConsentService.ShowPrivacyOptionsForm();
 
     private async void OnTermsOfServiceClicked(object? sender, TappedEventArgs e)
     {

@@ -42,7 +42,7 @@ en:
       glyph: "&#xE4C0;"
       at: -0.6
       title: Private by design
-      text: All your sheets are stored locally on your device. No cloud sync and no account required. Your PDFs never leave your phone. Ads appear only on the optional Donate page, and you can turn them off in Settings.
+      text: All your sheets are stored locally on your device. No cloud sync and no account required. Your PDFs never leave your phone. The app has no ads.
     - numeral: VI
       glyph: "&#xE048;"
       at: 3.8
@@ -91,7 +91,7 @@ es:
       glyph: "&#xE4C0;"
       at: -0.6
       title: Privado por diseño
-      text: Todas tus partituras se almacenan localmente en tu dispositivo. Sin sincronización en la nube y sin cuenta obligatoria. Tus PDFs nunca salen de tu teléfono. Los anuncios solo aparecen en la página opcional Donar y puedes desactivarlos en Ajustes.
+      text: Todas tus partituras se almacenan localmente en tu dispositivo. Sin sincronización en la nube y sin cuenta obligatoria. Tus PDFs nunca salen de tu teléfono. La app no tiene anuncios.
     - numeral: VI
       glyph: "&#xE048;"
       at: 3.8

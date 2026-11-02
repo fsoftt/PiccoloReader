@@ -37,8 +37,7 @@
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<!-- 24 (Android 7.0): Play's automatic app protection rejects bundles
-		     with minSdk below 24 (the AdMob SDK's androidx.lifecycle dependency
-		     alone would need 23). Android 6.0 devices are vanishingly rare. -->
+		     with minSdk below 24. Android 6.0 devices are vanishingly rare. -->
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
 
 		<!-- Pin a persistent, repo-committed debug keystore instead of each
@@ -62,8 +61,7 @@
 	</PropertyGroup>
 
 	<!-- QA flavor (dotnet build -p:PiccoloQa=true): installs side by side with
-	     the Play Store app under its own id and name, and shows AdMob test ads
-	     so testing never generates real impressions or clicks. -->
+	     the Play Store app under its own id and name. -->
 	<PropertyGroup Condition="'$(PiccoloQa)' == 'true'">
 		<ApplicationId>com.fsoftt.piccoloreader.qa</ApplicationId>
 		<ApplicationTitle>Piccolo QA</ApplicationTitle>
@@ -93,7 +91,6 @@
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.110" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.110" />
-		<PackageReference Include="Plugin.AdMob" Version="10.0.90" />
 		<PackageReference Include="SkiaSharp.Extended.UI.Maui" Version="3.0.0" />
 		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
 		<PackageReference Include="UraniumUI.Icons.MaterialSymbols" Version="3.0.0" />

@@ -2,7 +2,7 @@
 
 # Términos de Servicio
 
-**Última actualización:** enero de 2026
+**Última actualización:** 2 de noviembre de 2026
 
 **Fecha de entrada en vigor:** enero de 2026
 
@@ -215,15 +215,7 @@ Piccolo Music Reader puede enlazar a recursos externos:
 - Políticas de privacidad o términos de terceros
 - El uso de plataformas de terceros, que es bajo tu propio riesgo
 
-### 7.2 Google AdMob (anuncios)
-
-La página Donar incluye anuncios de Google AdMob:
-- **Política de privacidad de Google:** https://policies.google.com/privacy
-- **Términos de Google:** https://policies.google.com/terms
-- fsoftt no respalda los anuncios; Google controla el contenido de los anuncios
-- Interactúas con los anuncios bajo tu propio riesgo
-
-### 7.3 Bibliotecas de terceros
+### 7.2 Bibliotecas de terceros
 
 Piccolo Music Reader incluye bibliotecas de código abierto:
 - Cada biblioteca está licenciada bajo su propia licencia (consulta el archivo LICENSE en el repositorio)

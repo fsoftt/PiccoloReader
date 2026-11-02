@@ -61,22 +61,6 @@
                             </Image>
                         </Grid>
                         <BoxView Style="{StaticResource RowDivider}" />
-                        <Grid Style="{StaticResource RowGrid}" ColumnDefinitions="20,*,Auto">
-                            <Image Grid.Column="0" VerticalOptions="Center">
-                                <Image.Source>
-                                    <FontImageSource Glyph="&#xE87E;" FontFamily="MaterialOutlined" Size="20"
-                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
-                                </Image.Source>
-                            </Image>
-                            <Label Grid.Column="1" Style="{StaticResource RowTitle}" VerticalOptions="Center"
-                                   Text="{x:Static strings:AppStrings.SupportWithAdsOption}"
-                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-                            <Switch Grid.Column="2" AutomationId="SettingsAdsSwitch" VerticalOptions="Center"
-                                    SemanticProperties.Description="{x:Static strings:AppStrings.SupportWithAdsOption}"
-                                    OnColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
-                                    IsToggled="{Binding SupportWithAdsEnabled}" />
-                        </Grid>
-                        <BoxView Style="{StaticResource RowDivider}" IsVisible="{x:Static local:PlatformInfo.IsAndroid}" />
                         <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsTunerStripPositionRow" ColumnDefinitions="20,*,Auto,20"
                               IsVisible="{x:Static local:PlatformInfo.IsAndroid}"
                               SemanticProperties.Description="{x:Static strings:AppStrings.TunerStripPositionLabel}">
@@ -247,31 +231,6 @@
                             <Image Grid.Column="2" VerticalOptions="Center">
                                 <Image.Source>
                                     <FontImageSource Glyph="&#xE89E;" FontFamily="MaterialOutlined" Size="20"
-                                        Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
-                                </Image.Source>
-                            </Image>
-                        </Grid>
-                        <!-- Only shown where UMP requires a privacy options entry point (EEA, UK, Switzerland) -->
-                        <BoxView x:Name="AdPrivacyOptionsDivider" Style="{StaticResource RowDivider}" IsVisible="False" />
-                        <Grid x:Name="AdPrivacyOptionsRow" Style="{StaticResource RowGrid}" AutomationId="SettingsAdPrivacyOptionsRow" ColumnDefinitions="20,*,20"
-                              IsVisible="False" SemanticProperties.Description="{x:Static strings:AppStrings.AdPrivacyOptionsLabel}">
-                            <Grid.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnAdPrivacyOptionsClicked" />
-                            </Grid.GestureRecognizers>
-                            <Image Grid.Column="0" VerticalOptions="Center">
-                                <Image.Source>
-                                    <FontImageSource Glyph="&#xE8B8;" FontFamily="MaterialOutlined" Size="20"
-                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
-                                </Image.Source>
-                            </Image>
-                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center" Padding="0,8">
-                                <Label Style="{StaticResource RowTitle}" Text="{x:Static strings:AppStrings.AdPrivacyOptionsLabel}"
-                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-                                <Label Style="{StaticResource Caption}" FontSize="12" Text="{x:Static strings:AppStrings.AdPrivacyOptionsDescription}" />
-                            </VerticalStackLayout>
-                            <Image Grid.Column="2" VerticalOptions="Center">
-                                <Image.Source>
-                                    <FontImageSource Glyph="&#xE5CC;" FontFamily="MaterialOutlined" Size="20"
                                         Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
                                 </Image.Source>
                             </Image>

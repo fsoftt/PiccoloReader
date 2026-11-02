@@ -34,7 +34,6 @@ public class SheetViewerViewModelCropTests : IDisposable
         _renderer,
         new AnnotationService(_database),
         new BookmarkService(_database),
-        new FakeAdsPreferenceService(),
         _readingPreferences,
         _cropService);
 

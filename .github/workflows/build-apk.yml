@@ -15,8 +15,7 @@ on:
 # be installed over a locally-built one instead of failing with
 # INSTALL_FAILED_UPDATE_INCOMPATIBLE. This is for internal sideload
 # testing only, not a Play Store release pipeline. It builds the QA flavor
-# (-p:PiccoloQa=true): id com.fsoftt.piccoloreader.qa, name "Piccolo QA" and
-# AdMob test ads, so it installs side by side with the Play Store app.
+# (-p:PiccoloQa=true): id com.fsoftt.piccoloreader.qa, name "Piccolo QA", so it installs side by side with the Play Store app.
 #
 # Scoped to src/PiccoloReader/** (the app head - Views, Platforms,
 # Resources) rather than the whole repo: changes confined to
@@ -53,7 +52,7 @@ jobs:
       - name: Drop iOS target framework for this CI build
         run: sed -i 's#<TargetFrameworks>net10.0-android;net10.0-ios</TargetFrameworks>#<TargetFrameworks>net10.0-android</TargetFrameworks>#' src/PiccoloReader/PiccoloReader.csproj
 
-      - name: Build Release APK (QA flavor, com.fsoftt.piccoloreader.qa, test ads)
+      - name: Build Release APK (QA flavor, com.fsoftt.piccoloreader.qa)
         run: dotnet build src/PiccoloReader/PiccoloReader.csproj -c Release -p:PiccoloQa=true
 
       # Confirms the APK was actually signed with the repo-committed

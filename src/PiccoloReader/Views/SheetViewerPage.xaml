@@ -7,7 +7,6 @@
     xmlns:skia="clr-namespace:SkiaSharp.Views.Maui.Controls;assembly=SkiaSharp.Views.Maui.Controls"
     xmlns:ctViews="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
-    xmlns:admob="clr-namespace:Plugin.AdMob;assembly=Plugin.AdMob"
     xmlns:local="clr-namespace:PiccoloReader"
     xmlns:views="clr-namespace:PiccoloReader.Views"
     x:Name="ThisPage"
@@ -22,7 +21,7 @@
     </ContentPage.Resources>
 
     <!-- Columns 0 and 2 stay empty (zero width) unless the tuner strip sits on the left or right edge. -->
-    <Grid RowDefinitions="*,Auto,Auto" ColumnDefinitions="Auto,*,Auto">
+    <Grid RowDefinitions="*,Auto" ColumnDefinitions="Auto,*,Auto">
     <Grid Grid.Row="0" Grid.Column="1" BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
 
         <Grid
@@ -783,8 +782,5 @@
          Placed and sized per the position preference by ApplyTunerStripPosition (default: right edge). -->
     <Grid x:Name="TunerStripHost" Grid.Row="0" Grid.Column="2" WidthRequest="6" IsVisible="{x:Static local:PlatformInfo.IsAndroid}" />
 
-    <Grid Grid.Row="2" Grid.ColumnSpan="3" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
-        <admob:BannerAd IsVisible="{Binding ShowAdsBanner}" />
-    </Grid>
     </Grid>
 </ContentPage>

@@ -22,7 +22,6 @@ public partial class SheetViewerViewModel : ObservableObject
     private readonly AnnotationService _annotationService;
     private readonly BookmarkService _bookmarkService;
     private readonly PageCropService _pageCropService;
-    private readonly IAdsPreferenceService _adsPreferenceService;
     private readonly IReadingPreferenceService _readingPreferenceService;
 
     // One render task per page index - current page plus prefetched
@@ -109,7 +108,6 @@ public partial class SheetViewerViewModel : ObservableObject
         IPdfPageRenderer pdfPageRenderer,
         AnnotationService annotationService,
         BookmarkService bookmarkService,
-        IAdsPreferenceService adsPreferenceService,
         IReadingPreferenceService readingPreferenceService,
         PageCropService pageCropService,
         IPageThumbnailStore? thumbnails = null,
@@ -123,7 +121,6 @@ public partial class SheetViewerViewModel : ObservableObject
         _pdfPageRenderer = pdfPageRenderer;
         _annotationService = annotationService;
         _bookmarkService = bookmarkService;
-        _adsPreferenceService = adsPreferenceService;
         _readingPreferenceService = readingPreferenceService;
         _readingMode = readingPreferenceService.GetReadingMode();
     }
@@ -279,9 +276,6 @@ public partial class SheetViewerViewModel : ObservableObject
     private bool _canRedo;
 
     [ObservableProperty]
-    private bool _showAdsBanner;
-
-    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsVerticalPaged))]
     [NotifyPropertyChangedFor(nameof(IsContinuousReading))]
     private ReadingMode _readingMode;
@@ -312,7 +306,6 @@ public partial class SheetViewerViewModel : ObservableObject
 
     public async Task LoadAsync(int sheetId, int targetWidthPx, int targetHeightPx)
     {
-        ShowAdsBanner = _adsPreferenceService.GetSupportWithAdsEnabled();
         ReadingMode = _readingPreferenceService.GetReadingMode();
         _pageRenders.Clear();
         ClearUndoHistory();

@@ -70,34 +70,32 @@ public static class AppSession
     public static void ResetApp(
         string readingMode = "Horizontal",
         IReadOnlyList<SeedSheet>? sheets = null,
-        string language = "en",
-        bool? ads = null)
+        string language = "en")
     {
         // A loaded shared CI emulator occasionally stalls a launch; one retry from a clean slate.
         try
         {
-            ResetAppOnce(readingMode, sheets, language, ads);
+            ResetAppOnce(readingMode, sheets, language);
         }
         catch (WebDriverTimeoutException)
         {
-            ResetAppOnce(readingMode, sheets, language, ads);
+            ResetAppOnce(readingMode, sheets, language);
         }
     }
 
     private static void ResetAppOnce(
         string readingMode = "Horizontal",
         IReadOnlyList<SeedSheet>? sheets = null,
-        string language = "en",
-        bool? ads = null)
+        string language = "en")
     {
         var template = EnsureTemplateDb();
         Wipe();
 
         // Preferences are left to the app (tutorial is skipped through the UI below); only a non-default
         // reading mode is pre-seeded, best effort.
-        if (readingMode != "Horizontal" || ads is not null)
+        if (readingMode != "Horizontal")
         {
-            WritePreferences(tutorialCompleted: false, readingMode, language, ads);
+            WritePreferences(tutorialCompleted: false, readingMode, language);
         }
 
         var db = Path.Combine(Path.GetTempPath(), $"piccolo-e2e-seed-{Guid.NewGuid():N}.db3");
@@ -154,7 +152,7 @@ public static class AppSession
     {
         _ = Driver; // installs the APK
         Wipe();
-        WritePreferences(tutorialCompleted: false, "Horizontal", "en", null);
+        WritePreferences(tutorialCompleted: false, "Horizontal", "en");
         Launch();
         WaitForLibrary(skipTutorial: true);
         Thread.Sleep(1500);
@@ -209,14 +207,13 @@ public static class AppSession
         WaitForLibrary();
     }
 
-    private static void WritePreferences(bool tutorialCompleted, string readingMode, string language, bool? ads)
+    private static void WritePreferences(bool tutorialCompleted, string readingMode, string language)
     {
         // Same file/keys MAUI's Preferences API reads (see Maui*PreferenceService).
         var xml =
             "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n" +
             "<map>\n" +
             (tutorialCompleted ? "  <boolean name=\"TutorialCompleted\" value=\"true\" />\n" : "") +
-            (ads is { } a ? $"  <boolean name=\"SupportWithAds\" value=\"{(a ? "true" : "false")}\" />\n" : "") +
             $"  <string name=\"AppLanguage\">{language}</string>\n" +
             $"  <string name=\"ReadingMode\">{readingMode}</string>\n" +
             "</map>\n";
@@ -236,12 +233,5 @@ public static class AppSession
         var match = Regex.Match(
             ReadPreferencesXml() ?? "", $"<string name=\"{Regex.Escape(name)}\">([^<]*)</string>");
         return match.Success ? match.Groups[1].Value : null;
-    }
-
-    public static bool? ReadBoolPreference(string name)
-    {
-        var match = Regex.Match(
-            ReadPreferencesXml() ?? "", $"<boolean name=\"{Regex.Escape(name)}\" value=\"(true|false)\"");
-        return match.Success ? match.Groups[1].Value == "true" : null;
     }
 }
