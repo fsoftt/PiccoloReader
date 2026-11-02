@@ -108,6 +108,14 @@ public sealed class PianoKeyboardLayout
         return MinVelocity + (int)MathF.Round((MaxVelocity - MinVelocity) * fraction);
     }
 
+    /// <summary>Last white key (MIDI) of a window that starts at <paramref name="firstWhiteKey"/>.</summary>
+    public static int LastWhiteKeyOf(int firstWhiteKey, int whiteKeyCount)
+    {
+        var count = ClampWhiteKeyCount(whiteKeyCount);
+        var index = WhiteIndexOf(ClampFirstWhiteKey(firstWhiteKey, count)) + count - 1;
+        return WhiteNotes[Math.Clamp(index, 0, WhiteNotes.Length - 1)];
+    }
+
     public static int ClampWhiteKeyCount(int count) => Math.Clamp(count, MinWhiteKeys, MaxWhiteKeys);
 
     /// <summary>Snaps to a white key and keeps <paramref name="whiteKeyCount"/> keys inside A0 to C8.</summary>

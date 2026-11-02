@@ -139,6 +139,113 @@ public class PianoServiceTests
     }
 
     [Fact]
+    public async Task Load_FromAForwardOnlyStream_Works()
+    {
+        var sut = Create(async () => new ForwardOnlyStream(await PianoAsset.OpenAsync()));
+
+        sut.Acquire();
+
+        await WaitUntil(() => sut.State == PianoLoadState.Ready);
+    }
+
+    [Fact]
+    public async Task Died_RestartsTheStreamWhileLeased()
+    {
+        var sut = Create();
+        sut.Acquire();
+        await WaitUntil(() => _output.IsRunning);
+
+        _output.RaiseDied();
+
+        await WaitUntil(() => _output.StartCount == 2 && _output.IsRunning);
+    }
+
+    [Fact]
+    public async Task Died_RestartsAreThrottled()
+    {
+        var sut = Create();
+        sut.Acquire();
+        await WaitUntil(() => _output.IsRunning);
+
+        for (var i = 0; i < 5; i++)
+        {
+            _output.RaiseDied();
+        }
+
+        await Task.Delay(300);
+        Assert.True(_output.StartCount <= 3, $"starts {_output.StartCount}");
+    }
+
+    [Fact]
+    public async Task NoteOn_WhileTheStreamIsDown_RestartsItAndDropsTheNote()
+    {
+        var sut = Create();
+        sut.Acquire();
+        await WaitUntil(() => _output.IsRunning);
+        _output.RaiseDied();
+        await WaitUntil(() => _output.StartCount == 2);
+        _output.RaiseDied();
+
+        sut.NoteOn(60, 100);
+
+        await WaitUntil(() => _output.StartCount == 3 && _output.IsRunning);
+    }
+
+    [Fact]
+    public async Task StartFailure_ReportsFailedAndRetriesOnTheNextAcquire()
+    {
+        _output.StartResult = false;
+        var sut = Create();
+        sut.Acquire();
+        await WaitUntil(() => sut.State == PianoLoadState.Failed);
+        sut.Release();
+
+        _output.StartResult = true;
+        sut.Acquire();
+
+        await WaitUntil(() => sut.State == PianoLoadState.Ready && _output.IsRunning);
+    }
+
+    private sealed class ForwardOnlyStream(Stream inner) : Stream
+    {
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                inner.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+    }
+
+    [Fact]
     public async Task StateChanged_IsRaisedWhenLoadingStartsAndFinishes()
     {
         var sut = Create();

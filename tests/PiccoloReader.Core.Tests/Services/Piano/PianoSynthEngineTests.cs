@@ -48,6 +48,38 @@ public class PianoSynthEngineTests
     }
 
     [Fact]
+    public void Render_AfterTheTailOfTheLastNote_ReportsIdleAndStaysSilent()
+    {
+        var sut = Create("organ");
+        var left = new float[Block];
+        var right = new float[Block];
+        sut.NoteOn(60, 100);
+        sut.NoteOff(60);
+        Render(sut, 6.0);
+
+        left.AsSpan().Fill(1f);
+        var rendered = sut.Render(left, right);
+
+        Assert.False(rendered);
+        Assert.All(left, x => Assert.Equal(0f, x));
+    }
+
+    [Fact]
+    public void Render_AfterIdle_ResumesAtOnceWhenACommandArrives()
+    {
+        var sut = Create("organ");
+        Render(sut, 3.0);
+        var left = new float[Block];
+        var right = new float[Block];
+
+        sut.NoteOn(60, 100);
+        var rendered = sut.Render(left, right);
+
+        Assert.True(rendered);
+        Assert.True(sut.ActiveVoiceCount > 0);
+    }
+
+    [Fact]
     public void NoteOn_ProducesSound()
     {
         var sut = Create();

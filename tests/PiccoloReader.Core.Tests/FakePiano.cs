@@ -53,6 +53,16 @@ public class FakePianoAudioOutput : IPianoAudioOutput
 
     public bool IsRunning { get; private set; }
 
+    public event EventHandler? Died;
+
+    public bool StartResult { get; set; } = true;
+
+    public void RaiseDied()
+    {
+        IsRunning = false;
+        Died?.Invoke(this, EventArgs.Empty);
+    }
+
     public int StartCount { get; private set; }
 
     public int StopCount { get; private set; }
@@ -60,8 +70,8 @@ public class FakePianoAudioOutput : IPianoAudioOutput
     public bool Start(PianoSynthEngine engine)
     {
         StartCount++;
-        IsRunning = true;
-        return true;
+        IsRunning = StartResult;
+        return StartResult;
     }
 
     public void Stop()

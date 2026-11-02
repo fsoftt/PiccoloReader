@@ -9,6 +9,8 @@ public class UnsupportedPianoAudioOutput : IPianoAudioOutput
 
     public bool IsRunning => false;
 
+    public event EventHandler? Died { add { } remove { } }
+
     public bool Start(PianoSynthEngine engine) => false;
 
     public void Stop()

@@ -13,8 +13,13 @@ public class MauiPianoPreferenceService : IPianoPreferenceService
     private const string StripWhiteKeysKey = "PianoStripWhiteKeys";
     private const string StripFirstWhiteKeyKey = "PianoStripFirstWhiteKey";
 
+    private readonly object _gate = new();
+    private PianoSettings? _pending;
+
     public PianoSettings Load()
     {
+        // A save still on its way to disk is written first, so a read never sees older values.
+        Flush();
         var defaults = new PianoSettings();
         var labels = Preferences.Default.Get(LabelsKey, (int)defaults.Labels);
         return new PianoSettings
@@ -30,7 +35,30 @@ public class MauiPianoPreferenceService : IPianoPreferenceService
         };
     }
 
+    // Returns at once; the write runs on the thread pool, newest settings winning.
     public void Save(PianoSettings settings)
+    {
+        lock (_gate)
+        {
+            _pending = settings;
+        }
+
+        Task.Run(Flush);
+    }
+
+    private void Flush()
+    {
+        lock (_gate)
+        {
+            if (_pending is { } settings)
+            {
+                _pending = null;
+                Write(settings);
+            }
+        }
+    }
+
+    private static void Write(PianoSettings settings)
     {
         Preferences.Default.Set(InstrumentKey, settings.InstrumentId);
         Preferences.Default.Set(WhiteKeysPortraitKey, settings.PortraitWhiteKeys);

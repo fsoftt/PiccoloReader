@@ -12,6 +12,9 @@ public interface IPianoAudioOutput
 
     bool IsRunning { get; }
 
+    /// <summary>Raised on the audio thread when the stream ended on its own (write error, render failure).</summary>
+    event EventHandler? Died;
+
     /// <summary>Opens the stream and starts pulling audio. Returns false when no stream could be opened.</summary>
     bool Start(PianoSynthEngine engine);
 

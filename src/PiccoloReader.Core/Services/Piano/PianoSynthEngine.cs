@@ -20,6 +20,10 @@ public sealed class PianoSynthEngine
     private const int ProgramChange = 0xC0;
     private const int ControlChange = 0xB0;
     private const int SustainController = 64;
+    private const int MaxPolyphony = 32;
+
+    /// <summary>After the last voice ended, rendering goes on this long so the reverb tail can ring out.</summary>
+    public const double IdleTailSeconds = 1.5;
 
     private enum CommandKind : byte
     {
@@ -36,10 +40,13 @@ public sealed class PianoSynthEngine
     private readonly ConcurrentQueue<Command> _commands = new();
     private float _gain;
     private float _targetGain;
+    private readonly long _idleTailFrames;
+    private long _silentFrames;
 
     public PianoSynthEngine(SoundFont soundFont, int sampleRate, PianoInstrument? instrument = null)
     {
-        var settings = new SynthesizerSettings(sampleRate);
+        var settings = new SynthesizerSettings(sampleRate) { MaximumPolyphony = MaxPolyphony };
+        _idleTailFrames = (long)(IdleTailSeconds * sampleRate);
         _synthesizer = new Synthesizer(soundFont, settings);
         SampleRate = sampleRate;
         var initial = instrument ?? PianoInstruments.Default;
@@ -68,18 +75,36 @@ public sealed class PianoSynthEngine
     /// <summary>Stops every voice at once and lifts the pedal. Queued before the notes that follow it.</summary>
     public void Silence() => _commands.Enqueue(new Command(CommandKind.Silence, 0, 0, 0f));
 
-    /// <summary>Fills both buffers (same length) with the next block of stereo audio. Audio thread only.</summary>
-    public void Render(Span<float> left, Span<float> right)
+    /// <summary>
+    /// Fills both buffers (same length) with the next block of stereo audio. Audio thread only.
+    /// Returns false when the engine is idle (no voice, no command, reverb tail over): the buffers
+    /// are then zeroed without running the synthesizer, so an open but silent piano costs almost nothing.
+    /// </summary>
+    public bool Render(Span<float> left, Span<float> right)
     {
+        var hadCommands = false;
         while (_commands.TryDequeue(out var command))
         {
             Apply(command);
+            hadCommands = true;
         }
 
         var count = Math.Min(left.Length, right.Length);
         left = left[..count];
         right = right[..count];
+        if (hadCommands)
+        {
+            _silentFrames = 0;
+        }
+        else if (_silentFrames >= _idleTailFrames && _synthesizer.ActiveVoiceCount == 0 && _gain == _targetGain)
+        {
+            left.Clear();
+            right.Clear();
+            return false;
+        }
+
         _synthesizer.Render(left, right);
+        _silentFrames = _synthesizer.ActiveVoiceCount > 0 ? 0 : _silentFrames + count;
 
         // The gain eases to its target over the block, so an instrument switch never clicks.
         var gain = _gain;
@@ -92,6 +117,7 @@ public sealed class PianoSynthEngine
         }
 
         _gain = _targetGain;
+        return true;
     }
 
     private void Apply(Command command)

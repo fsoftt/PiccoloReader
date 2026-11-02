@@ -19,7 +19,13 @@ public sealed class AndroidPianoAudioOutput : IPianoAudioOutput
     private const int StopJoinMilliseconds = 1000;
 
     private readonly object _gate = new();
+
+    // Serialises Render between a session and a stale one whose thread outlived its join timeout,
+    // so two threads never drive the same engine at once.
+    private readonly object _renderGate = new();
     private Session? _session;
+
+    public event EventHandler? Died;
 
     public int PreferredSampleRate
     {
@@ -53,7 +59,7 @@ public sealed class AndroidPianoAudioOutput : IPianoAudioOutput
             _session?.Stop();
             try
             {
-                _session = new Session(engine, GetBlockFrames());
+                _session = new Session(engine, GetBlockFrames(), _renderGate, OnSessionDied);
                 return true;
             }
             catch (Exception ex)
@@ -63,6 +69,19 @@ public sealed class AndroidPianoAudioOutput : IPianoAudioOutput
                 return false;
             }
         }
+    }
+
+    private void OnSessionDied(Session session)
+    {
+        lock (_gate)
+        {
+            if (!ReferenceEquals(_session, session))
+            {
+                return;
+            }
+        }
+
+        Died?.Invoke(this, EventArgs.Empty);
     }
 
     public void Stop()
@@ -97,16 +116,28 @@ public sealed class AndroidPianoAudioOutput : IPianoAudioOutput
         private readonly int _blockFrames;
         private readonly AudioTrack _track;
         private readonly Thread _thread;
+        private readonly object _renderGate;
+        private readonly Action<Session> _onDied;
         private volatile bool _stopRequested;
 
-        public Session(PianoSynthEngine engine, int blockFrames)
+        public Session(PianoSynthEngine engine, int blockFrames, object renderGate, Action<Session> onDied)
         {
             _engine = engine;
             _blockFrames = blockFrames;
+            _renderGate = renderGate;
+            _onDied = onDied;
             _track = CreateTrack(engine.SampleRate, blockFrames);
-            _track.Play();
-            _thread = new Thread(Run) { IsBackground = true, Name = "PianoAudio" };
-            _thread.Start();
+            try
+            {
+                _track.Play();
+                _thread = new Thread(Run) { IsBackground = true, Name = "PianoAudio" };
+                _thread.Start();
+            }
+            catch (Exception)
+            {
+                ReleaseTrack();
+                throw;
+            }
         }
 
         public bool IsAlive => !_stopRequested && _thread.IsAlive;
@@ -141,13 +172,36 @@ public sealed class AndroidPianoAudioOutput : IPianoAudioOutput
                 var left = new float[_blockFrames];
                 var right = new float[_blockFrames];
                 var interleaved = new float[_blockFrames * 2];
+                var interleavedIsSilent = true;
                 while (!_stopRequested)
                 {
-                    _engine.Render(left, right);
-                    for (var i = 0; i < _blockFrames; i++)
+                    bool rendered;
+                    lock (_renderGate)
                     {
-                        interleaved[2 * i] = left[i];
-                        interleaved[(2 * i) + 1] = right[i];
+                        // A stale session (its Stop timed out) must not render once a newer one owns the engine.
+                        if (_stopRequested)
+                        {
+                            break;
+                        }
+
+                        rendered = _engine.Render(left, right);
+                    }
+
+                    if (rendered)
+                    {
+                        for (var i = 0; i < _blockFrames; i++)
+                        {
+                            interleaved[2 * i] = left[i];
+                            interleaved[(2 * i) + 1] = right[i];
+                        }
+
+                        interleavedIsSilent = false;
+                    }
+                    else if (!interleavedIsSilent)
+                    {
+                        // Idle engine: zero the buffer once, then keep writing it as is.
+                        Array.Clear(interleaved);
+                        interleavedIsSilent = true;
                     }
 
                     if (_track.Write(interleaved, 0, interleaved.Length, WriteMode.Blocking) < 0)
@@ -162,8 +216,13 @@ public sealed class AndroidPianoAudioOutput : IPianoAudioOutput
             }
             finally
             {
+                var died = !_stopRequested;
                 _stopRequested = true;
                 ReleaseTrack();
+                if (died)
+                {
+                    _onDied(this);
+                }
             }
         }
 
@@ -185,7 +244,7 @@ public sealed class AndroidPianoAudioOutput : IPianoAudioOutput
         private static AudioTrack CreateTrack(int sampleRate, int blockFrames)
         {
             var minBytes = AudioTrack.GetMinBufferSize(sampleRate, ChannelOut.Stereo, Encoding.PcmFloat);
-            var bufferBytes = Math.Max(minBytes, blockFrames * 2 * sizeof(float) * 2);
+            var bufferBytes = Math.Max(minBytes, blockFrames * 2 * sizeof(float) * 4);
             var attributes = new AudioAttributes.Builder()
                 .SetUsage(AudioUsageKind.Media)!
                 .SetContentType(AudioContentType.Music)!
