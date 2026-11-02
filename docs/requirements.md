@@ -110,5 +110,32 @@ A built-in metronome for practicing while reading.
 - A **tuner** is planned as a second stage (active only inside its own
   screen)
 
+## Piano
+A playable virtual keyboard for musicians of any instrument: check a pitch, hear
+an interval, try a phrase with the sound of their own instrument.
+
+- Own **Piano** tab in the bottom tab bar (after Tuner, before Settings); Android
+  only for now. A compact keyboard strip in the Sheet Viewer is planned as a
+  second stage
+- 17 sounds in 5 families (keyboards, woodwinds, brass, strings, voices),
+  chosen from a bottom-sheet list. The sound comes from a trimmed subset of the
+  MuseScore General SoundFont played by the MeltySynth engine (both MIT)
+- The keyboard never limits its range to one instrument: all 88 keys (A0–C8)
+  are playable. Keys outside the chosen instrument's real range are drawn
+  muted, and the mini-map shows that range as a bracket
+- Multi-touch chords and glissando; the touch position on the key sets the
+  loudness. An optional sustain pedal holds released notes
+- The note readout shows the sounding notes (up to 4) with the tuner's note
+  naming (letters or solfege); the last note stays dimmed after release
+- A mini-map of the 88 keys with a draggable window, octave ‹ › buttons and a
+  key-count stepper (7–36 white keys, remembered separately for portrait and
+  landscape). Labels cycle Off, C only, All
+- Instrument, key counts, position and labels are remembered; sustain always
+  starts off
+- It does not take audio focus, so a running metronome keeps playing under it
+- Must cost nothing when the tab is not open: the sounds are loaded and the
+  audio stream started only when the tab is shown, and the stream stops shortly
+  after leaving it or when the app goes to the background
+
 ## Open Questions / Not Yet Decided
 - Exact music icon set and category groupings (dynamics, articulations, etc.)
