@@ -74,4 +74,70 @@ public class CoachMarkPlacementTests
 
         Assert.Equal(16, p.X);
     }
+
+    [Fact]
+    public void GestureReserve_PushesTheBubbleBelowTheHand()
+    {
+        var p = CoachMarkPlacement.PlaceBubble(400, 800, new CoachRect(180, 100, 40, 48), 240, 100, None, gestureReserve: 70);
+
+        Assert.True(p.BelowTarget);
+        Assert.Equal(148 + 12 + 70, p.Y);
+    }
+
+    [Fact]
+    public void GestureReserve_MovesTheBubbleAboveWhenBelowNoLongerFits()
+    {
+        // 800 - 16 - (700 + 12) = 72 below: fits 60 without a reserve, not with one.
+        var without = CoachMarkPlacement.PlaceBubble(400, 800, new CoachRect(180, 660, 40, 40), 240, 60, None);
+        var with = CoachMarkPlacement.PlaceBubble(400, 800, new CoachRect(180, 660, 40, 40), 240, 60, None, gestureReserve: 70);
+
+        Assert.True(without.BelowTarget);
+        Assert.False(with.BelowTarget);
+        Assert.Equal(660 - 12 - 60, with.Y);
+    }
+
+    [Fact]
+    public void Beside_LeftZone_PlacesBubbleInTheRightArea_VerticallyCentred()
+    {
+        // Left tap zone: 30% of a 1000-wide, 2000-tall screen.
+        var p = CoachMarkPlacement.PlaceBubbleBeside(
+            1000, 2000, new CoachRect(0, 100, 300, 1800), 360, width => 120, None);
+
+        Assert.NotNull(p);
+        Assert.Equal(312, p!.Value.X);
+        Assert.Equal(360, p.Value.Width);
+        Assert.Equal((2000 - 120) / 2.0, p.Value.Y);
+        Assert.False(p.Value.BelowTarget);
+    }
+
+    [Fact]
+    public void Beside_RightZone_PlacesBubbleInTheLeftArea_WidthLimitedToIt()
+    {
+        // Free area on the left: 1000 - 300 - 12 - 16 = 672 wide; bubble asked for 800.
+        var p = CoachMarkPlacement.PlaceBubbleBeside(
+            1000, 2000, new CoachRect(700, 100, 300, 1800), 800, width => width < 700 ? 150 : 100, None);
+
+        Assert.NotNull(p);
+        Assert.Equal(672, p!.Value.Width);
+        Assert.Equal(700 - 12 - 672, p.Value.X);
+        Assert.Equal((2000 - 150) / 2.0, p.Value.Y);
+    }
+
+    [Fact]
+    public void Beside_ReturnsNull_WhenTheBubbleFitsAboveOrBelow()
+    {
+        var p = CoachMarkPlacement.PlaceBubbleBeside(
+            1000, 2000, new CoachRect(0, 100, 300, 300), 360, width => 120, None);
+
+        Assert.Null(p);
+    }
+
+    [Fact]
+    public void Beside_ReturnsNull_WhenTheFreeAreaIsTooNarrow()
+    {
+        var p = CoachMarkPlacement.PlaceBubbleBeside(
+            400, 2000, new CoachRect(0, 100, 300, 1800), 360, width => 120, None);
+
+        Assert.Null(p);
+    }
 }

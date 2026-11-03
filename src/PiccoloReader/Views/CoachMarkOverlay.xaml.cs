@@ -205,7 +205,7 @@ public partial class CoachMarkOverlay : ContentView
         SemanticProperties.SetDescription(NextButton, NextButton.Text);
 
         Rect? anchor = target is { } tr ? (step.Anchor?.Invoke(tr) ?? tr) : null;
-        LayoutBubble(anchor);
+        LayoutBubble(cutout, anchor, step.Gesture);
         PlaceGesture(step.Gesture, anchor);
 
         Bubble.Opacity = 0;
@@ -214,15 +214,49 @@ public partial class CoachMarkOverlay : ContentView
         StartGesture(step.Gesture);
     }
 
-    private void LayoutBubble(Rect? anchor)
+    // Distance from the fingertip (the anchor centre) down to the lowest point of the hand
+    // while it plays: its glyph hangs ~36 below, and the drag moves it another 30.
+    private const double HandReachBelow = 36;
+    private const double DragTravel = 30;
+
+    private void LayoutBubble(Rect? cutout, Rect? anchor, CoachGesture gesture)
     {
         var width = Math.Min(MaxBubbleWidth, Math.Max(0, Width - 2 * ScreenMargin));
+        var insets = ViewBounds.SystemInsets(this);
+        CoachRect? target = cutout is { } c ? new CoachRect(c.X, c.Y, c.Width, c.Height) : null;
+
+        // A tall target (a tap zone): the bubble goes beside it, in the dark area.
+        if (target is { } zone)
+        {
+            var side = CoachMarkPlacement.PlaceBubbleBeside(
+                Width, Height, zone, width, w => MeasureBubbleHeight(w), insets, ScreenMargin);
+            if (side is { } s)
+            {
+                Bubble.WidthRequest = s.Width;
+                AbsoluteLayout.SetLayoutBounds(Bubble, new Rect(s.X, s.Y, s.Width, MeasureBubbleHeight(s.Width)));
+                return;
+            }
+        }
+
+        // Leave room under the target for the hand of the gesture hint to stay visible.
+        var reserve = 0.0;
+        if (target is { } t && anchor is { } a && gesture != CoachGesture.None)
+        {
+            var reach = HandReachBelow + (gesture == CoachGesture.LongPressDrag ? DragTravel : 0);
+            reserve = Math.Max(0, a.Y + a.Height / 2 + reach - t.Bottom - 12);
+        }
+
         Bubble.WidthRequest = width;
-        var size = Bubble.Measure(width, double.PositiveInfinity);
-        CoachRect? coachAnchor = anchor is { } a ? new CoachRect(a.X, a.Y, a.Width, a.Height) : null;
+        var height = MeasureBubbleHeight(width);
         var placement = CoachMarkPlacement.PlaceBubble(
-            Width, Height, coachAnchor, width, size.Height, ViewBounds.SystemInsets(this), ScreenMargin);
-        AbsoluteLayout.SetLayoutBounds(Bubble, new Rect(placement.X, placement.Y, width, size.Height));
+            Width, Height, target, width, height, insets, ScreenMargin, gestureReserve: reserve);
+        AbsoluteLayout.SetLayoutBounds(Bubble, new Rect(placement.X, placement.Y, width, height));
+    }
+
+    private double MeasureBubbleHeight(double width)
+    {
+        Bubble.WidthRequest = width;
+        return Bubble.Measure(width, double.PositiveInfinity).Height;
     }
 
     private void PlaceGesture(CoachGesture gesture, Rect? anchor)

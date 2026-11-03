@@ -15,16 +15,6 @@
         <GraphicsView x:Name="DimView" InputTransparent="True" />
 
         <AbsoluteLayout x:Name="Layer" InputTransparent="False">
-            <Border x:Name="Ripple" InputTransparent="True" Opacity="0"
-                    WidthRequest="56" HeightRequest="56"
-                    StrokeThickness="0" StrokeShape="RoundRectangle 28"
-                    BackgroundColor="#66FFFFFF" />
-            <Image x:Name="Hand" InputTransparent="True" Opacity="0" WidthRequest="44" HeightRequest="44"
-                   AutomationProperties.IsInAccessibleTree="False">
-                <Image.Source>
-                    <FontImageSource Glyph="&#xE913;" FontFamily="MaterialOutlined" Size="44" Color="White" />
-                </Image.Source>
-            </Image>
 
             <Border x:Name="Bubble"
                     Padding="16,14,16,10"
@@ -32,8 +22,8 @@
                     Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
                     BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceRaisedDark}}">
                 <VerticalStackLayout Spacing="12">
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                        <Image x:Name="BubbleIcon" Grid.Column="0" VerticalOptions="Center" IsVisible="False"
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="0">
+                        <Image x:Name="BubbleIcon" Grid.Column="0" Margin="0,0,12,0" VerticalOptions="Center" IsVisible="False"
                                AutomationProperties.IsInAccessibleTree="False">
                             <Image.Source>
                                 <FontImageSource Glyph="&#xE945;" FontFamily="MaterialOutlined" Size="28"
@@ -55,6 +45,17 @@
                     </Grid>
                 </VerticalStackLayout>
             </Border>
+
+            <Border x:Name="Ripple" InputTransparent="True" Opacity="0"
+                    WidthRequest="56" HeightRequest="56"
+                    Stroke="#66000000" StrokeThickness="2" StrokeShape="RoundRectangle 28"
+                    BackgroundColor="#E6FFFFFF" />
+            <Image x:Name="Hand" InputTransparent="True" Opacity="0" WidthRequest="44" HeightRequest="44"
+                   AutomationProperties.IsInAccessibleTree="False">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xE913;" FontFamily="MaterialOutlined" Size="44" Color="#202030" />
+                </Image.Source>
+            </Image>
         </AbsoluteLayout>
     </Grid>
 </ContentView>
