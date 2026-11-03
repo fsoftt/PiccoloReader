@@ -4,6 +4,7 @@ using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.ViewModels;
+using PiccoloReader.Services;
 
 namespace PiccoloReader.Views;
 
@@ -14,6 +15,7 @@ public partial class FolderPage : ContentPage
     private readonly FolderViewModel _viewModel;
     private readonly LibraryService _libraryService;
     private readonly PiccoloReader.Services.SheetShareFlow _shareFlow;
+    private readonly SheetReorderController _reorder;
 
     public FolderPage(FolderViewModel viewModel, LibraryService libraryService, PiccoloReader.Services.SheetShareFlow shareFlow)
     {
@@ -24,9 +26,30 @@ public partial class FolderPage : ContentPage
         BindingContext = _viewModel;
 
         SheetLongPressCommand = new Command<Sheet>(async sheet => await OnSheetLongPressedAsync(sheet));
+        _reorder = new SheetReorderController(SheetsList, _viewModel.Sheets, () => _viewModel.CanReorder, CommitOrderAsync);
     }
 
     public ICommand SheetLongPressCommand { get; }
+
+    private async Task CommitOrderAsync()
+    {
+        try
+        {
+            await _viewModel.CommitSheetOrderAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Saving the sheet order failed: {ex}");
+        }
+    }
+
+    private void OnDragHandleHandlerChanged(object? sender, EventArgs e)
+    {
+        if (sender is VisualElement handle)
+        {
+            _reorder.WireHandle(handle);
+        }
+    }
 
     public string FolderId
     {
@@ -88,7 +111,8 @@ public partial class FolderPage : ContentPage
             AppStrings.SortNameAscending,
             AppStrings.SortNameDescending,
             AppStrings.SortDateAddedAscending,
-            AppStrings.SortDateAddedDescending);
+            AppStrings.SortDateAddedDescending,
+            AppStrings.SortCustom);
 
         (SortField Field, SortDirection Direction)? sort = choice switch
         {
@@ -96,6 +120,7 @@ public partial class FolderPage : ContentPage
             var c when c == AppStrings.SortNameDescending => (SortField.Name, SortDirection.Descending),
             var c when c == AppStrings.SortDateAddedAscending => (SortField.DateAdded, SortDirection.Ascending),
             var c when c == AppStrings.SortDateAddedDescending => (SortField.DateAdded, SortDirection.Descending),
+            var c when c == AppStrings.SortCustom => (SortField.Custom, SortDirection.Ascending),
             _ => null
         };
 
@@ -131,6 +156,7 @@ public partial class FolderPage : ContentPage
 
         if (e.Parameter is Sheet sheet)
         {
+            _viewModel.PublishConcertQueue();
             await Shell.Current.GoToAsync($"sheetviewer?sheetId={sheet.Id}");
         }
     }

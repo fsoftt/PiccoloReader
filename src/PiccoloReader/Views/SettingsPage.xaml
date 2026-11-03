@@ -103,6 +103,24 @@
                                     OnColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
                                     IsToggled="{Binding StylusDrawsDirectly}" />
                         </Grid>
+                        <BoxView Style="{StaticResource RowDivider}" IsVisible="{x:Static local:PlatformInfo.IsAndroid}" />
+                        <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsConcertModeRow" ColumnDefinitions="20,*,Auto">
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE03D;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center" Padding="0,8">
+                                <Label Style="{StaticResource RowTitle}" Text="{x:Static strings:AppStrings.ConcertModeLabel}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                <Label Style="{StaticResource Caption}" FontSize="12" Text="{x:Static strings:AppStrings.ConcertModeDescription}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="2" AutomationId="SettingsConcertModeSwitch" VerticalOptions="Center"
+                                    SemanticProperties.Description="{x:Static strings:AppStrings.ConcertModeLabel}"
+                                    OnColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                                    IsToggled="{Binding ConcertModeEnabled}" />
+                        </Grid>
                     </VerticalStackLayout>
                 </Border>
             </VerticalStackLayout>
