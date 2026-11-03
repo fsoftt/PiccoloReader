@@ -72,7 +72,6 @@ public sealed class SheetReorderController
         var holder = _recyclerView.FindContainingViewHolder(view);
         if (holder is not null && ToItemIndex(holder) >= 0)
         {
-            view.Parent?.RequestDisallowInterceptTouchEvent(true);
             _helper.StartDrag(holder);
         }
     }

@@ -32,17 +32,17 @@
                     Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
                     BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceRaisedDark}}">
                 <VerticalStackLayout Spacing="12">
-                    <HorizontalStackLayout Spacing="12">
-                        <Image x:Name="BubbleIcon" VerticalOptions="Center" IsVisible="False"
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Image x:Name="BubbleIcon" Grid.Column="0" VerticalOptions="Center" IsVisible="False"
                                AutomationProperties.IsInAccessibleTree="False">
                             <Image.Source>
                                 <FontImageSource Glyph="&#xE945;" FontFamily="MaterialOutlined" Size="28"
                                     Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                             </Image.Source>
                         </Image>
-                        <Label x:Name="TextLabel" AutomationId="CoachMarkText" FontSize="16" VerticalOptions="Center"
+                        <Label x:Name="TextLabel" Grid.Column="1" AutomationId="CoachMarkText" FontSize="16" VerticalOptions="Center" LineBreakMode="WordWrap"
                                TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-                    </HorizontalStackLayout>
+                    </Grid>
                     <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                         <Label x:Name="StepLabel" Grid.Column="0" AutomationId="CoachMarkStep" FontSize="13" VerticalOptions="Center"
                                TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
