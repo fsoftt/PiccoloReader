@@ -3,7 +3,8 @@ namespace PiccoloReader.Core.ViewModels;
 public enum SortField
 {
     Name,
-    DateAdded
+    DateAdded,
+    Custom
 }
 
 public enum SortDirection

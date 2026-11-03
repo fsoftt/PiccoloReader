@@ -27,6 +27,8 @@ public static class AppStrings
     public static string SortNameDescending => Get(nameof(SortNameDescending));
     public static string SortDateAddedAscending => Get(nameof(SortDateAddedAscending));
     public static string SortDateAddedDescending => Get(nameof(SortDateAddedDescending));
+    public static string SortCustom => Get(nameof(SortCustom));
+    public static string ReorderHandleLabel => Get(nameof(ReorderHandleLabel));
     public static string DeleteSheetsOption => Get(nameof(DeleteSheetsOption));
     public static string KeepSheetsOption => Get(nameof(KeepSheetsOption));
     public static string Move => Get(nameof(Move));
@@ -288,6 +290,8 @@ public static class AppStrings
     public static string TunerStripPositionLabel => Get(nameof(TunerStripPositionLabel));
     public static string StylusDrawsDirectlyLabel => Get(nameof(StylusDrawsDirectlyLabel));
     public static string StylusDrawsDirectlyDescription => Get(nameof(StylusDrawsDirectlyDescription));
+    public static string ConcertModeLabel => Get(nameof(ConcertModeLabel));
+    public static string ConcertModeDescription => Get(nameof(ConcertModeDescription));
     public static string TunerStripPositionLeft => Get(nameof(TunerStripPositionLeft));
     public static string TunerStripPositionRight => Get(nameof(TunerStripPositionRight));
     public static string TunerStripPositionBottom => Get(nameof(TunerStripPositionBottom));

@@ -41,6 +41,8 @@
   <data name="SortNameDescending" xml:space="preserve"><value>Nombre (Z-A)</value></data>
   <data name="SortDateAddedAscending" xml:space="preserve"><value>Fecha de adición (más antiguas primero)</value></data>
   <data name="SortDateAddedDescending" xml:space="preserve"><value>Fecha de adición (más recientes primero)</value></data>
+  <data name="ReorderHandleLabel" xml:space="preserve"><value>Reordenar (mantén pulsado y arrastra)</value></data>
+  <data name="SortCustom" xml:space="preserve"><value>Personalizado</value></data>
   <data name="DeleteSheetsOption" xml:space="preserve"><value>Eliminar partituras</value></data>
   <data name="KeepSheetsOption" xml:space="preserve"><value>Conservar partituras</value></data>
   <data name="Move" xml:space="preserve"><value>Mover</value></data>
@@ -251,6 +253,8 @@
   <data name="TunerStripPositionTop" xml:space="preserve"><value>Arriba</value></data>
   <data name="StylusDrawsDirectlyLabel" xml:space="preserve"><value>El lápiz óptico dibuja directamente</value></data>
   <data name="StylusDrawsDirectlyDescription" xml:space="preserve"><value>Dibuja con el lápiz óptico sin abrir la herramienta de lápiz. El botón lateral o el extremo borrador borra.</value></data>
+  <data name="ConcertModeLabel" xml:space="preserve"><value>Modo concierto</value></data>
+  <data name="ConcertModeDescription" xml:space="preserve"><value>En la última hoja, siguiente abre la siguiente partitura de la lista</value></data>
   <data name="Metronome" xml:space="preserve"><value>Metrónomo</value></data>
   <data name="MetronomeBeatsPerBar" xml:space="preserve"><value>Pulsos por compás</value></data>
   <data name="MetronomeSubdivision" xml:space="preserve"><value>Subdivisión</value></data>

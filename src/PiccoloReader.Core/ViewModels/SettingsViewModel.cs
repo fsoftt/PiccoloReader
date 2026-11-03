@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
+using PiccoloReader.Core.Services.Concert;
 using PiccoloReader.Core.Services.Stylus;
 using PiccoloReader.Core.Services.Tuner;
 
@@ -13,6 +14,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ILanguagePreferenceService _languagePreferenceService;
     private readonly ITunerStripPreferenceService _tunerStripPreferenceService;
     private readonly IStylusPreferenceService _stylusPreferenceService;
+    private readonly IConcertModePreferenceService _concertModePreferenceService;
 
     // Parallel arrays backing the language Picker: index i in one
     // corresponds to index i in the other. Language names are shown in
@@ -61,12 +63,17 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _stylusDrawsDirectly;
 
-    public SettingsViewModel(ILanguagePreferenceService languagePreferenceService, ITunerStripPreferenceService tunerStripPreferenceService, IStylusPreferenceService stylusPreferenceService)
+    [ObservableProperty]
+    private bool _concertModeEnabled;
+
+    public SettingsViewModel(ILanguagePreferenceService languagePreferenceService, ITunerStripPreferenceService tunerStripPreferenceService, IStylusPreferenceService stylusPreferenceService, IConcertModePreferenceService concertModePreferenceService)
     {
         _languagePreferenceService = languagePreferenceService;
         _tunerStripPreferenceService = tunerStripPreferenceService;
         _stylusPreferenceService = stylusPreferenceService;
         _stylusDrawsDirectly = stylusPreferenceService.DrawsDirectly;
+        _concertModePreferenceService = concertModePreferenceService;
+        _concertModeEnabled = concertModePreferenceService.Enabled;
         _selectedLanguageCode = languagePreferenceService.GetSavedLanguageCode() ?? "en";
         _tunerStripPosition = tunerStripPreferenceService.Position;
     }
@@ -83,4 +90,7 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnStylusDrawsDirectlyChanged(bool value) =>
         _stylusPreferenceService.DrawsDirectly = value;
+
+    partial void OnConcertModeEnabledChanged(bool value) =>
+        _concertModePreferenceService.Enabled = value;
 }

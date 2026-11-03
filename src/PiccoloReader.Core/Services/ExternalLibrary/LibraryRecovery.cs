@@ -149,6 +149,7 @@ public class LibraryRecovery
                     : await ExternalLibrarySync.CountPagesAsync(_pageRenderer, localPath),
                 LastViewedPageIndex = entry.LastViewedPageIndex,
                 DateAdded = entry.DateAdded,
+                SortOrder = entry.SortOrder,
                 ContentHash = hash,
                 ExternalPath = foundPath
             };
@@ -188,6 +189,7 @@ public class LibraryRecovery
                 FileName = fileName,
                 PageCount = await ExternalLibrarySync.CountPagesAsync(_pageRenderer, localPath),
                 DateAdded = DateTime.UtcNow,
+                SortOrder = await SheetOrdering.NextSortOrderAsync(connection, folderId),
                 ContentHash = hash,
                 ExternalPath = path
             };

@@ -241,7 +241,8 @@ public class ExternalLibrarySync : ILibraryChangeNotifier
                 ContentHash = s.ContentHash,
                 PageCount = s.PageCount,
                 LastViewedPageIndex = s.LastViewedPageIndex,
-                DateAdded = s.DateAdded
+                DateAdded = s.DateAdded,
+                SortOrder = s.SortOrder
             }).ToList(),
             Annotations = annotations.Where(a => keyById.ContainsKey(a.SheetId))
                 .OrderBy(a => a.SyncId, StringComparer.Ordinal)

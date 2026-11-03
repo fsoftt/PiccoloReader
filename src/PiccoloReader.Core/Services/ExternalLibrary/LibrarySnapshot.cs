@@ -80,6 +80,9 @@ public class SnapshotSheet
     public int LastViewedPageIndex { get; set; }
 
     public DateTime DateAdded { get; set; }
+
+    // Optional: snapshots written before concert mode lack it (reads as 0).
+    public int SortOrder { get; set; }
 }
 
 public class SnapshotAnnotation

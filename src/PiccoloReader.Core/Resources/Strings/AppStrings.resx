@@ -41,6 +41,8 @@
   <data name="SortNameDescending" xml:space="preserve"><value>Name (Z-A)</value></data>
   <data name="SortDateAddedAscending" xml:space="preserve"><value>Date Added (Oldest First)</value></data>
   <data name="SortDateAddedDescending" xml:space="preserve"><value>Date Added (Newest First)</value></data>
+  <data name="ReorderHandleLabel" xml:space="preserve"><value>Reorder (long press and drag)</value></data>
+  <data name="SortCustom" xml:space="preserve"><value>Custom</value></data>
   <data name="DeleteSheetsOption" xml:space="preserve"><value>Delete Sheets</value></data>
   <data name="KeepSheetsOption" xml:space="preserve"><value>Keep Sheets</value></data>
   <data name="Move" xml:space="preserve"><value>Move</value></data>
@@ -251,6 +253,8 @@
   <data name="TunerStripPositionTop" xml:space="preserve"><value>Top</value></data>
   <data name="StylusDrawsDirectlyLabel" xml:space="preserve"><value>Stylus draws directly</value></data>
   <data name="StylusDrawsDirectlyDescription" xml:space="preserve"><value>Draw with a stylus without opening the pencil tool. The pen side button or eraser end erases.</value></data>
+  <data name="ConcertModeLabel" xml:space="preserve"><value>Concert mode</value></data>
+  <data name="ConcertModeDescription" xml:space="preserve"><value>At the last page, next opens the next score of the list</value></data>
   <data name="Metronome" xml:space="preserve"><value>Metronome</value></data>
   <data name="MetronomeBeatsPerBar" xml:space="preserve"><value>Beats per bar</value></data>
   <data name="MetronomeSubdivision" xml:space="preserve"><value>Subdivision</value></data>

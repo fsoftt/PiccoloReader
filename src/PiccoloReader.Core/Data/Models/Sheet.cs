@@ -25,4 +25,7 @@ public class Sheet
     // Path of the PDF inside the external library folder (Documents/PiccoloReader),
     // relative to it, with "/" separators. Null until copied there.
     public string? ExternalPath { get; set; }
+
+    // Position inside its folder (root = FolderId null) for the "Custom" sort.
+    public int SortOrder { get; set; }
 }
