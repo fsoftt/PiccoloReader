@@ -284,4 +284,48 @@
   <data name="Share" xml:space="preserve"><value>Compartir</value></data>
   <data name="PreparingPdf" xml:space="preserve"><value>Preparando PDF…</value></data>
   <data name="SharePdfFailed" xml:space="preserve"><value>No se pudo preparar el PDF para compartir.</value></data>
+  <data name="Piano" xml:space="preserve"><value>Piano</value></data>
+  <data name="PianoInstrument" xml:space="preserve"><value>Instrumento</value></data>
+  <data name="PianoChooseInstrument" xml:space="preserve"><value>Elige un instrumento</value></data>
+  <data name="PianoOctaveDown" xml:space="preserve"><value>Octava abajo</value></data>
+  <data name="PianoOctaveUp" xml:space="preserve"><value>Octava arriba</value></data>
+  <data name="PianoKeysMinus" xml:space="preserve"><value>Menos teclas</value></data>
+  <data name="PianoKeysPlus" xml:space="preserve"><value>Más teclas</value></data>
+  <data name="PianoKeysCountFormat" xml:space="preserve"><value>{0} teclas</value></data>
+  <data name="PianoSustain" xml:space="preserve"><value>Pedal de resonancia</value></data>
+  <data name="PianoLabelsOff" xml:space="preserve"><value>Etiquetas de notas: no</value></data>
+  <data name="PianoLabelsCOnly" xml:space="preserve"><value>Etiquetas de notas: solo Do</value></data>
+  <data name="PianoLabelsAll" xml:space="preserve"><value>Etiquetas de notas: todas</value></data>
+  <data name="PianoLabelsChipFormat" xml:space="preserve"><value>Nombres: {0}</value></data>
+  <data name="PianoLoading" xml:space="preserve"><value>Cargando sonidos…</value></data>
+  <data name="PianoLoadFailed" xml:space="preserve"><value>Sonido no disponible</value></data>
+  <data name="PianoMiniMap" xml:space="preserve"><value>Vista general del teclado</value></data>
+  <data name="PianoKeyboard" xml:space="preserve"><value>Teclado de piano</value></data>
+  <data name="PianoReadoutHint" xml:space="preserve"><value>Toca una tecla</value></data>
+  <data name="PianoFamilyKeyboards" xml:space="preserve"><value>Teclados</value></data>
+  <data name="PianoFamilyWoodwinds" xml:space="preserve"><value>Maderas</value></data>
+  <data name="PianoFamilyBrass" xml:space="preserve"><value>Metales</value></data>
+  <data name="PianoFamilyStrings" xml:space="preserve"><value>Cuerdas</value></data>
+  <data name="PianoFamilyVoices" xml:space="preserve"><value>Voces</value></data>
+  <data name="PianoGrand" xml:space="preserve"><value>Piano de cola</value></data>
+  <data name="PianoElectric" xml:space="preserve"><value>Piano eléctrico</value></data>
+  <data name="PianoOrgan" xml:space="preserve"><value>Órgano de iglesia</value></data>
+  <data name="PianoPiccolo" xml:space="preserve"><value>Piccolo</value></data>
+  <data name="PianoFlute" xml:space="preserve"><value>Flauta</value></data>
+  <data name="PianoOboe" xml:space="preserve"><value>Oboe</value></data>
+  <data name="PianoClarinet" xml:space="preserve"><value>Clarinete</value></data>
+  <data name="PianoAltoSax" xml:space="preserve"><value>Saxo alto</value></data>
+  <data name="PianoTenorSax" xml:space="preserve"><value>Saxo tenor</value></data>
+  <data name="PianoTrumpet" xml:space="preserve"><value>Trompeta</value></data>
+  <data name="PianoTrombone" xml:space="preserve"><value>Trombón</value></data>
+  <data name="PianoFrenchHorn" xml:space="preserve"><value>Trompa</value></data>
+  <data name="PianoViolin" xml:space="preserve"><value>Violín</value></data>
+  <data name="PianoCello" xml:space="preserve"><value>Violonchelo</value></data>
+  <data name="PianoStrings" xml:space="preserve"><value>Conjunto de cuerdas</value></data>
+  <data name="PianoNylonGuitar" xml:space="preserve"><value>Guitarra clásica</value></data>
+  <data name="PianoChoir" xml:space="preserve"><value>Coro</value></data>
+  <data name="SettingsMuseScoreCreditTitle" xml:space="preserve"><value>SoundFont MuseScore General</value></data>
+  <data name="SettingsMuseScoreCreditDescription" xml:space="preserve"><value>Sonidos del piano · licencia MIT</value></data>
+  <data name="SettingsMeltySynthCreditTitle" xml:space="preserve"><value>MeltySynth</value></data>
+  <data name="SettingsMeltySynthCreditDescription" xml:space="preserve"><value>Motor del sintetizador · licencia MIT</value></data>
 </root>

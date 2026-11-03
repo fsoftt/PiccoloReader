@@ -8,6 +8,7 @@ using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Services.ExternalLibrary;
 using PiccoloReader.Core.Services.Metronome;
+using PiccoloReader.Core.Services.Piano;
 using PiccoloReader.Core.Services.PageTurn;
 using PiccoloReader.Core.Services.Tuner;
 using PiccoloReader.Core.ViewModels;
@@ -85,6 +86,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IPageTurnInput, PageTurnInput>();
 		builder.Services.AddSingleton<IMetronomePreferenceService, MauiMetronomePreferenceService>();
 		builder.Services.AddSingleton<ITunerPreferenceService, MauiTunerPreferenceService>();
+		builder.Services.AddSingleton<IPianoPreferenceService, MauiPianoPreferenceService>();
 		builder.Services.AddSingleton<IMicrophonePermissionService, MauiMicrophonePermissionService>();
 		builder.Services.AddSingleton<ITunerStripPreferenceService, MauiTunerStripPreferenceService>();
 		builder.Services.AddSingleton<PiccoloReader.Core.Services.Stylus.IStylusPreferenceService, MauiStylusPreferenceService>();
@@ -92,10 +94,12 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.Android.PdfPageRenderer>();
 		builder.Services.AddSingleton<IMetronomePlayer, PiccoloReader.Platforms.Android.AndroidMetronomePlayer>();
 		builder.Services.AddSingleton<ITunerInput, PiccoloReader.Platforms.Android.AndroidTunerInput>();
+		builder.Services.AddSingleton<IPianoAudioOutput, PiccoloReader.Platforms.Android.AndroidPianoAudioOutput>();
 #elif IOS
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.iOS.PdfPageRenderer>();
 		builder.Services.AddSingleton<IMetronomePlayer, UnsupportedMetronomePlayer>();
 		builder.Services.AddSingleton<ITunerInput, UnsupportedTunerInput>();
+		builder.Services.AddSingleton<IPianoAudioOutput, UnsupportedPianoAudioOutput>();
 #endif
 		builder.Services.AddSingleton(sp =>
 		{
@@ -152,6 +156,15 @@ public static class MauiProgram
 		builder.Services.AddSingleton<PageCropService>();
 
 		builder.Services.AddSingleton<MetronomeViewModel>();
+		// Nothing is loaded or started until a piano screen takes a lease; the SoundFont loads on the thread pool.
+		builder.Services.AddSingleton<IPianoService>(sp => new PianoService(
+			sp.GetRequiredService<IPianoAudioOutput>(),
+			static () => FileSystem.OpenAppPackageFileAsync("piano.sf2")));
+		builder.Services.AddSingleton(sp => new PianoViewModel(
+			sp.GetRequiredService<IPianoService>(),
+			sp.GetRequiredService<IPianoPreferenceService>(),
+			sp.GetRequiredService<ITunerPreferenceService>(),
+			static action => MainThread.BeginInvokeOnMainThread(action)));
 		// Readings come from the audio thread: hand them to the UI thread fire-and-forget.
 		builder.Services.AddSingleton(sp => new TunerViewModel(
 			sp.GetRequiredService<ITunerInput>(),
@@ -177,6 +190,7 @@ public static class MauiProgram
 		builder.Services.AddTransient<SettingsPage>();
 		builder.Services.AddTransient<MetronomePage>();
 		builder.Services.AddTransient<TunerPage>();
+		builder.Services.AddTransient<PianoPage>();
 		builder.Services.AddTransient<TutorialPage>();
 
 		return builder.Build();

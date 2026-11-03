@@ -235,6 +235,54 @@
                                 </Image.Source>
                             </Image>
                         </Grid>
+                        <BoxView Style="{StaticResource RowDivider}" />
+                        <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsMuseScoreCreditRow" ColumnDefinitions="20,*,20"
+                              SemanticProperties.Description="{x:Static strings:AppStrings.SettingsMuseScoreCreditTitle}">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnMuseScoreCreditClicked" />
+                            </Grid.GestureRecognizers>
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center" Padding="0,8">
+                                <Label Style="{StaticResource RowTitle}" Text="{x:Static strings:AppStrings.SettingsMuseScoreCreditTitle}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                <Label Style="{StaticResource Caption}" FontSize="12" Text="{x:Static strings:AppStrings.SettingsMuseScoreCreditDescription}" />
+                            </VerticalStackLayout>
+                            <Image Grid.Column="2" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE89E;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                                </Image.Source>
+                            </Image>
+                        </Grid>
+                        <BoxView Style="{StaticResource RowDivider}" />
+                        <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsMeltySynthCreditRow" ColumnDefinitions="20,*,20"
+                              SemanticProperties.Description="{x:Static strings:AppStrings.SettingsMeltySynthCreditTitle}">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnMeltySynthCreditClicked" />
+                            </Grid.GestureRecognizers>
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE322;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center" Padding="0,8">
+                                <Label Style="{StaticResource RowTitle}" Text="{x:Static strings:AppStrings.SettingsMeltySynthCreditTitle}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                <Label Style="{StaticResource Caption}" FontSize="12" Text="{x:Static strings:AppStrings.SettingsMeltySynthCreditDescription}" />
+                            </VerticalStackLayout>
+                            <Image Grid.Column="2" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE89E;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                                </Image.Source>
+                            </Image>
+                        </Grid>
                     </VerticalStackLayout>
                 </Border>
             </VerticalStackLayout>
