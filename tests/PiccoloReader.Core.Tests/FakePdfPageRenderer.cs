@@ -11,6 +11,9 @@ public class FakePdfPageRenderer : IPdfPageRenderer
 
     public List<int> RenderedPageIndexes { get; } = new();
 
+    // File path of each render, parallel to RenderedPageIndexes.
+    public List<string> RenderedFiles { get; } = new();
+
     // Crop passed for each render, parallel to RenderedPageIndexes.
     public List<PageCrop?> RenderedCrops { get; } = new();
 
@@ -27,6 +30,7 @@ public class FakePdfPageRenderer : IPdfPageRenderer
     public Task<byte[]> RenderPageAsync(string filePath, int pageIndex, int targetWidthPx, int targetHeightPx, PageCrop? crop = null)
     {
         RenderedPageIndexes.Add(pageIndex);
+        RenderedFiles.Add(filePath);
         RenderedCrops.Add(crop);
         return RenderGate is null
             ? Task.FromResult(new byte[] { (byte)pageIndex })

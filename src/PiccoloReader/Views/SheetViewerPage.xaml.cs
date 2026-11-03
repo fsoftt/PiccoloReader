@@ -97,6 +97,7 @@ public partial class SheetViewerPage : ContentPage
             }
         };
 
+        _viewModel.SheetSwitched += OnSheetSwitched;
         _viewModel.CurrentPageAnnotations.CollectionChanged += (_, _) => InvalidateAnnotations();
         _viewModel.PropertyChanged += (_, e) =>
         {
@@ -241,6 +242,7 @@ public partial class SheetViewerPage : ContentPage
         AbortStylusGestures();
 #endif
         _viewModel.SaveCurrentPageThumbnail();
+        _viewModel.CancelPreloads();
         _viewModel.StopSpinnerWatchdog();
         _metronome.PropertyChanged -= OnMetronomePropertyChanged;
         _pageTurnInput.Requested -= OnPageTurnRequested;
@@ -2673,6 +2675,11 @@ public partial class SheetViewerPage : ContentPage
             _viewModel.NextPageCommand.Execute(null);
             ResetZoomForNewPage(alignBottom: false, carry);
         }
+        else if (CanAcceptPageTurn && _viewModel.CanCrossToNextSheet())
+        {
+            // Concert mode: past the last page comes the next score.
+            _ = CrossSheetAsync(next: true, atDocumentEdge: false);
+        }
     }
 
     private void TryGoToPreviousPage(bool alignBottom = false)
@@ -2682,6 +2689,71 @@ public partial class SheetViewerPage : ContentPage
             var carry = CaptureZoomCarry();
             _viewModel.PreviousPageCommand.Execute(null);
             ResetZoomForNewPage(alignBottom, carry);
+        }
+        else if (CanAcceptPageTurn && _viewModel.CanCrossToPreviousSheet())
+        {
+            _ = CrossSheetAsync(next: false, atDocumentEdge: false);
+        }
+    }
+
+    // Concert mode: switches the open viewer to the next/previous score of the
+    // list in place (no navigation). The view-side reset happens in
+    // OnSheetSwitched, which the view model raises mid-switch.
+    private async Task CrossSheetAsync(bool next, bool atDocumentEdge)
+    {
+        try
+        {
+            var switched = next
+                ? await _viewModel.TryGoToNextSheetAsync(atDocumentEdge)
+                : await _viewModel.TryGoToPreviousSheetAsync(atDocumentEdge);
+            if (switched)
+            {
+                _ = CommunityToolkit.Maui.Alerts.Toast.Make(_viewModel.Title).Show();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Concert mode switch failed: {ex.Message}");
+        }
+    }
+
+    private void OnSheetSwitched(bool toLastPage)
+    {
+        // Keep the route parameter in sync: OnAppearing reloads from it when
+        // the viewer is shown again (e.g. after a pushed page closes).
+        SheetId = _viewModel.CurrentSheetId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        HideDetail();
+        UpdateSelectionOverlay();
+        UpdateBookmarkButton();
+        UpdateEditingUi();
+        InvalidateAnnotations();
+        ResetContinuousZoom();
+
+        if (_viewModel.IsContinuousReading)
+        {
+            ResetZoom();
+            UpdateContinuousLayers();
+            _continuousScrollOffsetFallback = 0;
+            var count = _viewModel.ContinuousPages.Count;
+            Dispatcher.Dispatch(() =>
+            {
+                if (_viewModel.IsContinuousReading && count > 0 && count == _viewModel.ContinuousPages.Count)
+                {
+                    ContinuousPagesView.ScrollTo(
+                        toLastPage ? count - 1 : 0,
+                        position: toLastPage ? ScrollToPosition.End : ScrollToPosition.Start,
+                        animate: false);
+                }
+            });
+        }
+        else
+        {
+            // The new first (last) page is not shown yet: its base zoom is
+            // applied when its image arrives (OnPageImageShown), anchored at
+            // the bottom when coming back onto a tall last page.
+            _pageShownIndex = -1;
+            ResetZoomForNewPage(alignBottom: toLastPage, carry: null);
         }
     }
 
@@ -3087,6 +3159,15 @@ public partial class SheetViewerPage : ContentPage
         if (target is { } offset)
         {
             ScrollContinuousBy(offset - scroll);
+        }
+        else if (intent != PageTurnIntent.None
+            && CanAcceptPageTurn
+            && (intent == PageTurnIntent.Next
+                ? _viewModel.CanCrossToNextSheet(atDocumentEnd: true)
+                : _viewModel.CanCrossToPreviousSheet(atDocumentStart: true)))
+        {
+            // Nowhere left to scroll: this is the end (start) of the document.
+            _ = CrossSheetAsync(next: intent == PageTurnIntent.Next, atDocumentEdge: true);
         }
 
         return true;
