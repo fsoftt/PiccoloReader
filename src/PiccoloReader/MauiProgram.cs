@@ -92,6 +92,8 @@ public static class MauiProgram
 		builder.Services.AddSingleton<PiccoloReader.Core.Services.Stylus.IStylusPreferenceService, MauiStylusPreferenceService>();
 		builder.Services.AddSingleton<PiccoloReader.Core.Services.Concert.IConcertModePreferenceService, MauiConcertModePreferenceService>();
 		builder.Services.AddSingleton<PiccoloReader.Core.Services.Concert.IConcertQueue, PiccoloReader.Core.Services.Concert.ConcertQueue>();
+		builder.Services.AddSingleton<PiccoloReader.Core.Services.Concert.IConcertTutorialPreferenceService, MauiConcertTutorialPreferenceService>();
+		builder.Services.AddSingleton<ConcertTutorialService>();
 		builder.Services.AddSingleton<PiccoloReader.Core.Services.ISortPreferenceService, MauiSortPreferenceService>();
 #if ANDROID
 		builder.Services.AddSingleton<IPdfPageRenderer, PiccoloReader.Platforms.Android.PdfPageRenderer>();

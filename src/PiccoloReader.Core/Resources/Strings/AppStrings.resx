@@ -332,4 +332,16 @@
   <data name="SettingsMuseScoreCreditDescription" xml:space="preserve"><value>Piano sounds · MIT license</value></data>
   <data name="SettingsMeltySynthCreditTitle" xml:space="preserve"><value>MeltySynth</value></data>
   <data name="SettingsMeltySynthCreditDescription" xml:space="preserve"><value>Synthesizer engine · MIT license</value></data>
+  <data name="ConcertTutorialLabel" xml:space="preserve"><value>Show concert mode tutorial</value></data>
+  <data name="ConcertTutorialDescription" xml:space="preserve"><value>Shows the guide again next time</value></data>
+  <data name="CoachStepFormat" xml:space="preserve"><value>{0}/{1}</value></data>
+  <data name="CoachNext" xml:space="preserve"><value>Next</value></data>
+  <data name="CoachGotIt" xml:space="preserve"><value>Got it</value></data>
+  <data name="CoachSkip" xml:space="preserve"><value>Skip</value></data>
+  <data name="CoachLibraryHandle" xml:space="preserve"><value>Long press this icon and drag to change the order of your concert</value></data>
+  <data name="CoachLibraryList" xml:space="preserve"><value>Scores play in this order. At the end of one score, the next one opens</value></data>
+  <data name="CoachLibrarySort" xml:space="preserve"><value>Sorting by name or date also changes the concert order</value></data>
+  <data name="CoachViewerNext" xml:space="preserve"><value>On the last page, tap here (or press the pedal) to open the next score</value></data>
+  <data name="CoachViewerPrevious" xml:space="preserve"><value>On the first page, tap here to go back to the previous score</value></data>
+  <data name="CoachViewerSettings" xml:space="preserve"><value>You can turn concert mode off in Settings</value></data>
 </root>

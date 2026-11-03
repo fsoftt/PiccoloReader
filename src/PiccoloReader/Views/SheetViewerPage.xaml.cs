@@ -64,11 +64,12 @@ public partial class SheetViewerPage : ContentPage
     private readonly TunerStripController _tunerStrip;
     private readonly ITunerStripPreferenceService _tunerStripPreferences;
     private readonly IStylusPreferenceService _stylusPreferences;
+    private readonly PiccoloReader.Services.ConcertTutorialService _concertTutorial;
     // Cached from the preference in OnAppearing so toolbar show/hide does not read it.
     private TunerStripPosition _tunerStripPosition;
     private Window? _window;
 
-    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput, TunerStripController tunerStrip, ITunerStripPreferenceService tunerStripPreferences, IStylusPreferenceService stylusPreferences)
+    public SheetViewerPage(SheetViewerViewModel viewModel, MetronomeViewModel metronome, PiccoloReader.Services.SheetShareFlow shareFlow, LibraryService libraryService, IPageTurnInput pageTurnInput, TunerStripController tunerStrip, ITunerStripPreferenceService tunerStripPreferences, IStylusPreferenceService stylusPreferences, PiccoloReader.Services.ConcertTutorialService concertTutorial)
     {
         InitializeComponent();
         Unloaded += (_, _) => _pageTurnInput.Requested -= OnPageTurnRequested;
@@ -80,6 +81,7 @@ public partial class SheetViewerPage : ContentPage
         _tunerStrip = tunerStrip;
         _tunerStripPreferences = tunerStripPreferences;
         _stylusPreferences = stylusPreferences;
+        _concertTutorial = concertTutorial;
         SetUpTunerStripView();
         BindingContext = _viewModel;
 
@@ -243,6 +245,8 @@ public partial class SheetViewerPage : ContentPage
 #endif
         _viewModel.SaveCurrentPageThumbnail();
         _viewModel.CancelPreloads();
+        _coachPageVisible = false;
+        CoachOverlay.Cancel();
         _viewModel.StopSpinnerWatchdog();
         _metronome.PropertyChanged -= OnMetronomePropertyChanged;
         _pageTurnInput.Requested -= OnPageTurnRequested;
@@ -453,6 +457,7 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnAppearing();
         _tunerStripPosition = _tunerStripPreferences.Position;
+        _coachPageVisible = true;
         _viewModel.StartSpinnerWatchdog();
         _metronome.PropertyChanged += OnMetronomePropertyChanged;
         _pageTurnInput.Requested -= OnPageTurnRequested;
@@ -502,6 +507,7 @@ public partial class SheetViewerPage : ContentPage
         InvalidateAnnotations();
         UpdateReadingModeUi();
         AttachTunerStrip();
+        _ = TryShowConcertTutorialAsync();
     }
 
     // The editor's zoom/translation (set by ApplyEditorZoomFromContinuous)
@@ -2616,6 +2622,17 @@ public partial class SheetViewerPage : ContentPage
     // false to let the key through to whatever else is on screen.
     private bool OnPageTurnRequested(PageTurnIntent intent)
     {
+        if (CoachOverlay.IsShowing)
+        {
+            // The concert mode tutorial owns the pedal: it advances the guide, never turns pages.
+            if (intent == PageTurnIntent.Next)
+            {
+                CoachOverlay.Advance();
+            }
+
+            return true;
+        }
+
         if (!CanAcceptPageTurn)
         {
             return false;
@@ -2663,6 +2680,7 @@ public partial class SheetViewerPage : ContentPage
     private bool CanAcceptPageTurn =>
         !_viewModel.IsContinuousEditing
         && !IsEditing
+        && !CoachOverlay.IsShowing
         && _viewModel.PageCount > 0
         && !AddBookmarkOverlay.IsVisible
         && !CropOverlay.IsVisible;
@@ -2786,6 +2804,12 @@ public partial class SheetViewerPage : ContentPage
     // Otherwise an expanded tool FAB menu is collapsed before leaving.
     protected override bool OnBackButtonPressed()
     {
+        if (CoachOverlay.IsShowing)
+        {
+            CoachOverlay.Skip();
+            return true;
+        }
+
         if (!IsEditing && !_inEditSession)
         {
             if (_isToolFabExpanded)

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentView
+    x:Class="PiccoloReader.Views.CoachMarkOverlay"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    IsVisible="False"
+    Opacity="0">
+
+    <!-- Full-screen coach mark layer: dim with a cutout, a gesture hint and a callout bubble. -->
+    <Grid x:Name="Root" AutomationId="CoachMarkOverlay">
+        <Grid.GestureRecognizers>
+            <TapGestureRecognizer Tapped="OnBackdropTapped" />
+        </Grid.GestureRecognizers>
+
+        <GraphicsView x:Name="DimView" InputTransparent="True" />
+
+        <AbsoluteLayout x:Name="Layer" InputTransparent="False">
+            <Border x:Name="Ripple" InputTransparent="True" Opacity="0"
+                    WidthRequest="56" HeightRequest="56"
+                    StrokeThickness="0" StrokeShape="RoundRectangle 28"
+                    BackgroundColor="#66FFFFFF" />
+            <Image x:Name="Hand" InputTransparent="True" Opacity="0" WidthRequest="44" HeightRequest="44"
+                   AutomationProperties.IsInAccessibleTree="False">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xE913;" FontFamily="MaterialOutlined" Size="44" Color="White" />
+                </Image.Source>
+            </Image>
+
+            <Border x:Name="Bubble"
+                    Padding="16,14,16,10"
+                    StrokeThickness="1" StrokeShape="RoundRectangle 18"
+                    Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceRaisedDark}}">
+                <VerticalStackLayout Spacing="12">
+                    <HorizontalStackLayout Spacing="12">
+                        <Image x:Name="BubbleIcon" VerticalOptions="Center" IsVisible="False"
+                               AutomationProperties.IsInAccessibleTree="False">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xE945;" FontFamily="MaterialOutlined" Size="28"
+                                    Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                            </Image.Source>
+                        </Image>
+                        <Label x:Name="TextLabel" AutomationId="CoachMarkText" FontSize="16" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    </HorizontalStackLayout>
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                        <Label x:Name="StepLabel" Grid.Column="0" AutomationId="CoachMarkStep" FontSize="13" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                        <Button x:Name="SkipButton" Grid.Column="2" AutomationId="CoachMarkSkip"
+                                BackgroundColor="Transparent"
+                                TextColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                                Clicked="OnSkipClicked" />
+                        <Button x:Name="NextButton" Grid.Column="3" AutomationId="CoachMarkNext"
+                                Clicked="OnNextClicked" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </AbsoluteLayout>
+    </Grid>
+</ContentView>

@@ -332,4 +332,16 @@
   <data name="SettingsMuseScoreCreditDescription" xml:space="preserve"><value>Sonidos del piano · licencia MIT</value></data>
   <data name="SettingsMeltySynthCreditTitle" xml:space="preserve"><value>MeltySynth</value></data>
   <data name="SettingsMeltySynthCreditDescription" xml:space="preserve"><value>Motor del sintetizador · licencia MIT</value></data>
+  <data name="ConcertTutorialLabel" xml:space="preserve"><value>Mostrar tutorial del modo concierto</value></data>
+  <data name="ConcertTutorialDescription" xml:space="preserve"><value>Vuelve a mostrar la guía la próxima vez</value></data>
+  <data name="CoachStepFormat" xml:space="preserve"><value>{0}/{1}</value></data>
+  <data name="CoachNext" xml:space="preserve"><value>Siguiente</value></data>
+  <data name="CoachGotIt" xml:space="preserve"><value>Entendido</value></data>
+  <data name="CoachSkip" xml:space="preserve"><value>Omitir</value></data>
+  <data name="CoachLibraryHandle" xml:space="preserve"><value>Mantén presionado este ícono y arrastra para cambiar el orden de tu concierto</value></data>
+  <data name="CoachLibraryList" xml:space="preserve"><value>Las partituras se tocan en este orden. Al terminar una, se abre la siguiente</value></data>
+  <data name="CoachLibrarySort" xml:space="preserve"><value>Ordenar por nombre o fecha también cambia el orden del concierto</value></data>
+  <data name="CoachViewerNext" xml:space="preserve"><value>En la última hoja, toca aquí (o presiona el pedal) para abrir la siguiente partitura</value></data>
+  <data name="CoachViewerPrevious" xml:space="preserve"><value>En la primera hoja, toca aquí para volver a la partitura anterior</value></data>
+  <data name="CoachViewerSettings" xml:space="preserve"><value>Puedes desactivar el modo concierto en Ajustes</value></data>
 </root>

@@ -121,6 +121,24 @@
                                     OnColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
                                     IsToggled="{Binding ConcertModeEnabled}" />
                         </Grid>
+                        <BoxView Style="{StaticResource RowDivider}" />
+                        <Grid Style="{StaticResource RowGrid}" AutomationId="SettingsConcertTutorialRow" ColumnDefinitions="20,*,Auto">
+                            <Image Grid.Column="0" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xE80C;" FontFamily="MaterialOutlined" Size="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center" Padding="0,8">
+                                <Label Style="{StaticResource RowTitle}" Text="{x:Static strings:AppStrings.ConcertTutorialLabel}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                <Label Style="{StaticResource Caption}" FontSize="12" Text="{x:Static strings:AppStrings.ConcertTutorialDescription}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="2" AutomationId="SettingsConcertTutorialSwitch" VerticalOptions="Center"
+                                    SemanticProperties.Description="{x:Static strings:AppStrings.ConcertTutorialLabel}"
+                                    OnColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                                    IsToggled="{Binding ConcertTutorialEnabled}" />
+                        </Grid>
                     </VerticalStackLayout>
                 </Border>
             </VerticalStackLayout>

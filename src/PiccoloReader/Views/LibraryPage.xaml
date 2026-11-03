@@ -7,6 +7,7 @@
     xmlns:converters="clr-namespace:PiccoloReader.Converters"
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
     xmlns:local="clr-namespace:PiccoloReader"
+    xmlns:views="clr-namespace:PiccoloReader.Views"
     x:Name="ThisPage"
     Shell.NavBarIsVisible="False"
     Title="{x:Static strings:AppStrings.Library}">
@@ -136,7 +137,7 @@
                         </Border>
                         <ImageButton
                             Grid.Column="1"
-                            AutomationId="LibrarySortButton"
+                            x:Name="SheetSortButton" AutomationId="LibrarySortButton"
                             SemanticProperties.Description="{x:Static strings:AppStrings.SortLabel}"
                             Style="{StaticResource IconButton}"
                             CornerRadius="14" BorderWidth="1"
@@ -382,5 +383,6 @@
                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
         </Border>
 
+        <views:CoachMarkOverlay x:Name="CoachOverlay" />
     </Grid>
 </ContentPage>

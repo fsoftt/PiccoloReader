@@ -47,6 +47,14 @@ public partial class SheetViewerViewModel
 
     public bool CanCrossToPreviousSheet(bool atDocumentStart = false) => CrossTarget(next: false, atDocumentStart) is not null;
 
+    /// <summary>
+    /// True when concert mode is on and the open sheet came from a list with a
+    /// next or previous score (what the viewer tutorial explains).
+    /// </summary>
+    public bool HasConcertNeighbour =>
+        ConcertEnabled && _sheet is not null
+        && (_concertQueue!.NextAfter(_sheet.Id) is not null || _concertQueue.PreviousBefore(_sheet.Id) is not null);
+
     private int? CrossTarget(bool next, bool atEdgeOfContinuousList)
     {
         if (!ConcertEnabled || _sheet is null || _isSwitchingSheet || IsContinuousEditing || PageCount <= 0)

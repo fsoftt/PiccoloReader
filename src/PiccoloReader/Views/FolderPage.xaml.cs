@@ -16,8 +16,10 @@ public partial class FolderPage : ContentPage
     private readonly LibraryService _libraryService;
     private readonly PiccoloReader.Services.SheetShareFlow _shareFlow;
     private readonly SheetReorderController _reorder;
+    private readonly LibraryConcertCoach _coach;
+    private bool _isAppeared;
 
-    public FolderPage(FolderViewModel viewModel, LibraryService libraryService, PiccoloReader.Services.SheetShareFlow shareFlow)
+    public FolderPage(FolderViewModel viewModel, LibraryService libraryService, PiccoloReader.Services.SheetShareFlow shareFlow, ConcertTutorialService concertTutorial)
     {
         InitializeComponent();
         _shareFlow = shareFlow;
@@ -27,6 +29,7 @@ public partial class FolderPage : ContentPage
 
         SheetLongPressCommand = new Command<Sheet>(async sheet => await OnSheetLongPressedAsync(sheet));
         _reorder = new SheetReorderController(SheetsList, _viewModel.Sheets, () => _viewModel.CanReorder, CommitOrderAsync);
+        _coach = new LibraryConcertCoach(concertTutorial, CoachOverlay, SheetsList, SortButton, () => _viewModel.Sheets.FirstOrDefault(), () => PlatformInfo.IsAndroid && _viewModel.CanReorder, () => _isAppeared);
     }
 
     public ICommand SheetLongPressCommand { get; }
@@ -48,6 +51,7 @@ public partial class FolderPage : ContentPage
         if (sender is VisualElement handle)
         {
             _reorder.WireHandle(handle);
+            _coach.TrackHandle(handle);
         }
     }
 
@@ -64,6 +68,7 @@ public partial class FolderPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _isAppeared = true;
         var folderExists = await _viewModel.LoadAsync();
 
         if (!folderExists)
@@ -71,6 +76,28 @@ public partial class FolderPage : ContentPage
             // The folder was deleted: back to the library.
             await Shell.Current.GoToAsync("..");
         }
+        else
+        {
+            _ = _coach.TryShowAsync();
+        }
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _isAppeared = false;
+        _coach.Cancel();
+    }
+
+    protected override bool OnBackButtonPressed()
+    {
+        if (_coach.IsShowing)
+        {
+            _coach.Skip();
+            return true;
+        }
+
+        return base.OnBackButtonPressed();
     }
 
     private async void OnImportPdfClicked(object? sender, EventArgs e)
