@@ -21,6 +21,10 @@ public class FakePdfPageRenderer : IPdfPageRenderer
     // render "in flight" while navigating further.
     public TaskCompletionSource? RenderGate { get; set; }
 
+    // Optional per-file gate: renders of a file wait on the returned source
+    // (null = not held). Checked when no global RenderGate is set.
+    public Func<string, TaskCompletionSource?>? RenderGateFor { get; set; }
+
     public Task<int> GetPageCountAsync(string filePath)
     {
         GetPageCountCallCount++;
@@ -32,9 +36,10 @@ public class FakePdfPageRenderer : IPdfPageRenderer
         RenderedPageIndexes.Add(pageIndex);
         RenderedFiles.Add(filePath);
         RenderedCrops.Add(crop);
-        return RenderGate is null
+        var gate = RenderGate ?? RenderGateFor?.Invoke(filePath);
+        return gate is null
             ? Task.FromResult(new byte[] { (byte)pageIndex })
-            : RenderAfterGateAsync(RenderGate, pageIndex);
+            : RenderAfterGateAsync(gate, pageIndex);
     }
 
     public List<(int PageIndex, double X, double Y, double Width, double Height, int PixelWidth, int PixelHeight, PageCrop? Crop)> RenderedRegions { get; } = new();

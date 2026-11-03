@@ -241,30 +241,26 @@ public class SheetViewerViewModelConcertTests : IDisposable
     public async Task MovingAwayFromTheEdge_DropsThePreload()
     {
         var (a, _, _) = await InsertQueueAsync(aPages: 8, bPages: 2);
-        await _renderer_HoldAsync(async () =>
-        {
-            await _sut.LoadAsync(a.Id, 800, 1000);
-            await _sut.GoToPageAsync(6);
-            // The held renders keep the preload queued; moving away cancels it.
-            await _sut.GoToPageAsync(1);
-        });
 
-        await Task.Delay(200);
+        // The neighbour's first render is held in flight, so its second render
+        // is parked on the render gate and the preload is provably running.
+        var held = new TaskCompletionSource();
+        _renderer.RenderGateFor = file => file.EndsWith("B.pdf") ? held : null;
 
-        Assert.DoesNotContain(_renderer.RenderedFiles, f => f.EndsWith("B.pdf"));
-    }
+        await _sut.LoadAsync(a.Id, 800, 1000);
+        await _sut.GoToPageAsync(6);
+        await WaitUntilAsync(() => RendersOf("B") == 1);
 
-    private async Task _renderer_HoldAsync(Func<Task> action)
-    {
-        // Current-sheet renders stay in flight, so the low-priority preload
-        // cannot start; releasing them afterwards lets the test finish.
-        var gate = new TaskCompletionSource();
-        _renderer.RenderGate = gate;
-        var run = action();
-        await Task.Delay(100);
-        gate.SetResult();
-        await run;
-        _renderer.RenderGate = null;
+        // Moving away cancels the preload while its second render waits.
+        await _sut.GoToPageAsync(5);
+        held.SetResult();
+        _renderer.RenderGateFor = null;
+
+        // The render gate is first-in-first-out: once this fresh render
+        // completes, a surviving second preload render would have run before it.
+        await _sut.GoToPageAsync(1);
+
+        Assert.Equal(1, RendersOf("B"));
     }
 
     [Fact]
