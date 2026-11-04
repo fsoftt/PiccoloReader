@@ -968,12 +968,21 @@ public partial class SheetViewerViewModel : ObservableObject
 
     public async Task EraseAnnotationAsync(Annotation annotation)
     {
-        await _annotationService.DeleteAnnotationAsync(annotation);
-        CurrentPageAnnotations.Remove(annotation);
+        // Removed from the page before the awaited delete: the eraser calls
+        // this fire-and-forget for every point of the drag, so a second call
+        // for the same stroke would otherwise record a duplicate undo action
+        // and undo would insert the stroke twice.
+        if (!CurrentPageAnnotations.Remove(annotation))
+        {
+            return;
+        }
+
         if (SelectedAnnotation == annotation)
         {
             SelectedAnnotation = null;
         }
+
+        await _annotationService.DeleteAnnotationAsync(annotation);
 
         var action = new DeleteAnnotationAction(_annotationService, CurrentPageAnnotations, annotation);
         if (_eraseBatch is not null)

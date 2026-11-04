@@ -270,13 +270,13 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnToolSegmentPencilTapped" />
                             </Border.GestureRecognizers>
-                            <HorizontalStackLayout Spacing="6" HorizontalOptions="Center" VerticalOptions="Center">
+                            <HorizontalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
                                 <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
                                     <Image.Source>
                                         <FontImageSource x:Name="ToolSegmentPencilGlyph" Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="20" />
                                     </Image.Source>
                                 </Image>
-                                <Label x:Name="ToolSegmentPencilLabel" Text="{x:Static strings:AppStrings.Pencil}" FontSize="14" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
+                                <Label x:Name="ToolSegmentPencilLabel" Text="{x:Static strings:AppStrings.Pencil}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
                             </HorizontalStackLayout>
                         </Border>
                         <Border
@@ -291,13 +291,13 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnToolSegmentHighlighterTapped" />
                             </Border.GestureRecognizers>
-                            <HorizontalStackLayout Spacing="6" HorizontalOptions="Center" VerticalOptions="Center">
+                            <HorizontalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
                                 <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
                                     <Image.Source>
                                         <FontImageSource x:Name="ToolSegmentHighlighterGlyph" Glyph="&#xE6D1;" FontFamily="MaterialOutlined" Size="20" />
                                     </Image.Source>
                                 </Image>
-                                <Label x:Name="ToolSegmentHighlighterLabel" Text="{x:Static strings:AppStrings.Highlighter}" FontSize="14" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
+                                <Label x:Name="ToolSegmentHighlighterLabel" Text="{x:Static strings:AppStrings.Highlighter}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
                             </HorizontalStackLayout>
                         </Border>
                         <Border
@@ -312,13 +312,13 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnToolSegmentEraserTapped" />
                             </Border.GestureRecognizers>
-                            <HorizontalStackLayout Spacing="6" HorizontalOptions="Center" VerticalOptions="Center">
+                            <HorizontalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
                                 <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
                                     <Image.Source>
                                         <FontImageSource x:Name="ToolSegmentEraserGlyph" Glyph="&#xE6D0;" FontFamily="MaterialOutlined" Size="20" />
                                     </Image.Source>
                                 </Image>
-                                <Label x:Name="ToolSegmentEraserLabel" Text="{x:Static strings:AppStrings.Eraser}" FontSize="14" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
+                                <Label x:Name="ToolSegmentEraserLabel" Text="{x:Static strings:AppStrings.Eraser}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
                             </HorizontalStackLayout>
                         </Border>
                         <Border
@@ -333,13 +333,13 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnToolSegmentSymbolsTapped" />
                             </Border.GestureRecognizers>
-                            <HorizontalStackLayout Spacing="6" HorizontalOptions="Center" VerticalOptions="Center">
+                            <HorizontalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
                                 <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
                                     <Image.Source>
                                         <FontImageSource x:Name="ToolSegmentSymbolsGlyph" Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="20" />
                                     </Image.Source>
                                 </Image>
-                                <Label x:Name="ToolSegmentSymbolsLabel" Text="{x:Static strings:AppStrings.Symbols}" FontSize="14" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
+                                <Label x:Name="ToolSegmentSymbolsLabel" Text="{x:Static strings:AppStrings.Symbols}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
                             </HorizontalStackLayout>
                         </Border>
                     </Grid>

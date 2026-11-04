@@ -3860,10 +3860,31 @@ public partial class SheetViewerPage : ContentPage
         ToolSheet.Padding = landscape ? new Thickness(20, 8, 20, 0) : new Thickness(20, 10, 20, 0);
         ToolOptionsPad.Padding = new Thickness(0, 0, 0, landscape ? 8 : 24);
 
+        // Speed dial: in landscape the page is short, so the four mini FABs
+        // shrink to 40 and stack tighter to keep the top one clear of the bar.
+        var miniSize = landscape ? 40d : 48d;
+        var miniRight = landscape ? 28d : 24d;
+        var miniStart = landscape ? 84d : 92d;
+        var miniPitch = landscape ? 44d : 56d;
+        var minis = new[] { EraserFab, PencilFab, IconsFab, HighlighterFab };
+        for (var i = 0; i < minis.Length; i++)
+        {
+            minis[i].WidthRequest = miniSize;
+            minis[i].HeightRequest = miniSize;
+            minis[i].Margin = new Thickness(0, 0, miniRight, miniStart + (i * miniPitch));
+        }
+
         // Pencil: color block and width block share one row in landscape.
         Grid.SetRow(PencilWidthBlock, landscape ? 0 : 1);
         Grid.SetColumn(PencilWidthBlock, landscape ? 1 : 0);
         PencilSection.ColumnDefinitions = landscape
+            ? new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) }
+            : new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Star) };
+
+        // Highlighter: same side-by-side arrangement as the pencil.
+        Grid.SetRow(HighlighterWidthBlock, landscape ? 0 : 1);
+        Grid.SetColumn(HighlighterWidthBlock, landscape ? 1 : 0);
+        HighlighterSection.ColumnDefinitions = landscape
             ? new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) }
             : new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Star) };
 

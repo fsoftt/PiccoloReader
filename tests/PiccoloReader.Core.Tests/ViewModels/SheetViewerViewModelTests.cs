@@ -1131,6 +1131,25 @@ public class SheetViewerViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task EraseBatch_SameAnnotationErasedTwiceConcurrently_UndoRestoresItOnce()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var annotation = _sut.CurrentPageAnnotations[0];
+
+        _sut.BeginEraseBatch();
+        var first = _sut.EraseAnnotationAsync(annotation);
+        var second = _sut.EraseAnnotationAsync(annotation);
+        await Task.WhenAll(first, second);
+        _sut.EndEraseBatch();
+
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Single(_sut.CurrentPageAnnotations);
+    }
+
+    [Fact]
     public async Task EraseBatch_MultipleErasuresInOneBatch_UndoRestoresAllInOneStep()
     {
         var sheet = await InsertSheetAsync(pageCount: 3);
