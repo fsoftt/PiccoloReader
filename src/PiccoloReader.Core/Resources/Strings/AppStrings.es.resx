@@ -354,4 +354,6 @@
   <data name="CategoryPhrasing" xml:space="preserve"><value>Fraseo</value></data>
   <data name="IconSlurAbove" xml:space="preserve"><value>Ligadura (arriba)</value></data>
   <data name="IconSlurBelow" xml:space="preserve"><value>Ligadura (abajo)</value></data>
+  <data name="RecognizeShapesLabel" xml:space="preserve"><value>Reconocer ligaduras y reguladores dibujados</value></data>
+  <data name="RecognizeShapesDescription" xml:space="preserve"><value>Una ligadura o regulador dibujado con el lápiz se convierte en una figura limpia. Deshacer recupera el dibujo.</value></data>
 </root>

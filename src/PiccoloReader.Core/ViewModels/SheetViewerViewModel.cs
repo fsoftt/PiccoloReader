@@ -808,6 +808,76 @@ public partial class SheetViewerViewModel : ObservableObject
         return added;
     }
 
+    // The plain stroke saved last, so a second straight stroke can join it
+    // into a hairpin.
+    private (Annotation Stroke, IReadOnlyList<StrokePoint> Points, DateTime At)? _lastPlainStroke;
+
+    private static readonly TimeSpan TwoStrokeHairpinWindow = TimeSpan.FromMilliseconds(1500);
+
+    // Saves a finished pencil / stylus stroke. With recognize on, a stroke
+    // that is clearly a slur or a hairpin (alone, or - for a hairpin - with
+    // the stroke just before it) is saved as that figure instead; one undo
+    // brings the drawn stroke(s) back. The shape detection is pure maths and
+    // runs off the UI thread. Returns whether a figure was saved.
+    public async Task<bool> AddStrokeOrRecognizedShapeAsync(
+        int sheetId, string colorHex, double strokeWidth, IReadOnlyList<StrokePoint> points, bool recognize)
+    {
+        if (recognize && _sheet is not null && CurrentPageAspectRatio > 0)
+        {
+            var aspect = CurrentPageAspectRatio;
+            var pageIndex = CurrentPageIndex;
+            var previous = _lastPlainStroke;
+            if (previous is { } last
+                && (last.Stroke.PageIndex != pageIndex
+                    || DateTime.UtcNow - last.At > TwoStrokeHairpinWindow
+                    || !CurrentPageAnnotations.Contains(last.Stroke)))
+            {
+                previous = null;
+            }
+
+            var shape = await Task.Run(() =>
+            {
+                var single = ShapeRecognizer.Recognize(points, aspect);
+                if (single.Kind != RecognizedShapeKind.None || previous is null)
+                {
+                    return (Shape: single, UsesPrevious: false);
+                }
+
+                var joined = ShapeRecognizer.RecognizeTwoStrokeHairpin(previous.Value.Points, points, aspect);
+                return (Shape: joined, UsesPrevious: joined.Kind != RecognizedShapeKind.None);
+            });
+
+            // The page may have turned while this ran.
+            if (shape.Shape.Kind != RecognizedShapeKind.None && pageIndex == CurrentPageIndex
+                && RecognizedFigure.Create(shape.Shape, sheetId, pageIndex, colorHex, CurrentPageCrop) is { } figure)
+            {
+                var removed = new List<Annotation>();
+                if (shape.UsesPrevious && previous is { } joinedWith && CurrentPageAnnotations.Contains(joinedWith.Stroke))
+                {
+                    await _annotationService.DeleteAnnotationAsync(joinedWith.Stroke);
+                    CurrentPageAnnotations.Remove(joinedWith.Stroke);
+                    removed.Add(joinedWith.Stroke);
+                }
+
+                // What undo restores: the drawn stroke, clipped as a normal save would.
+                foreach (var piece in StrokeClipper.Clip(points, CurrentPageCrop))
+                {
+                    removed.Add(RecognizedFigure.UnsavedStroke(sheetId, pageIndex, colorHex, strokeWidth, piece));
+                }
+
+                await _annotationService.InsertAnnotationAsync(figure);
+                CurrentPageAnnotations.Add(figure);
+                RecordAction(new ReplaceAnnotationsAction(_annotationService, CurrentPageAnnotations, removed, new[] { figure }));
+                _lastPlainStroke = null;
+                return true;
+            }
+        }
+
+        var added = await AddClippedStrokeAsync(sheetId, colorHex, strokeWidth, points);
+        _lastPlainStroke = added.Count == 1 ? (added[0], points, DateTime.UtcNow) : null;
+        return false;
+    }
+
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private async Task UndoAsync()
     {

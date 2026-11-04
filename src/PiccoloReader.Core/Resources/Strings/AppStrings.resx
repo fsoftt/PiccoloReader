@@ -354,4 +354,6 @@
   <data name="CategoryPhrasing" xml:space="preserve"><value>Phrasing</value></data>
   <data name="IconSlurAbove" xml:space="preserve"><value>Slur (above)</value></data>
   <data name="IconSlurBelow" xml:space="preserve"><value>Slur (below)</value></data>
+  <data name="RecognizeShapesLabel" xml:space="preserve"><value>Recognize drawn slurs and hairpins</value></data>
+  <data name="RecognizeShapesDescription" xml:space="preserve"><value>A slur or hairpin drawn with the pencil becomes a clean figure. Undo brings back the drawing.</value></data>
 </root>

@@ -14,7 +14,7 @@ public class MauiStylusPreferenceService : IStylusPreferenceService
 
     public MauiStylusPreferenceService()
     {
-        _ = Task.Run(() => _ = DrawsDirectly);
+        _ = Task.Run(() => { _ = DrawsDirectly; _ = RecognizesShapes; });
     }
 
     public bool DrawsDirectly
@@ -32,6 +32,28 @@ public class MauiStylusPreferenceService : IStylusPreferenceService
             {
                 _drawsDirectly = value;
                 Preferences.Default.Set(DrawsDirectlyKey, value);
+            }
+        }
+    }
+
+    private const string RecognizesShapesKey = "RecognizeShapes";
+    private bool? _recognizesShapes;
+
+    public bool RecognizesShapes
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _recognizesShapes ??= Preferences.Default.Get(RecognizesShapesKey, true);
+            }
+        }
+        set
+        {
+            lock (_gate)
+            {
+                _recognizesShapes = value;
+                Preferences.Default.Set(RecognizesShapesKey, value);
             }
         }
     }

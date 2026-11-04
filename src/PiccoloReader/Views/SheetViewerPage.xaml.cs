@@ -4307,7 +4307,9 @@ public partial class SheetViewerPage : ContentPage
     // place that saves a stroke with the active tool's color/width (and records undo).
     private async Task SavePencilStrokeAsync(int sheetId, IReadOnlyList<StrokePoint> normalizedPoints)
     {
-        await _viewModel.AddClippedStrokeAsync(sheetId, ActiveStrokeColorHex, ActiveStrokeWidth, normalizedPoints);
+        // Only the pencil and the stylus are recognized; the highlighter draws wide bands.
+        var recognize = _stylusPreferences.RecognizesShapes && _viewModel.ActiveTool != AnnotationTool.Highlighter;
+        await _viewModel.AddStrokeOrRecognizedShapeAsync(sheetId, ActiveStrokeColorHex, ActiveStrokeWidth, normalizedPoints, recognize);
         InvalidateAnnotations();
     }
 
