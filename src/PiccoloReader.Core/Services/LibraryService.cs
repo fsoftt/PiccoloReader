@@ -25,7 +25,8 @@ public class LibraryService
     public Task<List<Sheet>> GetSheetsAsync(int? folderId) =>
         _database.Connection.Table<Sheet>()
             .Where(s => s.FolderId == folderId)
-            .OrderBy(s => s.Title)
+            .OrderBy(s => s.SortOrder)
+            .ThenBy(s => s.Title)
             .ToListAsync();
 
     public async Task<Dictionary<int, int>> GetSheetCountsByFolderAsync()
@@ -79,7 +80,8 @@ public class LibraryService
             else
             {
                 sheet.FolderId = null;
-                await _database.Connection.ExecuteAsync("UPDATE Sheet SET FolderId = NULL WHERE Id = ?", sheet.Id);
+                sheet.SortOrder = await SheetOrdering.NextSortOrderAsync(_database.Connection, null);
+                await _database.Connection.ExecuteAsync("UPDATE Sheet SET FolderId = NULL, SortOrder = ? WHERE Id = ?", sheet.SortOrder, sheet.Id);
             }
         }
 
@@ -108,13 +110,30 @@ public class LibraryService
     public async Task MoveSheetAsync(Sheet sheet, int? targetFolderId)
     {
         sheet.FolderId = targetFolderId;
-        await _database.Connection.ExecuteAsync("UPDATE Sheet SET FolderId = ? WHERE Id = ?", targetFolderId, sheet.Id);
+        sheet.SortOrder = await SheetOrdering.NextSortOrderAsync(_database.Connection, targetFolderId);
+        await _database.Connection.ExecuteAsync("UPDATE Sheet SET FolderId = ?, SortOrder = ? WHERE Id = ?", targetFolderId, sheet.SortOrder, sheet.Id);
 
         if (_externalSync is not null)
         {
             await _externalSync.SyncSheetAsync(sheet, requestAccess: false);
             _externalSync.NotifyChanged();
         }
+    }
+
+    // Persists a full order for one folder (root = null) in a single transaction:
+    // each id gets its index as SortOrder.
+    public async Task SetSheetOrderAsync(int? folderId, IReadOnlyList<int> sheetIds)
+    {
+        var ids = sheetIds.ToArray();
+        await _database.Connection.RunInTransactionAsync(connection =>
+        {
+            for (var i = 0; i < ids.Length; i++)
+            {
+                connection.Execute("UPDATE Sheet SET SortOrder = ? WHERE Id = ? AND FolderId IS ?", i, ids[i], folderId);
+            }
+        });
+
+        _externalSync?.NotifyChanged();
     }
 
     public async Task DeleteSheetAsync(Sheet sheet)

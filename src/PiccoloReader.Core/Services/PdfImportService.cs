@@ -31,7 +31,8 @@ public class PdfImportService
             Title = Path.GetFileNameWithoutExtension(sourceFilePath),
             FileName = fileName,
             PageCount = 0,
-            DateAdded = DateTime.UtcNow
+            DateAdded = DateTime.UtcNow,
+            SortOrder = await SheetOrdering.NextSortOrderAsync(_database.Connection, folderId)
         };
 
         await _database.Connection.InsertAsync(sheet);

@@ -11,12 +11,19 @@ public class FakePdfPageRenderer : IPdfPageRenderer
 
     public List<int> RenderedPageIndexes { get; } = new();
 
+    // File path of each render, parallel to RenderedPageIndexes.
+    public List<string> RenderedFiles { get; } = new();
+
     // Crop passed for each render, parallel to RenderedPageIndexes.
     public List<PageCrop?> RenderedCrops { get; } = new();
 
     // When set, renders wait on this before completing - lets tests hold a
     // render "in flight" while navigating further.
     public TaskCompletionSource? RenderGate { get; set; }
+
+    // Optional per-file gate: renders of a file wait on the returned source
+    // (null = not held). Checked when no global RenderGate is set.
+    public Func<string, TaskCompletionSource?>? RenderGateFor { get; set; }
 
     public Task<int> GetPageCountAsync(string filePath)
     {
@@ -27,10 +34,12 @@ public class FakePdfPageRenderer : IPdfPageRenderer
     public Task<byte[]> RenderPageAsync(string filePath, int pageIndex, int targetWidthPx, int targetHeightPx, PageCrop? crop = null)
     {
         RenderedPageIndexes.Add(pageIndex);
+        RenderedFiles.Add(filePath);
         RenderedCrops.Add(crop);
-        return RenderGate is null
+        var gate = RenderGate ?? RenderGateFor?.Invoke(filePath);
+        return gate is null
             ? Task.FromResult(new byte[] { (byte)pageIndex })
-            : RenderAfterGateAsync(RenderGate, pageIndex);
+            : RenderAfterGateAsync(gate, pageIndex);
     }
 
     public List<(int PageIndex, double X, double Y, double Width, double Height, int PixelWidth, int PixelHeight, PageCrop? Crop)> RenderedRegions { get; } = new();

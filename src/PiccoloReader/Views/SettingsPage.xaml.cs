@@ -22,6 +22,7 @@ public partial class SettingsPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _viewModel.RefreshConcertTutorial();
         RefreshLanguageValue();
         RefreshTunerStripPositionValue();
         await RefreshStorageStatusAsync();

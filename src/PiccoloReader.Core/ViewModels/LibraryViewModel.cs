@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
+using PiccoloReader.Core.Services.Concert;
 
 namespace PiccoloReader.Core.ViewModels;
 
@@ -11,14 +12,19 @@ public partial class LibraryViewModel : ObservableObject
 {
     private readonly LibraryService _libraryService;
     private readonly PdfImportService _importService;
+    private readonly ISortPreferenceService? _sortPreference;
+    private readonly IConcertQueue? _concertQueue;
 
     private List<Folder> _allFolders = new();
     private List<Sheet> _allRootSheets = new();
 
-    public LibraryViewModel(LibraryService libraryService, PdfImportService importService)
+    public LibraryViewModel(LibraryService libraryService, PdfImportService importService, ISortPreferenceService? sortPreference = null, IConcertQueue? concertQueue = null)
     {
         _libraryService = libraryService;
         _importService = importService;
+        _sortPreference = sortPreference;
+        _concertQueue = concertQueue;
+        LoadSavedSort();
     }
 
     public ObservableCollection<Folder> Folders { get; } = new();
@@ -76,12 +82,17 @@ public partial class LibraryViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasSheetResults;
 
+    [ObservableProperty]
+    private bool _canReorderSheets;
+
     partial void OnFolderSearchTextChanged(string value) => RefreshFolders();
 
     partial void OnSheetSearchTextChanged(string value) => RefreshSheets();
 
     public async Task LoadAsync()
     {
+        LoadSavedSort();
+
         _allFolders = (await _libraryService.GetFoldersAsync()).ToList();
         var counts = await _libraryService.GetSheetCountsByFolderAsync();
         foreach (var folder in _allFolders)
@@ -170,8 +181,45 @@ public partial class LibraryViewModel : ObservableObject
     {
         SheetSortField = field;
         SheetSortDirection = direction;
+        _sortPreference?.Save(field, direction);
         RefreshSheets();
     }
+
+    private void LoadSavedSort()
+    {
+        if (_sortPreference is null)
+        {
+            return;
+        }
+
+        SheetSortField = _sortPreference.SheetSortField;
+        SheetSortDirection = _sortPreference.SheetSortDirection;
+    }
+
+    // Called when a drag-and-drop ends: the visible order becomes the custom order.
+    public async Task CommitSheetOrderAsync()
+    {
+        if (!CanReorderSheets)
+        {
+            return;
+        }
+
+        var ordered = RootSheets.ToList();
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            ordered[i].SortOrder = i;
+        }
+
+        SheetSortField = SortField.Custom;
+        SheetSortDirection = SortDirection.Ascending;
+        _sortPreference?.Save(SortField.Custom, SortDirection.Ascending);
+
+        await _libraryService.SetSheetOrderAsync(null, ordered.Select(s => s.Id).ToList());
+    }
+
+    // The whole root list in the current sort, ignoring the search filter.
+    public void PublishConcertQueue() =>
+        _concertQueue?.SetQueue(SheetSorter.Sort(_allRootSheets, SheetSortField, SheetSortDirection).Select(s => s.Id));
 
     private void RefreshFolders()
     {
@@ -202,17 +250,8 @@ public partial class LibraryViewModel : ObservableObject
             ? _allRootSheets
             : _allRootSheets.Where(s => s.Title.Contains(SheetSearchText, StringComparison.OrdinalIgnoreCase));
 
-        var sorted = SheetSortField switch
-        {
-            SortField.DateAdded => SheetSortDirection == SortDirection.Ascending
-                ? filtered.OrderBy(s => s.DateAdded)
-                : filtered.OrderByDescending(s => s.DateAdded),
-            _ => SheetSortDirection == SortDirection.Ascending
-                ? filtered.OrderBy(s => s.Title)
-                : filtered.OrderByDescending(s => s.Title)
-        };
-
-        RootSheets.SyncWith(sorted.ToList());
+        RootSheets.SyncWith(SheetSorter.Sort(filtered, SheetSortField, SheetSortDirection));
+        CanReorderSheets = string.IsNullOrWhiteSpace(SheetSearchText) && RootSheets.Count > 1;
 
         HasSheetResults = RootSheets.Count > 0;
         HasNoSheetResults = _allRootSheets.Count > 0 && RootSheets.Count == 0;

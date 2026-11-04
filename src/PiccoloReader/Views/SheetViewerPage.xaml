@@ -22,7 +22,7 @@
 
     <!-- Columns 0 and 2 stay empty (zero width) unless the tuner strip sits on the left or right edge. -->
     <Grid RowDefinitions="*,Auto" ColumnDefinitions="Auto,*,Auto">
-    <Grid Grid.Row="0" Grid.Column="1" BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
+    <Grid x:Name="ViewerArea" Grid.Row="0" Grid.Column="1" BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Black}}">
 
         <Grid
             x:Name="PageContainer" AutomationId="ViewerPageContainer"
@@ -782,5 +782,7 @@
          Placed and sized per the position preference by ApplyTunerStripPosition (default: right edge). -->
     <Grid x:Name="TunerStripHost" Grid.Row="0" Grid.Column="2" WidthRequest="6" IsVisible="{x:Static local:PlatformInfo.IsAndroid}" />
 
+    <!-- Concert mode tutorial: above everything, swallows touches while shown. -->
+    <views:CoachMarkOverlay x:Name="CoachOverlay" Grid.RowSpan="2" Grid.ColumnSpan="3" />
     </Grid>
 </ContentPage>

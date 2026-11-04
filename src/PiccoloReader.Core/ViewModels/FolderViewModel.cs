@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
+using PiccoloReader.Core.Services.Concert;
 
 namespace PiccoloReader.Core.ViewModels;
 
@@ -11,13 +12,18 @@ public partial class FolderViewModel : ObservableObject
 {
     private readonly LibraryService _libraryService;
     private readonly PdfImportService _importService;
+    private readonly ISortPreferenceService? _sortPreference;
+    private readonly IConcertQueue? _concertQueue;
 
     private List<Sheet> _allSheets = new();
 
-    public FolderViewModel(LibraryService libraryService, PdfImportService importService)
+    public FolderViewModel(LibraryService libraryService, PdfImportService importService, ISortPreferenceService? sortPreference = null, IConcertQueue? concertQueue = null)
     {
         _libraryService = libraryService;
         _importService = importService;
+        _sortPreference = sortPreference;
+        _concertQueue = concertQueue;
+        LoadSavedSort();
     }
 
     [ObservableProperty]
@@ -50,6 +56,9 @@ public partial class FolderViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasResults;
 
+    [ObservableProperty]
+    private bool _canReorder;
+
     public ObservableCollection<Sheet> Sheets { get; } = new();
 
     partial void OnSearchTextChanged(string value) => RefreshSheets();
@@ -58,6 +67,8 @@ public partial class FolderViewModel : ObservableObject
     // list is then emptied and the view should leave the folder.
     public async Task<bool> LoadAsync()
     {
+        LoadSavedSort();
+
         if (!(await _libraryService.GetFoldersAsync()).Any(f => f.Id == FolderId))
         {
             _allSheets = new List<Sheet>();
@@ -105,8 +116,45 @@ public partial class FolderViewModel : ObservableObject
     {
         SortField = field;
         SortDirection = direction;
+        _sortPreference?.Save(field, direction);
         RefreshSheets();
     }
+
+    private void LoadSavedSort()
+    {
+        if (_sortPreference is null)
+        {
+            return;
+        }
+
+        SortField = _sortPreference.SheetSortField;
+        SortDirection = _sortPreference.SheetSortDirection;
+    }
+
+    // Called when a drag-and-drop ends: the visible order becomes the custom order.
+    public async Task CommitSheetOrderAsync()
+    {
+        if (!CanReorder)
+        {
+            return;
+        }
+
+        var ordered = Sheets.ToList();
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            ordered[i].SortOrder = i;
+        }
+
+        SortField = SortField.Custom;
+        SortDirection = SortDirection.Ascending;
+        _sortPreference?.Save(SortField.Custom, SortDirection.Ascending);
+
+        await _libraryService.SetSheetOrderAsync(FolderId, ordered.Select(s => s.Id).ToList());
+    }
+
+    // The whole folder in the current sort, ignoring the search filter.
+    public void PublishConcertQueue() =>
+        _concertQueue?.SetQueue(SheetSorter.Sort(_allSheets, SortField, SortDirection).Select(s => s.Id));
 
     private void RefreshSheets()
     {
@@ -114,17 +162,8 @@ public partial class FolderViewModel : ObservableObject
             ? _allSheets
             : _allSheets.Where(s => s.Title.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
 
-        var sorted = SortField switch
-        {
-            SortField.DateAdded => SortDirection == SortDirection.Ascending
-                ? filtered.OrderBy(s => s.DateAdded)
-                : filtered.OrderByDescending(s => s.DateAdded),
-            _ => SortDirection == SortDirection.Ascending
-                ? filtered.OrderBy(s => s.Title)
-                : filtered.OrderByDescending(s => s.Title)
-        };
-
-        Sheets.SyncWith(sorted.ToList());
+        Sheets.SyncWith(SheetSorter.Sort(filtered, SortField, SortDirection));
+        CanReorder = string.IsNullOrWhiteSpace(SearchText) && Sheets.Count > 1;
 
         HasResults = Sheets.Count > 0;
         IsFolderEmpty = _allSheets.Count == 0;

@@ -7,6 +7,7 @@
     xmlns:converters="clr-namespace:PiccoloReader.Converters"
     xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
     xmlns:local="clr-namespace:PiccoloReader"
+    xmlns:views="clr-namespace:PiccoloReader.Views"
     x:Name="ThisPage"
     Shell.NavBarIsVisible="False"
     Title="{x:Static strings:AppStrings.Library}">
@@ -50,6 +51,7 @@
 
     <Grid>
         <CollectionView
+            x:Name="SheetsList"
             Grid.Row="0"
             ItemsSource="{Binding RootSheets}"
             SelectionMode="None">
@@ -135,7 +137,7 @@
                         </Border>
                         <ImageButton
                             Grid.Column="1"
-                            AutomationId="LibrarySortButton"
+                            x:Name="SheetSortButton" AutomationId="LibrarySortButton"
                             SemanticProperties.Description="{x:Static strings:AppStrings.SortLabel}"
                             Style="{StaticResource IconButton}"
                             CornerRadius="14" BorderWidth="1"
@@ -242,7 +244,7 @@
 
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <Grid AutomationId="LibrarySheetRow" ColumnDefinitions="*,Auto" Padding="20,8,8,8" BackgroundColor="Transparent">
+                    <Grid AutomationId="LibrarySheetRow" ColumnDefinitions="*,Auto,Auto" Padding="20,8,8,8" BackgroundColor="Transparent">
                       <!-- Tap/long-press area; the more button is a sibling so its tap does not open the sheet. -->
                       <Grid x:Name="SheetItemRoot" ColumnDefinitions="Auto,*" ColumnSpacing="14" BackgroundColor="Transparent">
                         <Grid.GestureRecognizers>
@@ -283,8 +285,36 @@
 
                         </Grid>
 
+                        <!-- Drag handle: long press starts a native drag (Android); a sibling of the tap area so the row long-press menu is untouched. -->
+
+                        <Grid Grid.Column="1" VerticalOptions="Center" IsVisible="{x:Static local:PlatformInfo.IsAndroid}">
+
+                            <Grid AutomationId="LibrarySheetDragHandle" WidthRequest="40" HeightRequest="48" BackgroundColor="Transparent"
+
+                                  SemanticProperties.Description="{x:Static strings:AppStrings.ReorderHandleLabel}"
+
+                                  IsVisible="{Binding BindingContext.CanReorderSheets, Source={x:Reference ThisPage}}"
+
+                                  HandlerChanged="OnDragHandleHandlerChanged">
+
+                                <Image HorizontalOptions="Center" VerticalOptions="Center" InputTransparent="True">
+
+                                    <Image.Source>
+
+                                        <FontImageSource Glyph="&#xE945;" FontFamily="MaterialOutlined" Size="24"
+
+                                            Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+
+                                    </Image.Source>
+
+                                </Image>
+
+                            </Grid>
+
+                        </Grid>
+
                         <ImageButton
-                            Grid.Column="1"
+                            Grid.Column="2"
                             AutomationId="LibraryItemMoreButton"
                             SemanticProperties.Description="{x:Static strings:AppStrings.MoreOptions}"
                             Style="{StaticResource IconButton}"
@@ -353,5 +383,6 @@
                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
         </Border>
 
+        <views:CoachMarkOverlay x:Name="CoachOverlay" />
     </Grid>
 </ContentPage>

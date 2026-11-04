@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Resources.Strings;
 using PiccoloReader.Core.Services;
+using PiccoloReader.Core.Services.Concert;
 
 namespace PiccoloReader.Core.ViewModels;
 
@@ -23,6 +24,8 @@ public partial class SheetViewerViewModel : ObservableObject
     private readonly BookmarkService _bookmarkService;
     private readonly PageCropService _pageCropService;
     private readonly IReadingPreferenceService _readingPreferenceService;
+    private readonly IConcertQueue? _concertQueue;
+    private readonly IConcertModePreferenceService? _concertMode;
 
     // One render task per page index - current page plus prefetched
     // neighbours. Renders run one at a time through _renderGate (each
@@ -111,8 +114,12 @@ public partial class SheetViewerViewModel : ObservableObject
         IReadingPreferenceService readingPreferenceService,
         PageCropService pageCropService,
         IPageThumbnailStore? thumbnails = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IConcertQueue? concertQueue = null,
+        IConcertModePreferenceService? concertMode = null)
     {
+        _concertQueue = concertQueue;
+        _concertMode = concertMode;
         _pageCropService = pageCropService;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _thumbnails = thumbnails;
@@ -304,54 +311,114 @@ public partial class SheetViewerViewModel : ObservableObject
 
     public string PageIndicatorText => string.Format(AppStrings.PageIndicatorFormat, CurrentPageDisplay, PageCount);
 
-    public async Task LoadAsync(int sheetId, int targetWidthPx, int targetHeightPx)
+    public Task LoadAsync(int sheetId, int targetWidthPx, int targetHeightPx) =>
+        LoadCoreAsync(sheetId, targetWidthPx, targetHeightPx, StartPage.Saved, preload: null, switching: false);
+
+    private enum StartPage
+    {
+        Saved,
+        First,
+        Last
+    }
+
+    // Opens a sheet. Used for the first load and for the in-place switch of
+    // concert mode (switching: true), where `preload` may carry the sheet's
+    // data and already started renders. Bumps _sheetVersion first so work
+    // still running for the previous sheet notices and drops its results.
+    private async Task LoadCoreAsync(
+        int sheetId, int targetWidthPx, int targetHeightPx, StartPage startPage, SheetPreload? preload, bool switching)
     {
         ReadingMode = _readingPreferenceService.GetReadingMode();
+        _sheetVersion++;
         _pageRenders.Clear();
         ClearUndoHistory();
         OpeningThumbnailBytes = null;
+        SelectedAnnotation = null;
+        VisibleArea = null;
+        DiscardPreloads();
 
-        IsLoading = true;
+        PreloadedSheet? data = null;
+        if (preload is not null)
+        {
+            data = await preload.Data;
+            if (data is not null)
+            {
+                foreach (var render in preload.Renders)
+                {
+                    _pageRenders[render.Key] = render.Value;
+                }
+            }
+        }
+
+        IsLoading = data is null;
         try
         {
             _targetWidthPx = targetWidthPx;
             _targetHeightPx = targetHeightPx;
 
-            var sheet = await _libraryService.GetSheetAsync(sheetId);
-            _sheet = sheet;
-            Title = sheet.Title;
-            _filePath = Path.Combine(_storageProvider.SheetsDirectory, sheet.FileName);
-
-            var pageCount = sheet.PageCount;
-            if (pageCount <= 0)
+            Sheet sheet;
+            int pageCount;
+            if (data is not null)
             {
-                pageCount = await _pdfPageRenderer.GetPageCountAsync(_filePath);
-                await _libraryService.UpdateSheetPageCountAsync(sheet, pageCount);
+                sheet = data.Sheet;
+                _filePath = data.FilePath;
+                pageCount = data.PageCount;
+            }
+            else
+            {
+                sheet = await _libraryService.GetSheetAsync(sheetId);
+                _filePath = Path.Combine(_storageProvider.SheetsDirectory, sheet.FileName);
+                pageCount = sheet.PageCount;
+                if (pageCount <= 0)
+                {
+                    pageCount = await _pdfPageRenderer.GetPageCountAsync(_filePath);
+                    await _libraryService.UpdateSheetPageCountAsync(sheet, pageCount);
+                }
             }
 
+            _sheet = sheet;
+            Title = sheet.Title;
             PageCount = pageCount;
             CurrentPageIndex = pageCount > 0
-                ? Math.Clamp(sheet.LastViewedPageIndex, 0, pageCount - 1)
+                ? startPage switch
+                {
+                    StartPage.First => 0,
+                    StartPage.Last => pageCount - 1,
+                    _ => Math.Clamp(sheet.LastViewedPageIndex, 0, pageCount - 1)
+                }
                 : 0;
 
             // The cached thumbnail loads in parallel with the heavy work and
             // never delays it: it is applied only if it arrives before the
-            // full render of the opening page.
+            // full render of the opening page (and not at all when a
+            // preloaded render is already there).
             var openId = ++_openVersion;
             _saveThumbnailAfterRender = _thumbnails is not null && pageCount > 0;
             _thumbnailPageIndex = CurrentPageIndex;
-            _thumbnailApplicable = pageCount > 0 && _thumbnails is not null;
+            _thumbnailApplicable = pageCount > 0 && _thumbnails is not null && !IsRenderReady(CurrentPageIndex);
             if (_thumbnailApplicable)
             {
                 _ = ApplyOpeningThumbnailAsync(sheetId, CurrentPageIndex, openId);
             }
 
-            _crops = await _pageCropService.GetCropsAsync(sheetId);
-
-            Bookmarks.Clear();
-            foreach (var bookmark in await _bookmarkService.GetBookmarksAsync(sheetId))
+            if (data is not null)
             {
-                Bookmarks.Add(bookmark);
+                _crops = data.Crops;
+                Bookmarks.Clear();
+                foreach (var bookmark in data.Bookmarks)
+                {
+                    Bookmarks.Add(bookmark);
+                }
+            }
+            else
+            {
+                _crops = await _pageCropService.GetCropsAsync(sheetId);
+
+                Bookmarks.Clear();
+                foreach (var bookmark in await _bookmarkService.GetBookmarksAsync(sheetId))
+                {
+                    Bookmarks.Add(bookmark);
+                }
             }
 
             ContinuousPages.Clear();
@@ -362,6 +429,13 @@ public partial class SheetViewerViewModel : ObservableObject
             {
                 var crop = GetPageCrop(i);
                 ContinuousPages.Add(new ContinuousPage(i, crop.CroppedAspectRatio(estimatedAspectRatio)) { Crop = crop });
+            }
+
+            if (switching)
+            {
+                // The view re-anchors its zoom/scroll for the new sheet here,
+                // before the first page is shown.
+                SheetSwitched?.Invoke(startPage == StartPage.Last);
             }
 
             if (IsContinuousReading)
@@ -387,7 +461,12 @@ public partial class SheetViewerViewModel : ObservableObject
             _saveThumbnailAfterRender = false;
             IsLoading = false;
         }
+
+        UpdatePreloads();
     }
+
+    private bool IsRenderReady(int pageIndex) =>
+        _pageRenders.TryGetValue(pageIndex, out var task) && task.IsCompletedSuccessfully;
 
     public async Task GoToPageAsync(int pageIndex)
     {
@@ -452,6 +531,8 @@ public partial class SheetViewerViewModel : ObservableObject
             }
         }
 
+        UpdatePreloads();
+
         EvictDistantPages();
 
         // Center page first so it wins the render queue, then the rest of
@@ -477,10 +558,11 @@ public partial class SheetViewerViewModel : ObservableObject
     private async Task LoadContinuousPageAsync(ContinuousPage page)
     {
         page.IsLoadRequested = true;
+        var version = _sheetVersion;
 
         page.Crop = GetPageCrop(page.PageIndex);
         var imageBytes = await GetPageImageAsync(page.PageIndex);
-        if (!page.IsLoadRequested)
+        if (!page.IsLoadRequested || version != _sheetVersion)
         {
             return;
         }
@@ -508,7 +590,7 @@ public partial class SheetViewerViewModel : ObservableObject
         if (_sheet is not null)
         {
             var annotations = await LoadPageAnnotationsAsync(page.PageIndex, page.FullAspectRatio);
-            if (page.IsLoadRequested)
+            if (page.IsLoadRequested && version == _sheetVersion)
             {
                 SetLoadedAnnotations(page, annotations.ToList());
             }
@@ -571,6 +653,7 @@ public partial class SheetViewerViewModel : ObservableObject
     private async Task CycleReadingModeAsync()
     {
         var previousMode = ReadingMode;
+        DiscardPreloads();
         IsContinuousEditing = false;
         ReadingMode = ReadingMode switch
         {
@@ -601,6 +684,8 @@ public partial class SheetViewerViewModel : ObservableObject
             // page view following it.
             await LoadCurrentPageAsync();
         }
+
+        UpdatePreloads();
     }
 
     // AllowConcurrentExecutions: page turns must not wait for the previous
@@ -979,6 +1064,7 @@ public partial class SheetViewerViewModel : ObservableObject
     private async Task LoadCurrentPageAsync()
     {
         var pageIndex = CurrentPageIndex;
+        var version = _sheetVersion;
         _keepFirst = Math.Max(0, pageIndex - PrefetchRadius);
         _keepLast = pageIndex + PrefetchRadius;
 
@@ -1010,13 +1096,13 @@ public partial class SheetViewerViewModel : ObservableObject
         }
         finally
         {
-            if (pageIndex == CurrentPageIndex)
+            if (pageIndex == CurrentPageIndex && version == _sheetVersion)
             {
                 IsLoading = false;
             }
         }
 
-        if (pageIndex != CurrentPageIndex)
+        if (pageIndex != CurrentPageIndex || version != _sheetVersion)
         {
             return;
         }
@@ -1040,7 +1126,7 @@ public partial class SheetViewerViewModel : ObservableObject
         if (_sheet is not null)
         {
             var annotations = await LoadPageAnnotationsAsync(pageIndex, CurrentPageAspectRatio);
-            if (pageIndex != CurrentPageIndex)
+            if (pageIndex != CurrentPageIndex || version != _sheetVersion)
             {
                 return;
             }
@@ -1056,13 +1142,14 @@ public partial class SheetViewerViewModel : ObservableObject
 
         EvictDistantPages();
         PrefetchNeighbours(pageIndex);
+        UpdatePreloads();
     }
 
     private Task<byte[]?> GetPageImageAsync(int pageIndex)
     {
         if (!_pageRenders.TryGetValue(pageIndex, out var task) || task.IsFaulted || task.IsCanceled)
         {
-            task = RenderPageGatedAsync(pageIndex);
+            task = RenderPageGatedAsync(pageIndex, _filePath, _sheetVersion);
             _pageRenders[pageIndex] = task;
         }
 
@@ -1085,24 +1172,42 @@ public partial class SheetViewerViewModel : ObservableObject
             _sheet!.Id, pageIndex, pageAspectRatio > 0 ? pageAspectRatio : targetAspect, areaWidth, areaHeight, persist: known);
     }
 
-    private async Task<byte[]?> RenderPageGatedAsync(int pageIndex)
+    // filePath/version are the sheet this render was asked for: a render still
+    // queued when the viewer switches to another sheet (concert mode) must
+    // neither render the new sheet's file nor touch its cache.
+    private async Task<byte[]?> RenderPageGatedAsync(int pageIndex, string filePath, int version)
     {
-        await _renderGate.WaitAsync();
+        // Counted from queueing, so low-priority preloads wait while any
+        // current-sheet render is queued or running.
+        Interlocked.Increment(ref _currentRenderDemand);
         try
         {
-            if (!IsInKeepWindow(pageIndex))
+            await _renderGate.WaitAsync();
+            try
             {
-                _pageRenders.Remove(pageIndex);
-                return null;
-            }
+                if (version != _sheetVersion)
+                {
+                    return null;
+                }
 
-            var crop = GetPageCrop(pageIndex);
-            return await _pdfPageRenderer.RenderPageAsync(
-                _filePath, pageIndex, _targetWidthPx, _targetHeightPx, crop.IsFull ? null : crop);
+                if (!IsInKeepWindow(pageIndex))
+                {
+                    _pageRenders.Remove(pageIndex);
+                    return null;
+                }
+
+                var crop = GetPageCrop(pageIndex);
+                return await _pdfPageRenderer.RenderPageAsync(
+                    filePath, pageIndex, _targetWidthPx, _targetHeightPx, crop.IsFull ? null : crop);
+            }
+            finally
+            {
+                _renderGate.Release();
+            }
         }
         finally
         {
-            _renderGate.Release();
+            Interlocked.Decrement(ref _currentRenderDemand);
         }
     }
 

@@ -12,10 +12,13 @@ public partial class LibraryPage : ContentPage
     private readonly LibraryViewModel _viewModel;
     private readonly LibraryService _libraryService;
     private readonly PiccoloReader.Services.SheetShareFlow _shareFlow;
+    private readonly SheetReorderController _reorder;
+    private readonly LibraryConcertCoach _coach;
+    private bool _isAppeared;
     private readonly LibraryRecoveryFlow _recoveryFlow;
     private readonly SharedPdfImportFlow _sharedImportFlow;
 
-    public LibraryPage(LibraryViewModel viewModel, LibraryService libraryService, LibraryRecoveryFlow recoveryFlow, SharedPdfImportFlow sharedImportFlow, PiccoloReader.Services.SheetShareFlow shareFlow)
+    public LibraryPage(LibraryViewModel viewModel, LibraryService libraryService, LibraryRecoveryFlow recoveryFlow, SharedPdfImportFlow sharedImportFlow, PiccoloReader.Services.SheetShareFlow shareFlow, ConcertTutorialService concertTutorial)
     {
         InitializeComponent();
         _shareFlow = shareFlow;
@@ -29,6 +32,8 @@ public partial class LibraryPage : ContentPage
 
         FolderLongPressCommand = new Command<Folder>(async folder => await OnFolderLongPressedAsync(folder));
         SheetLongPressCommand = new Command<Sheet>(async sheet => await OnSheetLongPressedAsync(sheet));
+        _reorder = new SheetReorderController(SheetsList, _viewModel.RootSheets, () => _viewModel.CanReorderSheets, CommitOrderAsync);
+        _coach = new LibraryConcertCoach(concertTutorial, CoachOverlay, SheetsList, SheetSortButton, () => _viewModel.RootSheets.FirstOrDefault(), () => PlatformInfo.IsAndroid && _viewModel.CanReorderSheets, () => _isAppeared);
     }
 
     private void RebuildFolderGrid()
@@ -54,10 +59,33 @@ public partial class LibraryPage : ContentPage
 
     public ICommand SheetLongPressCommand { get; }
 
+    private async Task CommitOrderAsync()
+    {
+        try
+        {
+            await _viewModel.CommitSheetOrderAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Saving the sheet order failed: {ex}");
+        }
+    }
+
+    private void OnDragHandleHandlerChanged(object? sender, EventArgs e)
+    {
+        if (sender is VisualElement handle)
+        {
+            _reorder.WireHandle(handle);
+            _coach.TrackHandle(handle);
+        }
+    }
+
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _isAppeared = true;
         await _viewModel.LoadAsync();
+        _ = _coach.TryShowAsync();
 
         // A PDF shared into the app before the shell was ready.
         _ = _sharedImportFlow.ProcessPendingAsync();
@@ -68,6 +96,24 @@ public partial class LibraryPage : ContentPage
         {
             await _viewModel.LoadAsync();
         }
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _isAppeared = false;
+        _coach.Cancel();
+    }
+
+    protected override bool OnBackButtonPressed()
+    {
+        if (_coach.IsShowing)
+        {
+            _coach.Skip();
+            return true;
+        }
+
+        return base.OnBackButtonPressed();
     }
 
     private void ShowSyncStatus(string? text) => Dispatcher.Dispatch(() =>
@@ -206,7 +252,8 @@ public partial class LibraryPage : ContentPage
             AppStrings.SortNameAscending,
             AppStrings.SortNameDescending,
             AppStrings.SortDateAddedAscending,
-            AppStrings.SortDateAddedDescending);
+            AppStrings.SortDateAddedDescending,
+            AppStrings.SortCustom);
 
         (SortField Field, SortDirection Direction)? sort = choice switch
         {
@@ -214,6 +261,7 @@ public partial class LibraryPage : ContentPage
             var c when c == AppStrings.SortNameDescending => (SortField.Name, SortDirection.Descending),
             var c when c == AppStrings.SortDateAddedAscending => (SortField.DateAdded, SortDirection.Ascending),
             var c when c == AppStrings.SortDateAddedDescending => (SortField.DateAdded, SortDirection.Descending),
+            var c when c == AppStrings.SortCustom => (SortField.Custom, SortDirection.Ascending),
             _ => null
         };
 
@@ -262,6 +310,7 @@ public partial class LibraryPage : ContentPage
 
         if (e.Parameter is Sheet sheet)
         {
+            _viewModel.PublishConcertQueue();
             await Shell.Current.GoToAsync($"sheetviewer?sheetId={sheet.Id}");
         }
     }
