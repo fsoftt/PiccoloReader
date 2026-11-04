@@ -51,6 +51,13 @@ public sealed class SingleDragTouchListener : Java.Lang.Object, View.IOnTouchLis
         _density = context.Resources?.DisplayMetrics?.Density ?? 1f;
     }
 
+    // Drops a long-press still waiting (the page is going away).
+    public void CancelLongPress()
+    {
+        _longPress?.Reset();
+        _longPressFired = false;
+    }
+
     private void StartLongPress(MotionEvent e)
     {
         _longPressFired = false;
@@ -90,6 +97,11 @@ public sealed class SingleDragTouchListener : Java.Lang.Object, View.IOnTouchLis
                 StartLongPress(e);
                 break;
 
+            case MotionEventActions.PointerDown:
+                // A second finger: not a long-press any more.
+                _longPress?.Cancel();
+                break;
+
             case MotionEventActions.Move:
                 if (_isDragging && !_longPressFired)
                 {
@@ -102,11 +114,17 @@ public sealed class SingleDragTouchListener : Java.Lang.Object, View.IOnTouchLis
             case MotionEventActions.Up:
             case MotionEventActions.Cancel:
                 _longPress?.Cancel();
+                // After a long-press the drag was already put back and the menu owns the
+                // selection: nothing to end (the page restores the controls afterwards).
+                var wasLongPress = _longPressFired;
                 _longPressFired = false;
                 if (_isDragging)
                 {
                     _isDragging = false;
-                    _onEnded();
+                    if (!wasLongPress)
+                    {
+                        _onEnded();
+                    }
                 }
 
                 break;

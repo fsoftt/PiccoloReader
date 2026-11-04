@@ -241,6 +241,10 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnDisappearing();
 #if ANDROID
+        _pageContainerTouchListener?.CancelLongPress();
+        _selectionMoveTouchListener?.CancelLongPress();
+#endif
+#if ANDROID
         AbortStylusGestures();
 #endif
         _viewModel.SaveCurrentPageThumbnail();
@@ -1156,10 +1160,7 @@ public partial class SheetViewerPage : ContentPage
         if (ToolSheet.IsVisible)
         {
             ToolSheet.IsVisible = false;
-            if (_viewModel.ActiveTool != AnnotationTool.Text)
-            {
-                return;
-            }
+            return;
         }
 
         if (_isToolFabExpanded)
@@ -1719,6 +1720,9 @@ public partial class SheetViewerPage : ContentPage
         {
             // Text keeps its proportions; the average of both drags scales it.
             var scale = (annotation.Width / _resizeStartWidth + annotation.Height / _resizeStartHeight) / 2;
+            // Never past the visible right or bottom edge (the top-left stays put).
+            var crop = _viewModel.CurrentPageCrop;
+            scale = Math.Min(scale, Math.Min((crop.Right - annotation.X) / _resizeStartWidth, (crop.Bottom - annotation.Y) / _resizeStartHeight));
             annotation.Height = Math.Clamp(_resizeStartHeight * scale, TextFigure.MinHeight, TextFigure.MaxHeight);
             annotation.Width = _resizeStartWidth * annotation.Height / _resizeStartHeight;
         }
@@ -2038,10 +2042,7 @@ public partial class SheetViewerPage : ContentPage
         if (ToolSheet.IsVisible)
         {
             ToolSheet.IsVisible = false;
-            if (_viewModel.ActiveTool != AnnotationTool.Text)
-            {
-                return;
-            }
+            return;
         }
 
         if (_isToolFabExpanded)
@@ -2361,7 +2362,13 @@ public partial class SheetViewerPage : ContentPage
         {
             if (page is not null && !dropped && stroke.Count >= 2 && sheetId > 0)
             {
-                await _viewModel.AddStrokeToContinuousPageAsync(page, sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, stroke);
+                var recognition = await _viewModel.AddStrokeToContinuousPageAsync(
+                    page, sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, stroke, _stylusPreferences.RecognizesShapes);
+                if (recognition is not null)
+                {
+                    var kind = SlurGeometry.IsSlur(recognition.Figure.IconKey) ? RecognizedShapeKind.Slur : RecognizedShapeKind.Hairpin;
+                    ShowShapeConvertedHint(kind, () => _viewModel.RevertContinuousRecognitionAsync(page, recognition));
+                }
             }
         }
         catch (Exception ex)
@@ -4335,8 +4342,45 @@ public partial class SheetViewerPage : ContentPage
     {
         // Only the pencil and the stylus are recognized; the highlighter draws wide bands.
         var recognize = _stylusPreferences.RecognizesShapes && _viewModel.ActiveTool != AnnotationTool.Highlighter;
-        await _viewModel.AddStrokeOrRecognizedShapeAsync(sheetId, ActiveStrokeColorHex, ActiveStrokeWidth, normalizedPoints, recognize);
+        var kind = await _viewModel.AddStrokeOrRecognizedShapeAsync(sheetId, ActiveStrokeColorHex, ActiveStrokeWidth, normalizedPoints, recognize);
+        ShowShapeConvertedHint(kind);
         InvalidateAnnotations();
+    }
+
+    // Tells the user, only the first few times, that a drawn stroke became a
+    // figure and that undo brings it back. In the continuous list there is no
+    // undo button, so the message carries an Undo action. Not blocking.
+    private void ShowShapeConvertedHint(RecognizedShapeKind kind, Func<Task>? undo = null)
+    {
+        const int MaxHints = 3;
+        if (kind == RecognizedShapeKind.None || _stylusPreferences.ShapeHintsShown >= MaxHints)
+        {
+            return;
+        }
+
+        _stylusPreferences.ShapeHintsShown++;
+        var message = kind == RecognizedShapeKind.Slur ? AppStrings.ShapeConvertedSlur : AppStrings.ShapeConvertedHairpin;
+        if (undo is null)
+        {
+            _ = CommunityToolkit.Maui.Alerts.Toast.Make(message, CommunityToolkit.Maui.Core.ToastDuration.Long).Show();
+            return;
+        }
+
+        _ = CommunityToolkit.Maui.Alerts.Snackbar.Make(
+            message,
+            async () =>
+            {
+                try
+                {
+                    await undo();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Undo of recognized shape failed: {ex}");
+                }
+            },
+            AppStrings.UndoAction,
+            TimeSpan.FromSeconds(6)).Show();
     }
 
     // Direct stylus drawing (no tool active). The stroke is kept in page-

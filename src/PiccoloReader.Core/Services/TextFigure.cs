@@ -12,6 +12,7 @@ public static class TextFigure
     public const double MinHeight = 0.012;
     public const double MaxHeight = 0.2;
 
+    // In text elements (what a user sees as one character).
     public const int MaxLength = 120;
 
     // Trimmed single-line text, or null when nothing is left.
@@ -23,9 +24,11 @@ public static class TextFigure
         }
 
         var single = string.Join(' ', text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)).Trim();
-        if (single.Length > MaxLength)
+        // Cut on a text-element boundary so an emoji or an accent is never split.
+        var info = new System.Globalization.StringInfo(single);
+        if (info.LengthInTextElements > MaxLength)
         {
-            single = single[..MaxLength];
+            single = info.SubstringByTextElements(0, MaxLength);
         }
 
         return single.Length == 0 ? null : single;

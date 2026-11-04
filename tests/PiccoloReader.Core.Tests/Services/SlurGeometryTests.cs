@@ -141,4 +141,27 @@ public class SlurGeometryTests
             Assert.Equal(page[i].Y, y + points[i].Y * height, 6);
         }
     }
+
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("{\"a\":1}")]
+    [InlineData("[1,2,3]")]
+    [InlineData("[]")]
+    public void ControlPoints_MalformedPoints_FallBackToDefault(string json)
+    {
+        var slur = new Annotation { IconKey = SlurGeometry.AboveKey, Points = json };
+
+        Assert.Equal(SlurGeometry.DefaultPoints(true), SlurGeometry.ControlPoints(slur));
+    }
+
+    [Fact]
+    public void FromPagePoints_DegenerateCurve_StillGivesABoxWithExtent()
+    {
+        var flat = new (double X, double Y)[] { (0.2, 0.5), (0.3, 0.5), (0.4, 0.5), (0.5, 0.5) };
+
+        var (_, _, width, height, points) = SlurGeometry.FromPagePoints(flat);
+
+        Assert.True(width > 0 && height >= SlurGeometry.MinExtent);
+        Assert.All(points, p => Assert.True(double.IsFinite(p.X) && double.IsFinite(p.Y)));
+    }
 }

@@ -13,4 +13,9 @@ public interface IStylusPreferenceService
     /// instead of a stroke. On by default. Cached like DrawsDirectly.
     /// </summary>
     bool RecognizesShapes { get; set; }
+
+    /// <summary>
+    /// How many times the "converted to a figure" hint was shown; it stops after a few.
+    /// </summary>
+    int ShapeHintsShown { get; set; }
 }

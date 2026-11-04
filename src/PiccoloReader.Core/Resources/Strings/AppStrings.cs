@@ -62,6 +62,8 @@ public static class AppStrings
     public static string Color => Get(nameof(Color));
     public static string Width => Get(nameof(Width));
     public static string Eraser => Get(nameof(Eraser));
+    public static string ShapeConvertedHairpin => Get(nameof(ShapeConvertedHairpin));
+    public static string ShapeConvertedSlur => Get(nameof(ShapeConvertedSlur));
     public static string TextToolHint => Get(nameof(TextToolHint));
     public static string EditText => Get(nameof(EditText));
     public static string AddTextTitle => Get(nameof(AddTextTitle));

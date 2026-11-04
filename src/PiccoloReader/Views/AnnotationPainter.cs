@@ -104,19 +104,92 @@ public class AnnotationPainter
     }
 
     // Text annotations use the system sans font; the box height is one line
-    // (see TextFigure) and the text is stretched to the box's width, so
-    // resizing keeps it fitted like a glyph.
+    // (see TextFigure) and the text is stretched to the box width, so
+    // resizing keeps it fitted like a glyph. Characters the main font lacks
+    // (emoji, CJK, symbols) are drawn with a fallback font the system picks
+    // for them, run by run. There is no complex shaping, so right-to-left
+    // scripts are drawn in typing order and joining scripts are not joined.
     private const float MeasureFontSize = 100f;
     private static readonly SKTypeface TextTypeface = SKTypeface.Default;
 
-    // The text's width / line height, as drawn: what TextFigure.Size needs.
-    public static double MeasureTextAspect(string text)
+    // One line's height for a font size of 1.
+    private static readonly float LineHeightPerSize = LineHeightOf(TextTypeface);
+
+    private static float LineHeightOf(SKTypeface typeface)
     {
-        using var font = new SKFont(TextTypeface, MeasureFontSize);
+        using var font = new SKFont(typeface, MeasureFontSize);
         var metrics = font.Metrics;
-        var lineHeight = metrics.Descent - metrics.Ascent;
-        return lineHeight <= 0 ? 1 : font.MeasureText(text) / lineHeight;
+        var height = (metrics.Descent - metrics.Ascent) / MeasureFontSize;
+        return height > 0 ? height : 1.2f;
     }
+
+    // Fallback typefaces by code point; kept for the app's lifetime.
+    private static readonly Dictionary<int, SKTypeface> FallbackTypefaces = new();
+
+    private static SKTypeface TypefaceFor(int codePoint)
+    {
+        if (TextTypeface.ContainsGlyph(codePoint))
+        {
+            return TextTypeface;
+        }
+
+        lock (FallbackTypefaces)
+        {
+            if (!FallbackTypefaces.TryGetValue(codePoint, out var typeface))
+            {
+                typeface = SKFontManager.Default.MatchCharacter(codePoint) ?? TextTypeface;
+                FallbackTypefaces[codePoint] = typeface;
+            }
+
+            return typeface;
+        }
+    }
+
+    // The text split into runs of one typeface, by text element so an emoji
+    // sequence or an accent stays together.
+    private static List<(string Text, SKTypeface Typeface)> TextRuns(string text)
+    {
+        var runs = new List<(string Text, SKTypeface Typeface)>();
+        var current = new System.Text.StringBuilder();
+        SKTypeface? currentTypeface = null;
+        var elements = System.Globalization.StringInfo.GetTextElementEnumerator(text);
+        while (elements.MoveNext())
+        {
+            var element = (string)elements.Current;
+            var typeface = TypefaceFor(char.ConvertToUtf32(element, 0));
+            if (currentTypeface is not null && !ReferenceEquals(typeface, currentTypeface))
+            {
+                runs.Add((current.ToString(), currentTypeface));
+                current.Clear();
+            }
+
+            currentTypeface = typeface;
+            current.Append(element);
+        }
+
+        if (currentTypeface is not null && current.Length > 0)
+        {
+            runs.Add((current.ToString(), currentTypeface));
+        }
+
+        return runs;
+    }
+
+    private static float MeasureRuns(List<(string Text, SKTypeface Typeface)> runs, float size)
+    {
+        float width = 0;
+        foreach (var (text, typeface) in runs)
+        {
+            using var font = new SKFont(typeface, size);
+            width += font.MeasureText(text);
+        }
+
+        return width;
+    }
+
+    // The text's width / line height, as drawn: what TextFigure.Size needs.
+    public static double MeasureTextAspect(string text) =>
+        MeasureRuns(TextRuns(text), MeasureFontSize) / (LineHeightPerSize * MeasureFontSize);
 
     private static void DrawText(SKCanvas canvas, string text, SKRect rect, SKColor color)
     {
@@ -125,26 +198,27 @@ public class AnnotationPainter
             return;
         }
 
-        using var probe = new SKFont(TextTypeface, MeasureFontSize);
-        var probeMetrics = probe.Metrics;
-        var lineHeight = probeMetrics.Descent - probeMetrics.Ascent;
-        if (lineHeight <= 0)
-        {
-            return;
-        }
-
-        using var font = new SKFont(TextTypeface, MeasureFontSize * rect.Height / lineHeight) { Subpixel = true };
-        var measured = font.MeasureText(text);
+        var size = rect.Height / LineHeightPerSize;
+        var runs = TextRuns(text);
+        var measured = MeasureRuns(runs, size);
         if (measured <= 0)
         {
             return;
         }
 
+        using var baseFont = new SKFont(TextTypeface, size);
         using var paint = new SKPaint { Color = color, IsAntialias = true };
         var restore = canvas.Save();
         canvas.Translate(rect.Left, rect.Top);
         canvas.Scale(rect.Width / measured, 1);
-        canvas.DrawText(text, 0, -font.Metrics.Ascent, font, paint);
+        var x = 0f;
+        foreach (var (run, typeface) in runs)
+        {
+            using var font = new SKFont(typeface, size) { Subpixel = true };
+            canvas.DrawText(run, x, -baseFont.Metrics.Ascent, font, paint);
+            x += font.MeasureText(run);
+        }
+
         canvas.RestoreToCount(restore);
     }
 

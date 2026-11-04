@@ -36,6 +36,15 @@ public class TextFigureTests : IDisposable
     }
 
     [Fact]
+    public void Normalize_Truncation_DoesNotSplitEmojiOrSurrogates()
+    {
+        var smile = "\U0001F600";
+        var result = TextFigure.Normalize(new string('a', TextFigure.MaxLength - 1) + smile + smile)!;
+
+        Assert.Equal(new string('a', TextFigure.MaxLength - 1) + smile, result);
+    }
+
+    [Fact]
     public void Normalize_CapsLength()
     {
         Assert.Equal(TextFigure.MaxLength, TextFigure.Normalize(new string('a', 500))!.Length);

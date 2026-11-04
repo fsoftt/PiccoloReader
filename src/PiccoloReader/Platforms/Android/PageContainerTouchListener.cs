@@ -128,6 +128,13 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
         _isPossiblePanOrTap = false;
     }
 
+    // Drops a long-press still waiting (the page is going away).
+    public void CancelLongPress()
+    {
+        _longPress?.Reset();
+        _longPressConsumed = false;
+    }
+
     private static float StableX(MotionEvent e, int pointerIndex, View v) => e.GetX(pointerIndex) * v.ScaleX + v.TranslationX;
 
     private static float StableY(MotionEvent e, int pointerIndex, View v) => e.GetY(pointerIndex) * v.ScaleY + v.TranslationY;

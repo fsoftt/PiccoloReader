@@ -16,6 +16,9 @@ public static class SlurGeometry
     // hairpin stroke thickness; the tips are 0.
     public const double MaxThicknessFactor = 1.6;
 
+    // Smallest box extent (page fractions) a curve is normalized against.
+    public const double MinExtent = 1e-3;
+
     public const double MinWidth = 0.04;
     public const double MaxWidth = 1.0;
 
@@ -40,8 +43,21 @@ public static class SlurGeometry
     // The four control points (box fractions) of a slur annotation.
     public static IReadOnlyList<StrokePoint> ControlPoints(Annotation annotation)
     {
-        var stored = AnnotationService.DeserializePoints(annotation.Points);
-        return stored.Count == 4 ? stored : DefaultPoints(IsAbove(annotation.IconKey));
+        // Points come from storage or a synced snapshot: anything unreadable or
+        // not exactly four finite points falls back to the default arc.
+        try
+        {
+            var stored = AnnotationService.DeserializePoints(annotation.Points);
+            if (stored.Count == 4 && stored.All(p => double.IsFinite(p.X) && double.IsFinite(p.Y)))
+            {
+                return stored;
+            }
+        }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or NotSupportedException or InvalidOperationException)
+        {
+        }
+
+        return DefaultPoints(IsAbove(annotation.IconKey));
     }
 
     // Evaluates the Bezier at t in [0, 1].
@@ -136,8 +152,10 @@ public static class SlurGeometry
         IReadOnlyList<(double X, double Y)> controlPoints)
     {
         var (minX, minY, maxX, maxY) = CurveBounds(controlPoints);
-        var width = Math.Max(maxX - minX, 1e-6);
-        var height = Math.Max(maxY - minY, 1e-6);
+        // A degenerate (flat or tiny) curve still gets a box with some extent; the
+        // points are relative to that box, so the curve is reproduced exactly.
+        var width = Math.Max(maxX - minX, MinExtent);
+        var height = Math.Max(maxY - minY, MinExtent);
         var points = controlPoints
             .Select(c => new StrokePoint((c.X - minX) / width, (c.Y - minY) / height))
             .ToList();
