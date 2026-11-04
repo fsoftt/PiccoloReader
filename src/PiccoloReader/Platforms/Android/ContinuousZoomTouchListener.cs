@@ -11,6 +11,9 @@ namespace PiccoloReader.Platforms.Android;
 // tap:
 // - Two fingers: the listener takes over the gesture (RecyclerView stops
 //   scrolling) and reports pinch updates, like PageContainerTouchListener.
+//   The midpoint of the two fingers pans along with the pinch, and when
+//   one finger lifts the other keeps panning (both axes) until it lifts
+//   too - the listener holds the gesture until all fingers are up.
 // - One finger: never taken over - the RecyclerView keeps doing vertical
 //   scrolling (and items keep their taps) - but horizontal movement is
 //   reported alongside, so a zoomed-in list pans sideways and diagonally.
@@ -22,9 +25,10 @@ namespace PiccoloReader.Platforms.Android;
 public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView.IOnItemTouchListener
 {
     private readonly Action _onPinchStart;
-    private readonly Action<double, double, double> _onPinchUpdate;
+    private readonly Action<double, double, double, double, double> _onPinchUpdate;
     private readonly Action _onPinchEnd;
     private readonly Action<double> _onHorizontalPan;
+    private readonly Action<double, double> _onPinchPan;
     private readonly float _density;
     private readonly float _touchSlop;
 
@@ -35,17 +39,31 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
     private float _lastPanX;
     private bool _hasLastPanX;
 
+    // Pinch pointers are tracked by id so a third finger can't swap them.
+    private int _pinchIdA;
+    private int _pinchIdB;
+    private float _previousMidX;
+    private float _previousMidY;
+
+    // One finger left after a pinch: pans both axes via _onPinchPan.
+    private bool _isPanAfterPinch;
+    private int _panPointerId;
+    private float _panAfterPinchX;
+    private float _panAfterPinchY;
+
     public ContinuousZoomTouchListener(
         Context context,
         Action onPinchStart,
-        Action<double, double, double> onPinchUpdate,
+        Action<double, double, double, double, double> onPinchUpdate,
         Action onPinchEnd,
-        Action<double> onHorizontalPan)
+        Action<double> onHorizontalPan,
+        Action<double, double> onPinchPan)
     {
         _onPinchStart = onPinchStart;
         _onPinchUpdate = onPinchUpdate;
         _onPinchEnd = onPinchEnd;
         _onHorizontalPan = onHorizontalPan;
+        _onPinchPan = onPinchPan;
         _density = context.Resources?.DisplayMetrics?.Density ?? 1f;
         _touchSlop = ViewConfiguration.Get(context)?.ScaledTouchSlop ?? 8 * _density;
     }
@@ -66,11 +84,28 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
 
     private static float StableY(MotionEvent e, int pointerIndex, View v) => e.GetY(pointerIndex) * v.ScaleY + v.TranslationY;
 
-    private static double Span(MotionEvent e, View v)
+    private static double Span(MotionEvent e, View v, int indexA, int indexB)
     {
-        var dx = StableX(e, 0, v) - StableX(e, 1, v);
-        var dy = StableY(e, 0, v) - StableY(e, 1, v);
+        var dx = StableX(e, indexA, v) - StableX(e, indexB, v);
+        var dy = StableY(e, indexA, v) - StableY(e, indexB, v);
         return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    // Starts (or resumes, after a pan-after-pinch) a pinch on the first two
+    // pointers, with fresh span and midpoint baselines.
+    private void StartPinch(RecyclerView rv, MotionEvent e)
+    {
+        _isPinching = true;
+        _isPanAfterPinch = false;
+        IsTap = false;
+        _hasLastPanX = false;
+        _pinchIdA = e.GetPointerId(0);
+        _pinchIdB = e.GetPointerId(1);
+        _previousSpan = Span(e, rv, 0, 1);
+        _previousMidX = (StableX(e, 0, rv) + StableX(e, 1, rv)) / 2;
+        _previousMidY = (StableY(e, 0, rv) + StableY(e, 1, rv)) / 2;
+        rv.Parent?.RequestDisallowInterceptTouchEvent(true);
+        _onPinchStart();
     }
 
     public bool OnInterceptTouchEvent(RecyclerView rv, MotionEvent e)
@@ -107,6 +142,7 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
             _onPinchEnd();
         }
 
+        _isPanAfterPinch = false;
         _hasLastPanX = false;
         IsTap = false;
     }
@@ -125,12 +161,7 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
                 return false;
 
             case MotionEventActions.PointerDown when e.PointerCount == 2:
-                _isPinching = true;
-                IsTap = false;
-                _hasLastPanX = false;
-                _previousSpan = Span(e, rv);
-                rv.Parent?.RequestDisallowInterceptTouchEvent(true);
-                _onPinchStart();
+                StartPinch(rv, e);
                 return true;
 
             case MotionEventActions.Move when e.PointerCount == 1 && _hasLastPanX:
@@ -150,7 +181,7 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
                 return false;
         }
 
-        return _isPinching;
+        return _isPinching || _isPanAfterPinch;
     }
 
     public void OnTouchEvent(RecyclerView rv, MotionEvent e)
@@ -168,25 +199,84 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
         switch (e.ActionMasked)
         {
             case MotionEventActions.Move when _isPinching && e.PointerCount >= 2:
-                var currentSpan = Span(e, rv);
+                var indexA = e.FindPointerIndex(_pinchIdA);
+                var indexB = e.FindPointerIndex(_pinchIdB);
+                if (indexA < 0 || indexB < 0)
+                {
+                    break;
+                }
+
+                var currentSpan = Span(e, rv, indexA, indexB);
+                var midX = (StableX(e, indexA, rv) + StableX(e, indexB, rv)) / 2;
+                var midY = (StableY(e, indexA, rv) + StableY(e, indexB, rv)) / 2;
                 if (_previousSpan > 0 && rv.Width > 0 && rv.Height > 0)
                 {
-                    var focusXFraction = (e.GetX(0) + e.GetX(1)) / 2 / rv.Width;
-                    var focusYFraction = (e.GetY(0) + e.GetY(1)) / 2 / rv.Height;
-                    _onPinchUpdate(currentSpan / _previousSpan, focusXFraction, focusYFraction);
+                    // Focus from the same stable coordinates as the span: the
+                    // list point under the midpoint is (mid - Translation) / Scale.
+                    var focusXFraction = (midX - rv.TranslationX) / rv.ScaleX / rv.Width;
+                    var focusYFraction = (midY - rv.TranslationY) / rv.ScaleY / rv.Height;
+                    _onPinchUpdate(
+                        currentSpan / _previousSpan,
+                        focusXFraction,
+                        focusYFraction,
+                        (midX - _previousMidX) / _density,
+                        (midY - _previousMidY) / _density);
                 }
 
                 _previousSpan = currentSpan;
+                _previousMidX = midX;
+                _previousMidY = midY;
                 break;
 
-            // Lifting one of the two fingers ends the pinch; the remaining
-            // finger does nothing until it's lifted too (same as the
-            // single-page viewer).
-            case MotionEventActions.PointerUp when _isPinching && e.PointerCount == 2:
+            // A second finger after a pan-after-pinch resumes the pinch.
+            case MotionEventActions.PointerDown when _isPanAfterPinch && e.PointerCount == 2:
+                StartPinch(rv, e);
+                break;
+
+            case MotionEventActions.Move when _isPanAfterPinch:
+                var panIndex = e.FindPointerIndex(_panPointerId);
+                if (panIndex >= 0)
+                {
+                    var panX = StableX(e, panIndex, rv);
+                    var panY = StableY(e, panIndex, rv);
+                    _onPinchPan((panX - _panAfterPinchX) / _density, (panY - _panAfterPinchY) / _density);
+                    _panAfterPinchX = panX;
+                    _panAfterPinchY = panY;
+                }
+
+                break;
+
+            // Lifting one of the two pinch fingers ends the pinch (zoom
+            // settle) and the remaining finger keeps panning until it's
+            // lifted too. Lifting some other (third) finger changes nothing.
+            case MotionEventActions.PointerUp when _isPinching:
+                var liftedId = e.GetPointerId(e.ActionIndex);
+                if (liftedId == _pinchIdA || liftedId == _pinchIdB)
+                {
+                    var remainingId = liftedId == _pinchIdA ? _pinchIdB : _pinchIdA;
+                    var remainingIndex = e.FindPointerIndex(remainingId);
+                    _isPinching = false;
+                    _onPinchEnd();
+                    if (remainingIndex >= 0)
+                    {
+                        _isPanAfterPinch = true;
+                        _panPointerId = remainingId;
+                        _panAfterPinchX = StableX(e, remainingIndex, rv);
+                        _panAfterPinchY = StableY(e, remainingIndex, rv);
+                    }
+                }
+
+                break;
+
             case MotionEventActions.Up when _isPinching:
             case MotionEventActions.Cancel when _isPinching:
                 _isPinching = false;
                 _onPinchEnd();
+                break;
+
+            case MotionEventActions.Up:
+            case MotionEventActions.Cancel:
+                _isPanAfterPinch = false;
                 break;
         }
     }

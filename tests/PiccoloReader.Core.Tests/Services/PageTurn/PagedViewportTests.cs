@@ -207,4 +207,39 @@ public class PagedViewportTests
         Assert.Equal(0.5, PagedViewport.PanFraction(-50, -50, -50), 6);
         Assert.Equal(-50, PagedViewport.TranslationFromFraction(0.2, -50, -50), 6);
     }
+
+    [Fact]
+    public void PinchTranslation_keeps_point_under_fingers_while_zooming_and_panning()
+    {
+        // View 400 wide, scale 2 -> 3, translation -100, fingers midpoint at
+        // screen x 300 moving to 320 in the same frame.
+        const double width = 400;
+        var focus = PagedViewport.FocusFraction(300, -100, 2, width);
+        Assert.Equal(0.5, focus, 6);
+
+        var local = focus * width;
+        var next = PagedViewport.PinchTranslation(-100, local, 3 - 2, 20);
+
+        // The local point renders at the new midpoint (300 + 20).
+        Assert.Equal(320, next + local * 3, 6);
+    }
+
+    [Fact]
+    public void PinchTranslation_without_zoom_change_follows_the_midpoint()
+    {
+        Assert.Equal(-70, PagedViewport.PinchTranslation(-100, 150, 0, 30), 6);
+    }
+
+    [Fact]
+    public void PinchTranslation_without_pan_matches_plain_anchored_zoom()
+    {
+        Assert.Equal(-100 - 200 * 0.5, PagedViewport.PinchTranslation(-100, 200, 0.5, 0), 6);
+    }
+
+    [Fact]
+    public void FocusFraction_is_zero_for_degenerate_size_or_scale()
+    {
+        Assert.Equal(0, PagedViewport.FocusFraction(10, 0, 1, 0));
+        Assert.Equal(0, PagedViewport.FocusFraction(10, 0, 0, 100));
+    }
 }
