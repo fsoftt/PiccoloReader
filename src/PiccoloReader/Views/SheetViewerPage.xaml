@@ -294,7 +294,7 @@
                             <HorizontalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
                                 <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
                                     <Image.Source>
-                                        <FontImageSource x:Name="ToolSegmentHighlighterGlyph" Glyph="&#xE6D1;" FontFamily="MaterialOutlined" Size="20" />
+                                        <FontImageSource x:Name="ToolSegmentHighlighterGlyph" Glyph="&#xF82B;" FontFamily="MaterialOutlined" Size="20" />
                                     </Image.Source>
                                 </Image>
                                 <Label x:Name="ToolSegmentHighlighterLabel" Text="{x:Static strings:AppStrings.Highlighter}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
@@ -397,7 +397,7 @@
                                 <VerticalStackLayout x:Name="PencilWidthBlock" Grid.Row="1" Spacing="10">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Text="{x:Static strings:AppStrings.Width}" Style="{StaticResource SectionLabel}" />
-                                    <Label x:Name="PencilWidthValueLabel" Grid.Column="1" Style="{StaticResource Caption}" />
+                                    <Label x:Name="PencilWidthValueLabel" Grid.Column="1" Margin="0,0,8,0" Style="{StaticResource Caption}" />
                                 </Grid>
                                 <Slider
                                     x:Name="PencilWidthSlider"
@@ -421,7 +421,7 @@
                                 <VerticalStackLayout x:Name="HighlighterWidthBlock" Grid.Row="1" Spacing="10">
                                     <Grid ColumnDefinitions="*,Auto">
                                         <Label Text="{x:Static strings:AppStrings.Width}" Style="{StaticResource SectionLabel}" />
-                                        <Label x:Name="HighlighterWidthValueLabel" Grid.Column="1" Style="{StaticResource Caption}" />
+                                        <Label x:Name="HighlighterWidthValueLabel" Grid.Column="1" Margin="0,0,8,0" Style="{StaticResource Caption}" />
                                     </Grid>
                                     <Slider
                                         x:Name="HighlighterWidthSlider"
@@ -440,7 +440,7 @@
                             <VerticalStackLayout x:Name="EraserSection" IsVisible="False" Spacing="10">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Text="{x:Static strings:AppStrings.Size}" Style="{StaticResource SectionLabel}" />
-                                    <Label x:Name="EraserRadiusValueLabel" Grid.Column="1" Style="{StaticResource Caption}" />
+                                    <Label x:Name="EraserRadiusValueLabel" Grid.Column="1" Margin="0,0,8,0" Style="{StaticResource Caption}" />
                                 </Grid>
                                 <Slider
                                     x:Name="EraserRadiusSlider"
@@ -551,7 +551,7 @@
             </Border.GestureRecognizers>
             <Image HorizontalOptions="Center" VerticalOptions="Center">
                 <Image.Source>
-                    <FontImageSource Glyph="&#xE6D1;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
+                    <FontImageSource Glyph="&#xF82B;" FontFamily="MaterialOutlined" Size="24" Color="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}" />
                 </Image.Source>
             </Image>
         </Border>
