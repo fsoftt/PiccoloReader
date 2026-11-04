@@ -2086,6 +2086,7 @@ public partial class SheetViewerPage : ContentPage
                     onPanUpdate: AndroidHandlePanRunning,
                     onPanEnd: AndroidHandlePanEnded);
                 _pageContainerTouchListener.Stylus = TrackStylusHandler(CreateStylusHandler(nativePencil: false));
+                _pageContainerTouchListener.OnLongPress = HandleContainerLongPress;
                 platformView.SetOnTouchListener(_pageContainerTouchListener);
             }
         };
@@ -2498,6 +2499,7 @@ public partial class SheetViewerPage : ContentPage
                     onStarted: HandleSelectionMoveStarted,
                     onRunning: HandleSelectionMoveRunning,
                     onEnded: () => _ = HandleSelectionMoveEndedAsync());
+                _selectionMoveTouchListener.OnLongPress = () => _ = ShowFigureMenuAsync(_viewModel.SelectedAnnotation);
                 platformView.SetOnTouchListener(_selectionMoveTouchListener);
             }
         };

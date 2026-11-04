@@ -350,4 +350,5 @@
   <data name="CoachViewerNext" xml:space="preserve"><value>On the last page, tap here (or press the pedal) to open the next score</value></data>
   <data name="CoachViewerPrevious" xml:space="preserve"><value>On the first page, tap here to go back to the previous score</value></data>
   <data name="CoachViewerSettings" xml:space="preserve"><value>You can turn concert mode off in Settings</value></data>
+  <data name="CopyFigure" xml:space="preserve"><value>Copy</value></data>
 </root>

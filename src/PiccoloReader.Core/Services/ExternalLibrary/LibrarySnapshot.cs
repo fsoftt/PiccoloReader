@@ -111,6 +111,9 @@ public class SnapshotAnnotation
 
     public string? Points { get; set; }
 
+    // Optional: snapshots written before text annotations lack it.
+    public string? Text { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public int CoordinateSpace { get; set; }

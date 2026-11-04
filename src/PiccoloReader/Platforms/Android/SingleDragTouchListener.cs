@@ -32,6 +32,13 @@ public sealed class SingleDragTouchListener : Java.Lang.Object, View.IOnTouchLis
     private readonly Action _onEnded;
     private readonly float _density;
 
+    // Optional long-press on the dragged element: when it fires the drag is
+    // put back where it started and ignored until the finger lifts.
+    public Action? OnLongPress { get; set; }
+
+    private LongPressDetector? _longPress;
+    private bool _longPressFired;
+
     private bool _isDragging;
     private float _startX;
     private float _startY;
@@ -42,6 +49,28 @@ public sealed class SingleDragTouchListener : Java.Lang.Object, View.IOnTouchLis
         _onRunning = onRunning;
         _onEnded = onEnded;
         _density = context.Resources?.DisplayMetrics?.Density ?? 1f;
+    }
+
+    private void StartLongPress(MotionEvent e)
+    {
+        _longPressFired = false;
+        if (OnLongPress is null)
+        {
+            return;
+        }
+
+        _longPress ??= new LongPressDetector(_density);
+        _longPress.Start(e.RawX, e.RawY, () =>
+        {
+            if (!_isDragging)
+            {
+                return;
+            }
+
+            _longPressFired = true;
+            _onRunning(0, 0);
+            OnLongPress?.Invoke();
+        });
     }
 
     public bool OnTouch(View? v, MotionEvent? e)
@@ -58,11 +87,13 @@ public sealed class SingleDragTouchListener : Java.Lang.Object, View.IOnTouchLis
                 _startX = e.RawX;
                 _startY = e.RawY;
                 _onStarted();
+                StartLongPress(e);
                 break;
 
             case MotionEventActions.Move:
-                if (_isDragging)
+                if (_isDragging && !_longPressFired)
                 {
+                    _longPress?.Move(e.RawX, e.RawY);
                     _onRunning((e.RawX - _startX) / _density, (e.RawY - _startY) / _density);
                 }
 
@@ -70,6 +101,8 @@ public sealed class SingleDragTouchListener : Java.Lang.Object, View.IOnTouchLis
 
             case MotionEventActions.Up:
             case MotionEventActions.Cancel:
+                _longPress?.Cancel();
+                _longPressFired = false;
                 if (_isDragging)
                 {
                     _isDragging = false;

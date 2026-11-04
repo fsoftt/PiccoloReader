@@ -350,4 +350,5 @@
   <data name="CoachViewerNext" xml:space="preserve"><value>En la última hoja, toca aquí (o presiona el pedal) para abrir la siguiente partitura</value></data>
   <data name="CoachViewerPrevious" xml:space="preserve"><value>En la primera hoja, toca aquí para volver a la partitura anterior</value></data>
   <data name="CoachViewerSettings" xml:space="preserve"><value>Puedes desactivar el modo concierto en Ajustes</value></data>
+  <data name="CopyFigure" xml:space="preserve"><value>Copiar</value></data>
 </root>

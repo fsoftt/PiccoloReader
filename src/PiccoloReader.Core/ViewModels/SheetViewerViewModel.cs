@@ -753,6 +753,26 @@ public partial class SheetViewerViewModel : ObservableObject
         SelectedAnnotation = annotation;
     }
 
+    // Duplicates a figure (the "Copy" menu): same shape, nudged so it shows
+    // as a second one, kept inside the visible crop and selected so it can be
+    // dragged away right away.
+    public async Task<Annotation?> CopyAnnotationAsync(Annotation source)
+    {
+        if (source.IsStroke || _sheet is null)
+        {
+            return null;
+        }
+
+        var crop = CurrentPageCrop;
+        var copy = FigureCopy.Copy(source, crop.Left, crop.Top, crop.Right, crop.Bottom);
+        await _annotationService.InsertAnnotationAsync(copy);
+
+        CurrentPageAnnotations.Add(copy);
+        RecordAction(new AddAnnotationAction(_annotationService, CurrentPageAnnotations, copy));
+        SelectedAnnotation = copy;
+        return copy;
+    }
+
     public async Task<Annotation> AddStrokeAsync(int sheetId, string colorHex, double strokeWidth, IReadOnlyList<StrokePoint> points)
     {
         var annotation = await _annotationService.AddStrokeAsync(sheetId, CurrentPageIndex, colorHex, strokeWidth, points);

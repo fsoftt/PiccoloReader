@@ -62,6 +62,7 @@ public static class AppStrings
     public static string Color => Get(nameof(Color));
     public static string Width => Get(nameof(Width));
     public static string Eraser => Get(nameof(Eraser));
+    public static string CopyFigure => Get(nameof(CopyFigure));
     public static string Size => Get(nameof(Size));
     public static string PageIndicatorFormat => Get(nameof(PageIndicatorFormat));
     public static string ReadingModeHorizontalMessage => Get(nameof(ReadingModeHorizontalMessage));

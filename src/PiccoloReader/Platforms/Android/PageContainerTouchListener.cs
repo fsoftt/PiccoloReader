@@ -60,6 +60,14 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
     // Stylus gestures are handled first and never reach the pan/pinch/tap logic.
     public StylusGestureHandler? Stylus { get; set; }
 
+    // Long-press on a figure (not pinch/pan/tap): given the container-normalized
+    // point, returns true when it handled the press. A handled press swallows
+    // the rest of the gesture, so it is never also a tap or a pan.
+    public Func<double, double, bool>? OnLongPress { get; set; }
+
+    private LongPressDetector? _longPress;
+    private bool _longPressConsumed;
+
     private bool _isPossiblePanOrTap;
     private bool _isPinching;
     private float _panStartX;
@@ -167,11 +175,18 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
                 _panStartX = StableX(e, 0, v);
                 _panStartY = StableY(e, 0, v);
                 _downTimeMs = Java.Lang.JavaSystem.CurrentTimeMillis();
+                StartLongPress(v, e);
                 break;
 
             case MotionEventActions.PointerDown:
                 // A second finger arrived - this is a pinch, not a pan/tap
                 // (also when it follows a pan-after-pinch: pinch resumes).
+                _longPress?.Cancel();
+                if (_longPressConsumed)
+                {
+                    break;
+                }
+
                 if (e.PointerCount == 2)
                 {
                     StartPinch(e, v);
@@ -180,6 +195,16 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
                 break;
 
             case MotionEventActions.Move:
+                if (_longPressConsumed)
+                {
+                    break;
+                }
+
+                if (e.PointerCount == 1)
+                {
+                    _longPress?.Move(e.RawX, e.RawY);
+                }
+
                 if (_isPinching && e.PointerCount >= 2)
                 {
                     var indexA = e.FindPointerIndex(_pinchIdA);
@@ -272,6 +297,15 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
 
             case MotionEventActions.Up:
             case MotionEventActions.Cancel:
+                _longPress?.Cancel();
+                if (_longPressConsumed)
+                {
+                    _longPressConsumed = false;
+                    _isPossiblePanOrTap = false;
+                    _onPanEnd();
+                    break;
+                }
+
                 if (_isPinching)
                 {
                     _isPinching = false;
@@ -293,6 +327,27 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
         }
 
         return true;
+    }
+
+    private void StartLongPress(View v, MotionEvent e)
+    {
+        _longPressConsumed = false;
+        if (OnLongPress is null || v.Width <= 0 || v.Height <= 0)
+        {
+            return;
+        }
+
+        // Same corrected coordinate a tap hit-tests with.
+        var normalizedX = e.GetX(0) / v.Width;
+        var normalizedY = e.GetY(0) / v.Height;
+        _longPress ??= new LongPressDetector(_density);
+        _longPress.Start(e.RawX, e.RawY, () =>
+        {
+            if (_isPossiblePanOrTap && !_isPinching && !_isPanAfterPinch && OnLongPress?.Invoke(normalizedX, normalizedY) == true)
+            {
+                _longPressConsumed = true;
+            }
+        });
     }
 
     private void FinishPanOrTap(View v, MotionEvent e)
