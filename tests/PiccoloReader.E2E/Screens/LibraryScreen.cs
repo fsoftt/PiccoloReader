@@ -33,7 +33,7 @@ public static class LibraryScreen
         return row!;
     }
 
-    public static bool HasSheet(string title) => Ui.FindAll(SheetTitleId).Any(e => e.Text == title);
+    public static bool HasSheet(string title) => RetryStale(() => Ui.FindAll(SheetTitleId).Any(e => e.Text == title));
 
     public static void WaitSheetGone(string title) =>
         Ui.Poll(() => !HasSheet(title), 15, $"sheet '{title}' to leave the list");
@@ -45,10 +45,27 @@ public static class LibraryScreen
     }
 
     /// <summary>The "more" button on the same row as the given sheet title.</summary>
-    public static IWebElement MoreButtonOf(string title)
+    public static IWebElement MoreButtonOf(string title) =>
+        RetryStale(() =>
+        {
+            var rowY = SheetRow(title).Location.Y;
+            return Ui.FindAll(MoreButton).OrderBy(b => Math.Abs(b.Location.Y + b.Size.Height / 2 - rowY)).First();
+        });
+
+    // The list re-renders after folder/move changes, which can detach an element between lookup and use.
+    private static T RetryStale<T>(Func<T> action)
     {
-        var rowY = SheetRow(title).Location.Y;
-        return Ui.FindAll(MoreButton).OrderBy(b => Math.Abs(b.Location.Y + b.Size.Height / 2 - rowY)).First();
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                return action();
+            }
+            catch (StaleElementReferenceException) when (attempt < 3)
+            {
+                Thread.Sleep(300);
+            }
+        }
     }
 
     public static void OpenSheetMenu(string title)
@@ -84,7 +101,12 @@ public static class LibraryScreen
     public static void OpenFolder(string name)
     {
         Ui.Poll(() => FolderNames().Contains(name), 30, $"folder '{name}'");
-        Ui.FindAll(FolderNameId).First(e => e.Text == name).Click();
+        Ui.Poll(() =>
+        {
+            var folder = Ui.FindAll(FolderNameId).FirstOrDefault(e => e.Text == name);
+            folder?.Click();
+            return folder is not null;
+        }, 15, $"folder '{name}' to be tappable");
         Ui.Find("FolderBackButton");
     }
 

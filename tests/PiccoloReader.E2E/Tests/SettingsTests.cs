@@ -91,7 +91,7 @@ public class SettingsTests : E2ETestBase
     {
         OpenSettingsTab(AppStrings.Settings);
 
-        Assert.That(Ui.Exists("SettingsPrivacyRow"), Is.True);
-        Assert.That(Ui.Exists("SettingsTermsRow"), Is.True);
+        Assert.That(Ui.ScrollIntoView("SettingsPrivacyRow"), Is.Not.Null);
+        Assert.That(Ui.ScrollIntoView("SettingsTermsRow"), Is.Not.Null);
     }
 }
