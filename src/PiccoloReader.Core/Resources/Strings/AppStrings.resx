@@ -67,6 +67,7 @@
   <data name="Add" xml:space="preserve"><value>Add</value></data>
   <data name="MusicIcons" xml:space="preserve"><value>Music Icons</value></data>
   <data name="Pencil" xml:space="preserve"><value>Pencil</value></data>
+  <data name="Highlighter" xml:space="preserve"><value>Highlighter</value></data>
   <data name="Color" xml:space="preserve"><value>Color</value></data>
   <data name="Width" xml:space="preserve"><value>Width</value></data>
   <data name="Eraser" xml:space="preserve"><value>Eraser</value></data>

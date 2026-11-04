@@ -4,5 +4,6 @@ public enum AnnotationTool
 {
     MusicIcons,
     Pencil,
+    Highlighter,
     Eraser
 }

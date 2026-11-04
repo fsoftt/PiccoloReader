@@ -3570,6 +3570,15 @@ public partial class SheetViewerPage : ContentPage
         await ShowToolSheetAsync();
     }
 
+    private async void OnFabHighlighterClicked(object? sender, TappedEventArgs e)
+    {
+        await EnsureEditablePageAsync();
+
+        _viewModel.ActiveTool = AnnotationTool.Highlighter;
+        SetToolFabExpanded(false);
+        await ShowToolSheetAsync();
+    }
+
     private async void OnFabEraserClicked(object? sender, TappedEventArgs e)
     {
         await EnsureEditablePageAsync();
@@ -3579,7 +3588,7 @@ public partial class SheetViewerPage : ContentPage
         await ShowToolSheetAsync();
     }
 
-    // Shows/hides the 3 mini FABs above the main FAB and swaps its own
+    // Shows/hides the 4 mini FABs above the main FAB and swaps its own
     // icon between the pencil glyph (collapsed) and a close glyph
     // (expanded) - the collapsed/expanded state is independent of which
     // tool is active, it only tracks whether the speed-dial menu itself
@@ -3589,6 +3598,7 @@ public partial class SheetViewerPage : ContentPage
         _isToolFabExpanded = expanded;
         IconsFab.IsVisible = expanded;
         PencilFab.IsVisible = expanded;
+        HighlighterFab.IsVisible = expanded;
         EraserFab.IsVisible = expanded;
         var glyphSource = new FontImageSource
         {
@@ -3606,6 +3616,7 @@ public partial class SheetViewerPage : ContentPage
     {
         MusicIconsSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.MusicIcons;
         PencilSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Pencil;
+        HighlighterSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Highlighter;
         EraserSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Eraser;
 
         // InputTransparent is left False permanently in XAML (never toggled
@@ -3616,13 +3627,23 @@ public partial class SheetViewerPage : ContentPage
         // rendering solid black). PencilDrawingView is already the last
         // child in PageContainer's XAML, which is enough for correct
         // z-order without ZIndex - don't add one.
+        // Pencil and Highlighter share PencilDrawingView; only the color and
+        // width it is given differ.
         var pencilActive = _viewModel.ActiveTool == AnnotationTool.Pencil;
-        PencilDrawingView.IsVisible = pencilActive;
+        var highlighterActive = _viewModel.ActiveTool == AnnotationTool.Highlighter;
+        PencilDrawingView.IsVisible = pencilActive || highlighterActive;
         if (pencilActive)
         {
             PencilDrawingView.LineColor = Color.FromArgb(_viewModel.PencilColorHex);
             UpdatePencilDrawingViewLineWidth();
             UpdatePencilColorSwatchSelection();
+        }
+        else if (highlighterActive)
+        {
+            EnsureHighlighterSwatches();
+            PencilDrawingView.LineColor = Color.FromArgb(_viewModel.HighlighterColorHex);
+            UpdatePencilDrawingViewLineWidth();
+            UpdateHighlighterColorSwatchSelection();
         }
 
         var eraserActive = _viewModel.ActiveTool == AnnotationTool.Eraser;
@@ -3641,6 +3662,7 @@ public partial class SheetViewerPage : ContentPage
     private void UpdateToolValueLabels()
     {
         PencilWidthValueLabel.Text = $"{_viewModel.PencilStrokeWidth * 1000:0.#} pt";
+        HighlighterWidthValueLabel.Text = $"{_viewModel.HighlighterStrokeWidth * 1000:0.#} pt";
         EraserRadiusValueLabel.Text = $"{_viewModel.EraserRadius * 100:0.#}";
     }
 
@@ -3649,6 +3671,7 @@ public partial class SheetViewerPage : ContentPage
     private void UpdateToolSegments()
     {
         SetSegment(ToolSegmentPencil, ToolSegmentPencilLabel, ToolSegmentPencilGlyph, _viewModel.ActiveTool == AnnotationTool.Pencil);
+        SetSegment(ToolSegmentHighlighter, ToolSegmentHighlighterLabel, ToolSegmentHighlighterGlyph, _viewModel.ActiveTool == AnnotationTool.Highlighter);
         SetSegment(ToolSegmentEraser, ToolSegmentEraserLabel, ToolSegmentEraserGlyph, _viewModel.ActiveTool == AnnotationTool.Eraser);
         SetSegment(ToolSegmentSymbols, ToolSegmentSymbolsLabel, ToolSegmentSymbolsGlyph, _viewModel.ActiveTool == AnnotationTool.MusicIcons);
     }
@@ -3837,10 +3860,31 @@ public partial class SheetViewerPage : ContentPage
         ToolSheet.Padding = landscape ? new Thickness(20, 8, 20, 0) : new Thickness(20, 10, 20, 0);
         ToolOptionsPad.Padding = new Thickness(0, 0, 0, landscape ? 8 : 24);
 
+        // Speed dial: in landscape the page is short, so the four mini FABs
+        // shrink to 40 and stack tighter to keep the top one clear of the bar.
+        var miniSize = landscape ? 40d : 48d;
+        var miniRight = landscape ? 28d : 24d;
+        var miniStart = landscape ? 84d : 92d;
+        var miniPitch = landscape ? 44d : 56d;
+        var minis = new[] { EraserFab, PencilFab, IconsFab, HighlighterFab };
+        for (var i = 0; i < minis.Length; i++)
+        {
+            minis[i].WidthRequest = miniSize;
+            minis[i].HeightRequest = miniSize;
+            minis[i].Margin = new Thickness(0, 0, miniRight, miniStart + (i * miniPitch));
+        }
+
         // Pencil: color block and width block share one row in landscape.
         Grid.SetRow(PencilWidthBlock, landscape ? 0 : 1);
         Grid.SetColumn(PencilWidthBlock, landscape ? 1 : 0);
         PencilSection.ColumnDefinitions = landscape
+            ? new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) }
+            : new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Star) };
+
+        // Highlighter: same side-by-side arrangement as the pencil.
+        Grid.SetRow(HighlighterWidthBlock, landscape ? 0 : 1);
+        Grid.SetColumn(HighlighterWidthBlock, landscape ? 1 : 0);
+        HighlighterSection.ColumnDefinitions = landscape
             ? new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) }
             : new ColumnDefinitionCollection { new ColumnDefinition(GridLength.Star) };
 
@@ -3858,6 +3902,9 @@ public partial class SheetViewerPage : ContentPage
 
     private async void OnToolSegmentPencilTapped(object? sender, TappedEventArgs e) =>
         await SelectToolSegmentAsync(AnnotationTool.Pencil);
+
+    private async void OnToolSegmentHighlighterTapped(object? sender, TappedEventArgs e) =>
+        await SelectToolSegmentAsync(AnnotationTool.Highlighter);
 
     private async void OnToolSegmentEraserTapped(object? sender, TappedEventArgs e) =>
         await SelectToolSegmentAsync(AnnotationTool.Eraser);
@@ -4064,9 +4111,12 @@ public partial class SheetViewerPage : ContentPage
         SetColorRingSelected(ColorRingOrange, "#FFA500");
     }
 
-    private void SetColorRingSelected(Border ring, string colorHex)
+    private void SetColorRingSelected(Border ring, string colorHex) =>
+        SetColorRingSelected(ring, colorHex, _viewModel.PencilColorHex);
+
+    private static void SetColorRingSelected(Border ring, string colorHex, string currentColorHex)
     {
-        var isSelected = string.Equals(_viewModel.PencilColorHex, colorHex, StringComparison.OrdinalIgnoreCase);
+        var isSelected = string.Equals(currentColorHex, colorHex, StringComparison.OrdinalIgnoreCase);
         ring.Stroke = isSelected ? (Color)Application.Current!.Resources["Primary"] : Colors.Transparent;
         ring.Shadow = isSelected
             ? new Shadow { Brush = Colors.Black, Opacity = 0.3f, Radius = 6, Offset = new Point(0, 2) }
@@ -4093,8 +4143,90 @@ public partial class SheetViewerPage : ContentPage
     {
         if (PageContainer.Width > 0)
         {
-            PencilDrawingView.LineWidth = (float)(_viewModel.PencilStrokeWidth * EditorPageRect().Width);
+            PencilDrawingView.LineWidth = (float)(ActiveStrokeWidth * EditorPageRect().Width);
         }
+    }
+
+    // Color and width of a new stroke follow the active tool (Highlighter
+    // or, otherwise, Pencil - which direct stylus drawing also uses).
+    private string ActiveStrokeColorHex =>
+        _viewModel.ActiveTool == AnnotationTool.Highlighter ? _viewModel.HighlighterColorHex : _viewModel.PencilColorHex;
+
+    private double ActiveStrokeWidth =>
+        _viewModel.ActiveTool == AnnotationTool.Highlighter ? _viewModel.HighlighterStrokeWidth : _viewModel.PencilStrokeWidth;
+
+    private readonly List<(Border Ring, string ColorHex)> _highlighterRings = new();
+
+    // Swatches are built from HighlighterPalette, the single source of the
+    // colors. They show the opaque color; the stored one is translucent.
+    private void EnsureHighlighterSwatches()
+    {
+        if (_highlighterRings.Count > 0)
+        {
+            return;
+        }
+
+        var names = new[] { "Yellow", "Green", "Pink", "Blue", "Orange" };
+        for (var i = 0; i < HighlighterPalette.Colors.Count; i++)
+        {
+            var inner = new Border
+            {
+                WidthRequest = 32,
+                HeightRequest = 32,
+                BackgroundColor = Color.FromArgb(HighlighterPalette.SwatchColors[i]),
+                StrokeThickness = 1,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center
+            };
+            inner.SetAppThemeColor(Border.StrokeProperty,
+                (Color)Application.Current!.Resources["OutlineLight"],
+                (Color)Application.Current!.Resources["OutlineDark"]);
+            var ring = new Border
+            {
+                WidthRequest = 42,
+                HeightRequest = 42,
+                StrokeThickness = 2,
+                Stroke = Colors.Transparent,
+                BackgroundColor = Colors.Transparent,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 21 },
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                Content = inner
+            };
+            var tap = new TapGestureRecognizer { CommandParameter = HighlighterPalette.Colors[i] };
+            tap.Tapped += OnHighlighterColorTapped;
+            var swatch = new Grid { WidthRequest = 44, HeightRequest = 44, AutomationId = $"HighlighterColorSwatch_{i}" };
+            swatch.Children.Add(ring);
+            swatch.GestureRecognizers.Add(tap);
+            SemanticProperties.SetDescription(swatch, names[i]);
+            HighlighterSwatches.Children.Add(swatch);
+            _highlighterRings.Add((ring, HighlighterPalette.Colors[i]));
+        }
+    }
+
+    private void UpdateHighlighterColorSwatchSelection()
+    {
+        foreach (var (ring, colorHex) in _highlighterRings)
+        {
+            SetColorRingSelected(ring, colorHex, _viewModel.HighlighterColorHex);
+        }
+    }
+
+    private void OnHighlighterColorTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is string colorHex)
+        {
+            _viewModel.HighlighterColorHex = colorHex;
+            PencilDrawingView.LineColor = Color.FromArgb(colorHex);
+            UpdateHighlighterColorSwatchSelection();
+        }
+    }
+
+    private void OnHighlighterWidthChanged(object? sender, ValueChangedEventArgs e)
+    {
+        UpdatePencilDrawingViewLineWidth();
+        UpdateToolValueLabels();
     }
 
     // Closes on the initial touch-down, not when the finger lifts, so the
@@ -4137,11 +4269,11 @@ public partial class SheetViewerPage : ContentPage
         await SavePencilStrokeAsync(sheetId, normalizedPoints);
     }
 
-    // Shared by the Pencil tool and direct stylus drawing: one place that
-    // saves a stroke with the current pencil color/width (and records undo).
+    // Shared by the Pencil/Highlighter tools and direct stylus drawing: one
+    // place that saves a stroke with the active tool's color/width (and records undo).
     private async Task SavePencilStrokeAsync(int sheetId, IReadOnlyList<StrokePoint> normalizedPoints)
     {
-        await _viewModel.AddClippedStrokeAsync(sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, normalizedPoints);
+        await _viewModel.AddClippedStrokeAsync(sheetId, ActiveStrokeColorHex, ActiveStrokeWidth, normalizedPoints);
         InvalidateAnnotations();
     }
 

@@ -976,6 +976,55 @@ public class SheetViewerViewModelTests : IDisposable
     }
 
     [Fact]
+    public void IsDrawingToolActive_TrueWhenHighlighterActive()
+    {
+        _sut.ActiveTool = AnnotationTool.Highlighter;
+
+        Assert.True(_sut.IsDrawingToolActive);
+    }
+
+    [Fact]
+    public void HighlighterDefaults_AreYellowTranslucentAndWide()
+    {
+        Assert.Equal(HighlighterPalette.Default, _sut.HighlighterColorHex);
+        Assert.Equal(0.025, _sut.HighlighterStrokeWidth);
+    }
+
+    [Fact]
+    public void SwitchingTools_KeepsEachToolsColorAndWidth()
+    {
+        _sut.PencilColorHex = "#FF0000";
+        _sut.PencilStrokeWidth = 0.012;
+        _sut.HighlighterColorHex = HighlighterPalette.Colors[2];
+        _sut.HighlighterStrokeWidth = 0.04;
+
+        _sut.ActiveTool = AnnotationTool.Highlighter;
+        _sut.ActiveTool = AnnotationTool.Pencil;
+        _sut.ActiveTool = AnnotationTool.Highlighter;
+
+        Assert.Equal("#FF0000", _sut.PencilColorHex);
+        Assert.Equal(0.012, _sut.PencilStrokeWidth);
+        Assert.Equal(HighlighterPalette.Colors[2], _sut.HighlighterColorHex);
+        Assert.Equal(0.04, _sut.HighlighterStrokeWidth);
+    }
+
+    [Fact]
+    public async Task AddClippedStroke_WithHighlighterColor_SavesArgbColorAndWidth()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        var points = new List<StrokePoint> { new(0.1, 0.1), new(0.4, 0.2) };
+
+        var added = await _sut.AddClippedStrokeAsync(sheet.Id, _sut.HighlighterColorHex, _sut.HighlighterStrokeWidth, points);
+
+        var stroke = Assert.Single(added);
+        Assert.Equal("#66FFEB3B", stroke.ColorHex);
+        Assert.Equal(0.025, stroke.StrokeWidth);
+        var reloaded = Assert.Single(_sut.CurrentPageAnnotations);
+        Assert.Equal("#66FFEB3B", reloaded.ColorHex);
+    }
+
+    [Fact]
     public async Task UndoCommand_AfterAddStroke_RemovesTheStroke()
     {
         var sheet = await InsertSheetAsync(pageCount: 3);
@@ -1076,6 +1125,25 @@ public class SheetViewerViewModelTests : IDisposable
         var annotation = _sut.CurrentPageAnnotations[0];
 
         await _sut.EraseAnnotationAsync(annotation);
+        await _sut.UndoCommand.ExecuteAsync(null);
+
+        Assert.Single(_sut.CurrentPageAnnotations);
+    }
+
+    [Fact]
+    public async Task EraseBatch_SameAnnotationErasedTwiceConcurrently_UndoRestoresItOnce()
+    {
+        var sheet = await InsertSheetAsync(pageCount: 3);
+        await _sut.LoadAsync(sheet.Id, targetWidthPx: 800, targetHeightPx: 1000);
+        await _sut.PlaceIconCommand.ExecuteAsync("dynamicForte");
+        var annotation = _sut.CurrentPageAnnotations[0];
+
+        _sut.BeginEraseBatch();
+        var first = _sut.EraseAnnotationAsync(annotation);
+        var second = _sut.EraseAnnotationAsync(annotation);
+        await Task.WhenAll(first, second);
+        _sut.EndEraseBatch();
+
         await _sut.UndoCommand.ExecuteAsync(null);
 
         Assert.Single(_sut.CurrentPageAnnotations);

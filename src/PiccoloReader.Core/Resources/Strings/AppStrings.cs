@@ -53,6 +53,7 @@ public static class AppStrings
     public static string Add => Get(nameof(Add));
     public static string MusicIcons => Get(nameof(MusicIcons));
     public static string Pencil => Get(nameof(Pencil));
+    public static string Highlighter => Get(nameof(Highlighter));
     public static string Color => Get(nameof(Color));
     public static string Width => Get(nameof(Width));
     public static string Eraser => Get(nameof(Eraser));
