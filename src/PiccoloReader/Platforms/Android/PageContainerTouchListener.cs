@@ -199,11 +199,13 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
                         // The stable midpoint is a screen position; with
                         // AnchorX/Y = 0 the page point under it is
                         // (mid - Translation) / Scale in the view's local
-                        // space. Deriving the focus fraction from the same
-                        // stable coordinates as the span and pan deltas keeps
-                        // all three in one space.
-                        var focusXFraction = PagedViewport.FocusFraction(midX, v.TranslationX, v.ScaleX, v.Width);
-                        var focusYFraction = PagedViewport.FocusFraction(midY, v.TranslationY, v.ScaleY, v.Height);
+                        // space. The focus is the point that was under the
+                        // fingers last frame (the previous midpoint, against
+                        // the unchanged current transform); the midpoint
+                        // delta is then added on top, so the zoom anchoring
+                        // and the pan stay exact.
+                        var focusXFraction = PagedViewport.FocusFraction(_previousMidX, v.TranslationX, v.ScaleX, v.Width);
+                        var focusYFraction = PagedViewport.FocusFraction(_previousMidY, v.TranslationY, v.ScaleY, v.Height);
 
                         // The midpoint's own motion pans the page, in dp like
                         // the one-finger pan deltas.
@@ -249,6 +251,20 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
                             _panStartX = StableX(e, remainingIndex, v);
                             _panStartY = StableY(e, remainingIndex, v);
                         }
+                    }
+                }
+                else if (_isPanAfterPinch && e.GetPointerId(e.ActionIndex) == _panPointerId)
+                {
+                    // The panning finger lifted while another is still down:
+                    // hand the pan over to it. _onPinchEnd re-bases the
+                    // offsets on the current translation, so no jump.
+                    var nextIndex = e.ActionIndex == 0 ? 1 : 0;
+                    if (nextIndex < e.PointerCount)
+                    {
+                        _onPinchEnd();
+                        _panPointerId = e.GetPointerId(nextIndex);
+                        _panStartX = StableX(e, nextIndex, v);
+                        _panStartY = StableY(e, nextIndex, v);
                     }
                 }
 

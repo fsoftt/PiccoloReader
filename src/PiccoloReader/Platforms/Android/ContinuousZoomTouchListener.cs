@@ -213,8 +213,8 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
                 {
                     // Focus from the same stable coordinates as the span: the
                     // list point under the midpoint is (mid - Translation) / Scale.
-                    var focusXFraction = (midX - rv.TranslationX) / rv.ScaleX / rv.Width;
-                    var focusYFraction = (midY - rv.TranslationY) / rv.ScaleY / rv.Height;
+                    var focusXFraction = (_previousMidX - rv.TranslationX) / rv.ScaleX / rv.Width;
+                    var focusYFraction = (_previousMidY - rv.TranslationY) / rv.ScaleY / rv.Height;
                     _onPinchUpdate(
                         currentSpan / _previousSpan,
                         focusXFraction,
@@ -264,6 +264,19 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
                         _panAfterPinchX = StableX(e, remainingIndex, rv);
                         _panAfterPinchY = StableY(e, remainingIndex, rv);
                     }
+                }
+
+                break;
+
+            // The panning finger lifted while another is still down: hand
+            // the pan over to it (baseline reset, so no jump).
+            case MotionEventActions.PointerUp when _isPanAfterPinch && e.GetPointerId(e.ActionIndex) == _panPointerId:
+                var nextIndex = e.ActionIndex == 0 ? 1 : 0;
+                if (nextIndex < e.PointerCount)
+                {
+                    _panPointerId = e.GetPointerId(nextIndex);
+                    _panAfterPinchX = StableX(e, nextIndex, rv);
+                    _panAfterPinchY = StableY(e, nextIndex, rv);
                 }
 
                 break;
