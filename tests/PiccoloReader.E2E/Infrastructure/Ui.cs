@@ -48,6 +48,23 @@ public static class Ui
         return element!;
     }
 
+    /// <summary>
+    /// Scrolls the page's scrollable container until the element is on screen (UiAutomator does not
+    /// see children that are scrolled out of view).
+    /// </summary>
+    public static IWebElement ScrollIntoView(string automationId)
+    {
+        if (TryFind(automationId) is { } visible)
+        {
+            return visible;
+        }
+
+        D.FindElement(MobileBy.AndroidUIAutomator(
+            "new UiScrollable(new UiSelector().scrollable(true))" +
+            $".scrollIntoView(new UiSelector().resourceIdMatches(\"(.*:id/)?{automationId}\"))"));
+        return Find(automationId, 10);
+    }
+
     public static void WaitGone(string automationId, int timeoutSeconds = 10) =>
         Poll(() => !Exists(automationId), timeoutSeconds, $"element '{automationId}' to disappear");
 

@@ -15,7 +15,7 @@ public record SeedSheet(string Title, int Pages = 3, bool Landscape = false);
 public static class AppSession
 {
     private const string PreferencesFile =
-        "shared_prefs/" + E2EEnvironment.PackageName + ".microsoft.maui.essentials.preferences.xml";
+        "shared_prefs/" + E2EEnvironment.PackageName + "_preferences.xml";
 
     private static AndroidDriver? _driver;
     private static string? _templateDb;
@@ -91,12 +91,9 @@ public static class AppSession
         var template = EnsureTemplateDb();
         Wipe();
 
-        // Preferences are left to the app (tutorial is skipped through the UI below); only a non-default
-        // reading mode is pre-seeded, best effort.
-        if (readingMode != "Horizontal")
-        {
-            WritePreferences(tutorialCompleted: false, readingMode, language);
-        }
+        // The first-run tutorial is skipped through the UI below; the concert-mode coach marks are
+        // pre-seeded as seen so they do not cover the library/viewer.
+        WritePreferences(tutorialCompleted: false, readingMode, language);
 
         var db = Path.Combine(Path.GetTempPath(), $"piccolo-e2e-seed-{Guid.NewGuid():N}.db3");
         File.Copy(template, db, overwrite: true);
@@ -209,11 +206,13 @@ public static class AppSession
 
     private static void WritePreferences(bool tutorialCompleted, string readingMode, string language)
     {
-        // Same file/keys MAUI's Preferences API reads (see Maui*PreferenceService).
+        // Same file/keys MAUI's Preferences API reads (the default shared preferences) (see Maui*PreferenceService).
         var xml =
             "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n" +
             "<map>\n" +
             (tutorialCompleted ? "  <boolean name=\"TutorialCompleted\" value=\"true\" />\n" : "") +
+            "  <boolean name=\"ConcertTutorialLibrarySeen\" value=\"true\" />\n" +
+            "  <boolean name=\"ConcertTutorialViewerSeen\" value=\"true\" />\n" +
             $"  <string name=\"AppLanguage\">{language}</string>\n" +
             $"  <string name=\"ReadingMode\">{readingMode}</string>\n" +
             "</map>\n";
