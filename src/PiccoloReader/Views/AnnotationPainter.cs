@@ -71,7 +71,15 @@ public class AnnotationPainter
 
             if (HairpinGeometry.IsHairpin(annotation.IconKey))
             {
+                _hairpinPaint.Color = ColorOf(annotation);
                 DrawHairpin(canvas, annotation.IconKey, targetRect, (float)(HairpinGeometry.StrokeWidth * frame.Width * width));
+                continue;
+            }
+
+            if (SlurGeometry.IsSlur(annotation.IconKey))
+            {
+                DrawSlur(canvas, SlurGeometry.ControlPoints(annotation), targetRect,
+                    (float)(SlurGeometry.MaxThickness * frame.Width * width), ColorOf(annotation));
                 continue;
             }
 
@@ -80,6 +88,34 @@ public class AnnotationPainter
 
         canvas.RestoreToCount(restoreCount);
     }
+
+    // A slur is a filled crescent: two Bezier edges sharing the end points,
+    // pushed apart in the middle (see SlurGeometry.Edges), so its tips are
+    // sharp and its belly is thickest. Control points are box fractions.
+    public void DrawSlur(SKCanvas canvas, IReadOnlyList<StrokePoint> controlPoints, SKRect rect, float thickness, SKColor color)
+    {
+        if (controlPoints.Count != 4 || rect.Width <= 0 || rect.Height <= 0)
+        {
+            return;
+        }
+
+        var pixels = controlPoints
+            .Select(p => (X: (double)rect.Left + p.X * rect.Width, Y: (double)rect.Top + p.Y * rect.Height))
+            .ToArray();
+        var (outer, inner) = SlurGeometry.Edges(pixels, thickness);
+
+        using var path = new SKPath();
+        path.MoveTo((float)outer[0].X, (float)outer[0].Y);
+        path.CubicTo((float)outer[1].X, (float)outer[1].Y, (float)outer[2].X, (float)outer[2].Y, (float)outer[3].X, (float)outer[3].Y);
+        path.CubicTo((float)inner[2].X, (float)inner[2].Y, (float)inner[1].X, (float)inner[1].Y, (float)inner[0].X, (float)inner[0].Y);
+        path.Close();
+
+        using var paint = new SKPaint { Color = color, Style = SKPaintStyle.Fill, IsAntialias = true };
+        canvas.DrawPath(path, paint);
+    }
+
+    private static SKColor ColorOf(Annotation annotation) =>
+        annotation.ColorHex is { } hex && SKColor.TryParse(hex, out var color) ? color : SKColors.Black;
 
     // Hairpins fill their whole box with two lines, so a stretched one gets
     // longer while its stroke thickness stays the same.

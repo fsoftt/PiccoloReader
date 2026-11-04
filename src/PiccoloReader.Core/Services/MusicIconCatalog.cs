@@ -33,6 +33,13 @@ public static class MusicIconCatalog
             new("dynamicCrescendoHairpin", AppStrings.IconCrescendo, 0xE53E, 2.78),
             new("dynamicDiminuendoHairpin", AppStrings.IconDecrescendo, 0xE53F, 2.78),
         }),
+        // Slurs are vector shapes (SlurGeometry), so the codepoint is only a
+        // placeholder: the picker and the page draw the curve instead.
+        new(AppStrings.CategoryPhrasing, new List<MusicIcon>
+        {
+            new(SlurGeometry.AboveKey, AppStrings.IconSlurAbove, 0xE53E, 4.0),
+            new(SlurGeometry.BelowKey, AppStrings.IconSlurBelow, 0xE53F, 4.0),
+        }),
         new(AppStrings.CategoryArticulations, new List<MusicIcon>
         {
             // Staccato's glyph is a small dot with tight ink bounds, so fitting

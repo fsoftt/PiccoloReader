@@ -1699,6 +1699,12 @@ public partial class SheetViewerPage : ContentPage
                 _resizeStartX, annotation.Width, annotation.Height,
                 _viewModel.CurrentPageAspectRatio, _viewModel.CurrentPageCrop.Right);
         }
+        else if (SlurGeometry.IsSlur(annotation.IconKey))
+        {
+            (annotation.X, annotation.Width, annotation.Height) = SlurGeometry.ClampBox(
+                _resizeStartX, annotation.Width, annotation.Height,
+                _viewModel.CurrentPageAspectRatio, _viewModel.CurrentPageCrop.Right);
+        }
 
         RepositionSelectionOverlay();
         InvalidateAnnotations();
@@ -4447,6 +4453,15 @@ public partial class SheetViewerPage : ContentPage
         }
 
         var info = e.Info;
+        if (SlurGeometry.IsSlur(icon.Key))
+        {
+            // Drawn as a curve like on the page, not with a font glyph.
+            var inset = Math.Min(info.Width, info.Height) * 0.15f;
+            var slurRect = new SKRect(inset, inset * 2, info.Width - inset, info.Height - inset * 2);
+            _annotationPainter.DrawSlur(canvas, SlurGeometry.DefaultPoints(SlurGeometry.IsAbove(icon.Key)), slurRect, info.Height * 0.07f, SKColors.Black);
+            return;
+        }
+
         _annotationPainter.DrawGlyphFitted(canvas, icon.Codepoint, new SKRect(0, 0, info.Width, info.Height), icon.VisualScale);
     }
 
