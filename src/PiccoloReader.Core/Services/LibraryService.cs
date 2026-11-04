@@ -67,7 +67,9 @@ public class LibraryService
         return folder;
     }
 
-    public async Task DeleteFolderAsync(int folderId, bool deleteSheets)
+    // deleteExternalCopies only matters with deleteSheets: false keeps the PDFs in the
+    // external folder (and so their directory) and only drops them from the library.
+    public async Task DeleteFolderAsync(int folderId, bool deleteSheets, bool deleteExternalCopies = false)
     {
         var sheets = await GetSheetsAsync(folderId);
 
@@ -75,7 +77,7 @@ public class LibraryService
         {
             if (deleteSheets)
             {
-                await DeleteSheetAsync(sheet);
+                await DeleteSheetAsync(sheet, deleteExternalCopies);
             }
             else
             {
@@ -136,7 +138,10 @@ public class LibraryService
         _externalSync?.NotifyChanged();
     }
 
-    public async Task DeleteSheetAsync(Sheet sheet)
+    // Always removes the row, thumbnails and the private copy. The visible copy in
+    // the external folder is deleted only when asked; the snapshot is rewritten
+    // either way so it no longer lists the sheet.
+    public async Task DeleteSheetAsync(Sheet sheet, bool deleteExternalCopy)
     {
         await _database.Connection.DeleteAsync(sheet);
         if (_thumbnails is not null)
@@ -152,7 +157,14 @@ public class LibraryService
 
         if (_externalSync is not null)
         {
-            await _externalSync.RemoveSheetAsync(sheet);
+            if (deleteExternalCopy)
+            {
+                await _externalSync.RemoveSheetAsync(sheet);
+            }
+            else
+            {
+                _externalSync.NotifyChanged();
+            }
         }
     }
 }

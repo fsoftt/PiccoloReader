@@ -164,11 +164,66 @@ public class ExternalLibraryTests
         using var app = new AppInstall(_store);
         var sheet = await app.ImportPdfAsync("Song", "s");
 
-        await app.Library.DeleteSheetAsync(sheet);
+        await app.Library.DeleteSheetAsync(sheet, deleteExternalCopy: true);
 
         Assert.False(_store.Files.ContainsKey("Song.pdf"));
     }
 
+
+    [Fact]
+    public async Task DeleteSheet_KeepingExternalCopy_KeepsFileButDropsSheetAndSnapshotEntry()
+    {
+        using var app = new AppInstall(_store);
+        var sheet = await app.ImportPdfAsync("Song", "s");
+        await app.ImportPdfAsync("Other", "o");
+        await app.Sync.WaitForPendingAsync();
+        var privatePath = Path.Combine(app.Storage.SheetsDirectory, sheet.FileName);
+
+        await app.Library.DeleteSheetAsync(sheet, deleteExternalCopy: false);
+        await app.Sync.WaitForPendingAsync();
+
+        Assert.True(_store.Files.ContainsKey("Song.pdf"));
+        Assert.False(File.Exists(privatePath));
+        Assert.DoesNotContain(await app.Library.GetSheetsAsync(null), s => s.Id == sheet.Id);
+        var snapshot = LibrarySnapshot.TryParse(_store.SnapshotJson())!;
+        Assert.DoesNotContain(snapshot.Sheets, s => s.SheetKey == sheet.FileName);
+        Assert.Single(snapshot.Sheets);
+    }
+
+    [Fact]
+    public async Task DeleteSheet_DeletingExternalCopy_RemovesFileAndSnapshotEntry()
+    {
+        using var app = new AppInstall(_store);
+        var sheet = await app.ImportPdfAsync("Song", "s");
+        await app.ImportPdfAsync("Other", "o");
+
+        await app.Library.DeleteSheetAsync(sheet, deleteExternalCopy: true);
+        await app.Sync.WaitForPendingAsync();
+
+        Assert.False(_store.Files.ContainsKey("Song.pdf"));
+        Assert.True(_store.Files.ContainsKey("Other.pdf"));
+        var snapshot = LibrarySnapshot.TryParse(_store.SnapshotJson())!;
+        Assert.DoesNotContain(snapshot.Sheets, s => s.SheetKey == sheet.FileName);
+    }
+
+    [Fact]
+    public async Task DeleteFolder_WithSheetsKeepingCopies_KeepsFilesAndDirectory()
+    {
+        using var app = new AppInstall(_store);
+        var folder = await app.Library.CreateFolderAsync("Rock");
+        await app.ImportPdfAsync("Song", "s", folder.Id);
+        await app.ImportPdfAsync("Other", "o");
+
+        await app.Library.DeleteFolderAsync(folder.Id, deleteSheets: true, deleteExternalCopies: false);
+        await app.Sync.WaitForPendingAsync();
+
+        Assert.True(_store.Files.ContainsKey("Rock/Song.pdf"));
+        Assert.Contains("Rock", _store.Directories);
+        Assert.Empty(await app.Library.GetFoldersAsync());
+        Assert.Single(await app.Library.GetSheetsAsync(null));
+        var snapshot = LibrarySnapshot.TryParse(_store.SnapshotJson())!;
+        Assert.DoesNotContain(snapshot.Sheets, s => s.Title == "Song");
+    }
     [Fact]
     public async Task DeleteFolder_WithSheets_RemovesTheirFiles()
     {
@@ -176,7 +231,7 @@ public class ExternalLibraryTests
         var folder = await app.Library.CreateFolderAsync("Rock");
         await app.ImportPdfAsync("Song", "s", folder.Id);
 
-        await app.Library.DeleteFolderAsync(folder.Id, deleteSheets: true);
+        await app.Library.DeleteFolderAsync(folder.Id, deleteSheets: true, deleteExternalCopies: true);
 
         Assert.DoesNotContain(_store.Files.Keys, k => k.EndsWith(".pdf"));
     }
@@ -203,10 +258,10 @@ public class ExternalLibraryTests
         var a = await app.ImportPdfAsync("A", "a", folder.Id);
         var b = await app.ImportPdfAsync("B", "b", folder.Id);
 
-        await app.Library.DeleteSheetAsync(a);
+        await app.Library.DeleteSheetAsync(a, deleteExternalCopy: true);
         Assert.Contains("Etudes", _store.Directories);
 
-        await app.Library.DeleteSheetAsync(b);
+        await app.Library.DeleteSheetAsync(b, deleteExternalCopy: true);
         Assert.DoesNotContain("Etudes", _store.Directories);
     }
 
@@ -230,7 +285,7 @@ public class ExternalLibraryTests
         var folder = await app.Library.CreateFolderAsync("Etudes");
         await app.ImportPdfAsync("Song", "s", folder.Id);
 
-        await app.Library.DeleteFolderAsync(folder.Id, deleteSheets: true);
+        await app.Library.DeleteFolderAsync(folder.Id, deleteSheets: true, deleteExternalCopies: true);
 
         Assert.DoesNotContain("Etudes", _store.Directories);
     }
@@ -255,8 +310,8 @@ public class ExternalLibraryTests
         var sheet = await app.ImportPdfAsync("Song", "s", folder.Id);
         _store.Files["Etudes/notes.txt"] = new byte[] { 1 };
 
-        await app.Library.DeleteSheetAsync(sheet);
-        await app.Library.DeleteFolderAsync(folder.Id, deleteSheets: true);
+        await app.Library.DeleteSheetAsync(sheet, deleteExternalCopy: true);
+        await app.Library.DeleteFolderAsync(folder.Id, deleteSheets: true, deleteExternalCopies: true);
 
         Assert.Contains("Etudes", _store.Directories);
         Assert.True(_store.Files.ContainsKey("Etudes/notes.txt"));

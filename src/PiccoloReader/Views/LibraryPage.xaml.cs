@@ -107,6 +107,12 @@ public partial class LibraryPage : ContentPage
 
     protected override bool OnBackButtonPressed()
     {
+        if (DeleteOverlay.IsShowing)
+        {
+            DeleteOverlay.Cancel();
+            return true;
+        }
+
         if (_coach.IsShowing)
         {
             _coach.Skip();
@@ -323,7 +329,16 @@ public partial class LibraryPage : ContentPage
 
         if (choice == AppStrings.DeleteSheetsOption)
         {
-            await _viewModel.DeleteFolderCommand.ExecuteAsync(folder);
+            var (confirmed, deleteFiles) = await DeleteOverlay.ShowAsync(
+                AppStrings.DeleteFolderTitle,
+                string.Format(AppStrings.DeleteFolderMessageFormat, folder.Name),
+                DeleteConfirmOverlay.FolderDisplayPath(folder.Name),
+                AppStrings.DeleteAlsoFilesFromStorage);
+
+            if (confirmed)
+            {
+                await _viewModel.DeleteFolderCommand.ExecuteAsync((folder, deleteFiles));
+            }
         }
         else if (choice == AppStrings.KeepSheetsOption)
         {
@@ -359,15 +374,15 @@ public partial class LibraryPage : ContentPage
 
         if (choice == AppStrings.Delete)
         {
-            var confirmed = await DisplayAlertAsync(
+            var (confirmed, deleteFile) = await DeleteOverlay.ShowAsync(
                 AppStrings.DeleteSheetTitle,
                 string.Format(AppStrings.DeleteSheetMessageFormat, sheet.Title),
-                AppStrings.Delete,
-                AppStrings.Cancel);
+                DeleteConfirmOverlay.SheetDisplayPath(sheet.ExternalPath),
+                AppStrings.DeleteAlsoFromStorage);
 
             if (confirmed)
             {
-                await _viewModel.DeleteSheetCommand.ExecuteAsync(sheet);
+                await _viewModel.DeleteSheetCommand.ExecuteAsync((sheet, deleteFile));
             }
         }
         else if (choice == AppStrings.Move)

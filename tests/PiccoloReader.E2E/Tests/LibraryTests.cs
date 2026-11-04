@@ -106,9 +106,7 @@ public class LibraryTests : E2ETestBase
     {
         LibraryScreen.OpenSheetMenu(Bravo);
         Ui.TapText(AppStrings.Delete);
-        // Confirmation alert: its confirm button is also labelled "Delete".
-        Ui.Poll(() => Ui.TextExists(AppStrings.DeleteSheetTitle), 10, "the delete confirmation");
-        Ui.TapText(AppStrings.Delete);
+        LibraryScreen.ConfirmDelete();
 
         LibraryScreen.WaitSheetGone(Bravo);
         Assert.That(AppDb.Sheets().Select(s => s.Title), Is.EquivalentTo(new[] { Alpha }));

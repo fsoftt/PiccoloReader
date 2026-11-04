@@ -48,7 +48,12 @@
   <data name="Move" xml:space="preserve"><value>Mover</value></data>
   <data name="Delete" xml:space="preserve"><value>Eliminar</value></data>
   <data name="DeleteSheetTitle" xml:space="preserve"><value>Eliminar partitura</value></data>
-  <data name="DeleteSheetMessageFormat" xml:space="preserve"><value>¿Eliminar "{0}"? El PDF también se borrará de Documentos/PiccoloReader. Esta acción no se puede deshacer.</value></data>
+  <data name="DeleteSheetMessageFormat" xml:space="preserve"><value>¿Eliminar "{0}" de la biblioteca?</value></data>
+  <data name="DeleteAlsoFromStorage" xml:space="preserve"><value>También eliminar el archivo del almacenamiento</value></data>
+  <data name="DeleteLocationFormat" xml:space="preserve"><value>Ubicación: {0}</value></data>
+  <data name="DeleteFolderTitle" xml:space="preserve"><value>Eliminar carpeta</value></data>
+  <data name="DeleteFolderMessageFormat" xml:space="preserve"><value>¿Eliminar la carpeta "{0}" y todas sus partituras de la biblioteca?</value></data>
+  <data name="DeleteAlsoFilesFromStorage" xml:space="preserve"><value>También eliminar los archivos del almacenamiento</value></data>
   <data name="RootOption" xml:space="preserve"><value>Raíz</value></data>
   <data name="MoveToTitle" xml:space="preserve"><value>Mover a…</value></data>
   <data name="NoFoldersToMoveMessage" xml:space="preserve"><value>Primero crea una carpeta para poder mover partituras a ella.</value></data>

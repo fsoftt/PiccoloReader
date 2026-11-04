@@ -48,7 +48,12 @@
   <data name="Move" xml:space="preserve"><value>Move</value></data>
   <data name="Delete" xml:space="preserve"><value>Delete</value></data>
   <data name="DeleteSheetTitle" xml:space="preserve"><value>Delete sheet</value></data>
-  <data name="DeleteSheetMessageFormat" xml:space="preserve"><value>Delete "{0}"? The PDF will also be deleted from Documents/PiccoloReader. This cannot be undone.</value></data>
+  <data name="DeleteSheetMessageFormat" xml:space="preserve"><value>Delete "{0}" from the library?</value></data>
+  <data name="DeleteAlsoFromStorage" xml:space="preserve"><value>Also delete the file from storage</value></data>
+  <data name="DeleteLocationFormat" xml:space="preserve"><value>Location: {0}</value></data>
+  <data name="DeleteFolderTitle" xml:space="preserve"><value>Delete folder</value></data>
+  <data name="DeleteFolderMessageFormat" xml:space="preserve"><value>Delete the folder "{0}" and all its sheets from the library?</value></data>
+  <data name="DeleteAlsoFilesFromStorage" xml:space="preserve"><value>Also delete the files from storage</value></data>
   <data name="RootOption" xml:space="preserve"><value>Root</value></data>
   <data name="MoveToTitle" xml:space="preserve"><value>Move to…</value></data>
   <data name="NoFoldersToMoveMessage" xml:space="preserve"><value>Create a folder first to move sheets into.</value></data>

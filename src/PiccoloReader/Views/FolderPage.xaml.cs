@@ -91,6 +91,12 @@ public partial class FolderPage : ContentPage
 
     protected override bool OnBackButtonPressed()
     {
+        if (DeleteOverlay.IsShowing)
+        {
+            DeleteOverlay.Cancel();
+            return true;
+        }
+
         if (_coach.IsShowing)
         {
             _coach.Skip();
@@ -219,15 +225,15 @@ public partial class FolderPage : ContentPage
 
         if (choice == AppStrings.Delete)
         {
-            var confirmed = await DisplayAlertAsync(
+            var (confirmed, deleteFile) = await DeleteOverlay.ShowAsync(
                 AppStrings.DeleteSheetTitle,
                 string.Format(AppStrings.DeleteSheetMessageFormat, sheet.Title),
-                AppStrings.Delete,
-                AppStrings.Cancel);
+                DeleteConfirmOverlay.SheetDisplayPath(sheet.ExternalPath),
+                AppStrings.DeleteAlsoFromStorage);
 
             if (confirmed)
             {
-                await _viewModel.DeleteSheetCommand.ExecuteAsync(sheet);
+                await _viewModel.DeleteSheetCommand.ExecuteAsync((sheet, deleteFile));
             }
         }
         else if (choice == AppStrings.Move)
