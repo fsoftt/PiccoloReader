@@ -384,5 +384,6 @@
         </Border>
 
         <views:CoachMarkOverlay x:Name="CoachOverlay" />
+        <views:DeleteConfirmOverlay x:Name="DeleteOverlay" />
     </Grid>
 </ContentPage>

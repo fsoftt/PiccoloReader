@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentView
+    x:Class="PiccoloReader.Views.DeleteConfirmOverlay"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:strings="clr-namespace:PiccoloReader.Core.Resources.Strings;assembly=PiccoloReader.Core"
+    IsVisible="False">
+
+    <!-- In-page confirmation dialog for deleting sheets/folders, with an opt-in "also delete from storage". -->
+    <Grid x:Name="Backdrop" AutomationId="DeleteConfirmOverlay" BackgroundColor="#99000000" Padding="24">
+        <Grid.GestureRecognizers>
+            <TapGestureRecognizer Tapped="OnBackdropTapped" />
+        </Grid.GestureRecognizers>
+
+        <Border VerticalOptions="Center" HorizontalOptions="Center" MaximumWidthRequest="420"
+                Padding="20,20,20,12" StrokeThickness="1" StrokeShape="RoundRectangle 24"
+                Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceRaisedDark}}">
+            <Border.GestureRecognizers>
+                <!-- Swallows taps so they do not reach the backdrop. -->
+                <TapGestureRecognizer Tapped="OnCardTapped" />
+            </Border.GestureRecognizers>
+
+            <VerticalStackLayout Spacing="12">
+                <Label x:Name="TitleLabel" AutomationId="DeleteConfirmTitle" FontSize="20" FontFamily="OpenSansSemibold"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                <Label x:Name="MessageLabel" AutomationId="DeleteConfirmMessage" FontSize="16"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                <Label x:Name="PathLabel" AutomationId="DeleteConfirmPath" FontSize="13" LineBreakMode="CharacterWrap"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                <Grid x:Name="CheckRow" ColumnDefinitions="Auto,*" ColumnSpacing="4" Margin="-10,0,0,0">
+                    <CheckBox x:Name="DeleteFileCheckBox" AutomationId="DeleteConfirmDeleteFileCheckBox"
+                              VerticalOptions="Center" />
+                    <Label x:Name="CheckLabel" Grid.Column="1" FontSize="15" VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnCheckLabelTapped" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                </Grid>
+                <HorizontalStackLayout HorizontalOptions="End" Spacing="8">
+                    <Button x:Name="CancelButton" AutomationId="DeleteConfirmCancelButton"
+                            Text="{x:Static strings:AppStrings.Cancel}"
+                            BackgroundColor="Transparent"
+                            TextColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"
+                            Clicked="OnCancelClicked" />
+                    <Button x:Name="DeleteButton" AutomationId="DeleteConfirmDeleteButton"
+                            Text="{x:Static strings:AppStrings.Delete}"
+                            Clicked="OnDeleteClicked" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentView>

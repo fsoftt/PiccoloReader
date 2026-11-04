@@ -35,6 +35,11 @@ public static class AppStrings
     public static string Delete => Get(nameof(Delete));
     public static string DeleteSheetTitle => Get(nameof(DeleteSheetTitle));
     public static string DeleteSheetMessageFormat => Get(nameof(DeleteSheetMessageFormat));
+    public static string DeleteAlsoFromStorage => Get(nameof(DeleteAlsoFromStorage));
+    public static string DeleteAlsoFilesFromStorage => Get(nameof(DeleteAlsoFilesFromStorage));
+    public static string DeleteLocationFormat => Get(nameof(DeleteLocationFormat));
+    public static string DeleteFolderTitle => Get(nameof(DeleteFolderTitle));
+    public static string DeleteFolderMessageFormat => Get(nameof(DeleteFolderMessageFormat));
     public static string RootOption => Get(nameof(RootOption));
     public static string MoveToTitle => Get(nameof(MoveToTitle));
     public static string NoFoldersToMoveMessage => Get(nameof(NoFoldersToMoveMessage));

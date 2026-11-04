@@ -15,6 +15,10 @@ public static class LibraryScreen
     public const string SheetTitleId = "LibrarySheetTitle";
     public const string FolderNameId = "LibraryFolderName";
     public const string MoreButton = "LibraryItemMoreButton";
+    public const string DeleteConfirmOverlay = "DeleteConfirmOverlay";
+    public const string DeleteConfirmDeleteButton = "DeleteConfirmDeleteButton";
+    public const string DeleteConfirmCancelButton = "DeleteConfirmCancelButton";
+    public const string DeleteConfirmCheckBox = "DeleteConfirmDeleteFileCheckBox";
 
     public static void WaitLoaded() => Ui.Find(ImportButton, 60);
 
@@ -77,6 +81,13 @@ public static class LibraryScreen
     public static void LongPressSheet(string title) => Gestures.LongPress(SheetRow(title));
 
     public static bool SheetMenuIsShown() => Ui.TextExists(AppStrings.Move) && Ui.TextExists(AppStrings.Delete);
+
+    /// <summary>Waits for the delete confirmation overlay and taps its Delete button (file checkbox left unchecked).</summary>
+    public static void ConfirmDelete()
+    {
+        Ui.Find(DeleteConfirmOverlay, 10);
+        Ui.Tap(DeleteConfirmDeleteButton);
+    }
 
     public static void DismissMenu()
     {

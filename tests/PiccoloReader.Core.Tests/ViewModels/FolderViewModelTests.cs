@@ -196,7 +196,7 @@ public class FolderViewModelTests : IDisposable
         _sut.SearchText = "noct";
         var toDelete = _sut.Sheets[0];
 
-        await _sut.DeleteSheetCommand.ExecuteAsync(toDelete);
+        await _sut.DeleteSheetCommand.ExecuteAsync((toDelete, false));
 
         Assert.False(_sut.HasMultipleSheets);
         Assert.False(_sut.IsSearchVisible);

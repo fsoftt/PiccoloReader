@@ -150,16 +150,16 @@ public partial class LibraryViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task DeleteSheetAsync(Sheet sheet)
+    private async Task DeleteSheetAsync((Sheet Sheet, bool DeleteFile) args)
     {
-        await _libraryService.DeleteSheetAsync(sheet);
+        await _libraryService.DeleteSheetAsync(args.Sheet, args.DeleteFile);
         await LoadAsync();
     }
 
     [RelayCommand]
-    private async Task DeleteFolderAsync(Folder folder)
+    private async Task DeleteFolderAsync((Folder Folder, bool DeleteFiles) args)
     {
-        await _libraryService.DeleteFolderAsync(folder.Id, deleteSheets: true);
+        await _libraryService.DeleteFolderAsync(args.Folder.Id, deleteSheets: true, deleteExternalCopies: args.DeleteFiles);
         await LoadAsync();
     }
 

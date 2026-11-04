@@ -99,9 +99,9 @@ public partial class FolderViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task DeleteSheetAsync(Sheet sheet)
+    private async Task DeleteSheetAsync((Sheet Sheet, bool DeleteFile) args)
     {
-        await _libraryService.DeleteSheetAsync(sheet);
+        await _libraryService.DeleteSheetAsync(args.Sheet, args.DeleteFile);
         await LoadAsync();
     }
 

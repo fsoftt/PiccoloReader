@@ -125,7 +125,7 @@ public class LibraryViewModelTests : IDisposable
         await _sut.CreateFolderCommand.ExecuteAsync(null);
         var folder = _sut.Folders[0];
 
-        await _sut.DeleteFolderCommand.ExecuteAsync(folder);
+        await _sut.DeleteFolderCommand.ExecuteAsync((folder, false));
 
         Assert.Empty(_sut.Folders);
         Assert.False(_sut.HasFolders);
@@ -210,7 +210,7 @@ public class LibraryViewModelTests : IDisposable
         _sut.FolderSearchText = "big";
         var toDelete = _sut.Folders[0];
 
-        await _sut.DeleteFolderCommand.ExecuteAsync(toDelete);
+        await _sut.DeleteFolderCommand.ExecuteAsync((toDelete, false));
 
         Assert.False(_sut.HasMultipleFolders);
         Assert.False(_sut.IsFolderSearchVisible);
@@ -288,7 +288,7 @@ public class LibraryViewModelTests : IDisposable
         _sut.SheetSearchText = "noct";
         var toDelete = _sut.RootSheets[0];
 
-        await _sut.DeleteSheetCommand.ExecuteAsync(toDelete);
+        await _sut.DeleteSheetCommand.ExecuteAsync((toDelete, false));
 
         Assert.False(_sut.HasMultipleRootSheets);
         Assert.False(_sut.IsSheetSearchVisible);

@@ -89,7 +89,7 @@ public class LibraryServiceTests : IDisposable
         var folder = await _sut.CreateFolderAsync("Orchestra");
         var sheet = await InsertSheetAsync(folder.Id);
 
-        await _sut.DeleteFolderAsync(folder.Id, deleteSheets: true);
+        await _sut.DeleteFolderAsync(folder.Id, deleteSheets: true, deleteExternalCopies: false);
 
         Assert.Empty(await _sut.GetFoldersAsync());
         Assert.Empty(await _sut.GetSheetsAsync(folder.Id));
@@ -127,7 +127,7 @@ public class LibraryServiceTests : IDisposable
         var sheet = await InsertSheetAsync(null);
         var filePath = Path.Combine(_storage.SheetsDirectory, sheet.FileName);
 
-        await _sut.DeleteSheetAsync(sheet);
+        await _sut.DeleteSheetAsync(sheet, deleteExternalCopy: true);
 
         Assert.Empty(await _sut.GetSheetsAsync(null));
         Assert.False(File.Exists(filePath));
