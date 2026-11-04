@@ -11,7 +11,7 @@ matched by the app's own `AppStrings` text (tests force the English UI).
 ## Run locally
 
 1. Build a **self-contained, debuggable** APK (the tests read the app's database and preferences
-   with `adb run-as`, and reset it with `pm clear`):
+   with `adb run-as`, and reset it with `run-as ... rm -rf`):
 
    ```
    dotnet build src/PiccoloReader/PiccoloReader.csproj -f net10.0-android -c Debug ^
@@ -21,8 +21,8 @@ matched by the app's own `AppStrings` text (tests force the English UI).
    The APK is `src/PiccoloReader/bin/Debug/net10.0-android/com.fsoftt.piccoloreader-Signed.apk`.
 
    > **Warning: do not use a Fast Deployment Debug build.** The normal IDE/`dotnet build -t:Run`
-   > Debug flow pushes the .NET assemblies next to the app instead of into the APK. `pm clear`
-   > (used between tests) deletes them and the app then crashes on launch. Always build with
+   > Debug flow pushes the .NET assemblies next to the app instead of into the APK. `run-as rm -rf`
+   > (`run-as rm -rf` between tests) removes them and the app then crashes on launch. Always build with
    > `EmbedAssembliesIntoApk=true` (or Release) for E2E. If you must keep your Fast Deployment
    > install, set `PICCOLO_RESET=none` (no data wipe; tests then share state and may fail).
 
@@ -48,7 +48,7 @@ matched by the app's own `AppStrings` text (tests force the English UI).
 | `PICCOLO_APK` | (required) APK to install and test |
 | `APPIUM_URL` | Appium server, default `http://127.0.0.1:4723` |
 | `E2E_ARTIFACTS` | where failure screenshots / UI dumps / logcat go (default `bin/.../e2e-artifacts`) |
-| `PICCOLO_RESET` | `none` disables the `pm clear` between tests |
+| `PICCOLO_RESET` | `none` disables the data wipe between tests |
 | `ANDROID_SERIAL` | adb device to use |
 
 The tests change global emulator settings (rotation lock) and write PDFs to `/sdcard/Download`.
@@ -59,4 +59,17 @@ The tests change global emulator settings (rotation lock) and write PDFs to `/sd
   via `adb exec-out run-as ... cat`), `Gestures` (tap, long-press, drag, pinch via W3C actions),
   `PdfFactory` (hand-written test PDFs), `Ui` (AutomationId lookup).
 - `Screens/` - page objects (`LibraryScreen`, `ViewerScreen`) holding the AutomationIds. Only the import test goes through the system file picker; every other test starts with the PDFs already seeded into the library (files + DB rows), on top of an empty database captured once per run from a real first launch (which skips the tutorial through `TutorialSkipButton`).
-- `Tests/` - `LibraryTests`, `ImportTests`, `ViewerTests`, `EditorTests`, `SettingsTests`. Annotations are drawn on a Skia canvas, so editor tests assert on the app SQLite database. Each starts from a fresh app (`pm clear`, English, portrait).
+- `Tests/` - `LibraryTests`, `ImportTests`, `PianoTests`, `ViewerTests`, `ReadingGestureTests` (pinch zoom, swipes), `PedalTests` (hardware page-turn keys), `ConcertTests`, `CropTests`, `EditorTests`, `SettingsTests`. Annotations are drawn on a Skia canvas, so editor tests assert on the app SQLite database. Each starts from a fresh app (data wiped with `run-as rm -rf`, English, portrait).
+
+## CI
+
+`.github/workflows/e2e.yml` runs only on `workflow_dispatch` and on `v*` tags (before a release is uploaded to Google), not on pull requests. One job builds the APK, then four shards run in parallel on their own emulator (35 min timeout each). A test class that matches no shard never runs in CI, so add new classes to the `filter` of a shard:
+
+| Shard | Filter |
+| --- | --- |
+| `editor` | `EditorTests` |
+| `library` | `LibraryTests`, `ImportTests` |
+| `viewer-settings` | `ViewerTests`, `SettingsTests`, `PianoTests` |
+| `reading` | `ReadingGestureTests`, `PedalTests`, `ConcertTests`, `CropTests` |
+
+The `filter` input of `workflow_dispatch` overrides the shard filters (and runs on every shard).

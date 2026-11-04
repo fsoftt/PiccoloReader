@@ -83,9 +83,11 @@ jobs:
           - shard: editor
             filter: "FullyQualifiedName~EditorTests"
           - shard: library
-            filter: "FullyQualifiedName~LibraryTests"
+            filter: "FullyQualifiedName~LibraryTests|FullyQualifiedName~ImportTests"
           - shard: viewer-settings
-            filter: "FullyQualifiedName~ViewerTests|FullyQualifiedName~SettingsTests"
+            filter: "FullyQualifiedName~ViewerTests|FullyQualifiedName~SettingsTests|FullyQualifiedName~PianoTests"
+          - shard: reading
+            filter: "FullyQualifiedName~ReadingGestureTests|FullyQualifiedName~PedalTests|FullyQualifiedName~ConcertTests|FullyQualifiedName~CropTests"
     env:
       E2E_ARTIFACTS: ${{ github.workspace }}/e2e-artifacts
       E2E_FILTER: ${{ github.event.inputs.filter || matrix.filter }}
