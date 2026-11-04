@@ -83,9 +83,15 @@ public static class LibraryScreen
     public static bool SheetMenuIsShown() => Ui.TextExists(AppStrings.Move) && Ui.TextExists(AppStrings.Delete);
 
     /// <summary>Waits for the delete confirmation overlay and taps its Delete button (file checkbox left unchecked).</summary>
-    public static void ConfirmDelete()
+    public static void ConfirmDelete(bool alsoDeleteFile = false)
     {
         Ui.Find(DeleteConfirmOverlay, 10);
+        if (alsoDeleteFile)
+        {
+            Ui.Tap(DeleteConfirmCheckBox);
+            Ui.Poll(() => Ui.IsChecked(DeleteConfirmCheckBox), 5, "the delete-file checkbox to be checked");
+        }
+
         Ui.Tap(DeleteConfirmDeleteButton);
     }
 
