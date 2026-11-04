@@ -62,6 +62,10 @@ public static class AppStrings
     public static string Color => Get(nameof(Color));
     public static string Width => Get(nameof(Width));
     public static string Eraser => Get(nameof(Eraser));
+    public static string TextToolHint => Get(nameof(TextToolHint));
+    public static string EditText => Get(nameof(EditText));
+    public static string AddTextTitle => Get(nameof(AddTextTitle));
+    public static string TextTool => Get(nameof(TextTool));
     public static string RecognizeShapesDescription => Get(nameof(RecognizeShapesDescription));
     public static string RecognizeShapesLabel => Get(nameof(RecognizeShapesLabel));
     public static string IconSlurBelow => Get(nameof(IconSlurBelow));

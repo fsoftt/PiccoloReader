@@ -57,6 +57,20 @@ public class AnnotationPainter
                 continue;
             }
 
+            if (annotation.IsText)
+            {
+                if (!string.IsNullOrEmpty(annotation.Text))
+                {
+                    DrawText(canvas, annotation.Text, new SKRect(
+                        (float)(frame.ToContainerX(annotation.X) * width),
+                        (float)(frame.ToContainerY(annotation.Y) * height),
+                        (float)(frame.ToContainerX(annotation.X + annotation.Width) * width),
+                        (float)(frame.ToContainerY(annotation.Y + annotation.Height) * height)), ColorOf(annotation));
+                }
+
+                continue;
+            }
+
             var icon = MusicIconCatalog.FindByKey(annotation.IconKey);
             if (icon is null)
             {
@@ -87,6 +101,51 @@ public class AnnotationPainter
         }
 
         canvas.RestoreToCount(restoreCount);
+    }
+
+    // Text annotations use the system sans font; the box height is one line
+    // (see TextFigure) and the text is stretched to the box's width, so
+    // resizing keeps it fitted like a glyph.
+    private const float MeasureFontSize = 100f;
+    private static readonly SKTypeface TextTypeface = SKTypeface.Default;
+
+    // The text's width / line height, as drawn: what TextFigure.Size needs.
+    public static double MeasureTextAspect(string text)
+    {
+        using var font = new SKFont(TextTypeface, MeasureFontSize);
+        var metrics = font.Metrics;
+        var lineHeight = metrics.Descent - metrics.Ascent;
+        return lineHeight <= 0 ? 1 : font.MeasureText(text) / lineHeight;
+    }
+
+    private static void DrawText(SKCanvas canvas, string text, SKRect rect, SKColor color)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0 || text.Length == 0)
+        {
+            return;
+        }
+
+        using var probe = new SKFont(TextTypeface, MeasureFontSize);
+        var probeMetrics = probe.Metrics;
+        var lineHeight = probeMetrics.Descent - probeMetrics.Ascent;
+        if (lineHeight <= 0)
+        {
+            return;
+        }
+
+        using var font = new SKFont(TextTypeface, MeasureFontSize * rect.Height / lineHeight) { Subpixel = true };
+        var measured = font.MeasureText(text);
+        if (measured <= 0)
+        {
+            return;
+        }
+
+        using var paint = new SKPaint { Color = color, IsAntialias = true };
+        var restore = canvas.Save();
+        canvas.Translate(rect.Left, rect.Top);
+        canvas.Scale(rect.Width / measured, 1);
+        canvas.DrawText(text, 0, -font.Metrics.Ascent, font, paint);
+        canvas.RestoreToCount(restore);
     }
 
     // A slur is a filled crescent: two Bezier edges sharing the end points,

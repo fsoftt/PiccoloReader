@@ -753,6 +753,41 @@ public partial class SheetViewerViewModel : ObservableObject
         SelectedAnnotation = annotation;
     }
 
+    // Adds a text annotation (already sized by the caller) and selects it.
+    public async Task<Annotation?> AddTextAsync(string text, string colorHex, double x, double y, double width, double height)
+    {
+        if (_sheet is null)
+        {
+            return null;
+        }
+
+        var annotation = await _annotationService.AddTextAsync(_sheet.Id, CurrentPageIndex, text, colorHex, x, y, width, height);
+        CurrentPageAnnotations.Add(annotation);
+        RecordAction(new AddAnnotationAction(_annotationService, CurrentPageAnnotations, annotation));
+        SelectedAnnotation = annotation;
+        return annotation;
+    }
+
+    // Changes a text annotation's content; its box is given by the caller
+    // (the new text's width at the same height). One undo step.
+    public async Task EditTextAsync(Annotation annotation, string newText, double newX, double newWidth)
+    {
+        var before = (annotation.X, annotation.Y, annotation.Width, annotation.Height);
+        var beforeText = annotation.Text ?? string.Empty;
+        annotation.Text = newText;
+        annotation.X = newX;
+        annotation.Width = newWidth;
+        await _annotationService.UpdateAnnotationAsync(annotation);
+
+        RecordAction(new UpdateAnnotationAction(
+            _annotationService,
+            annotation,
+            before,
+            (annotation.X, annotation.Y, annotation.Width, annotation.Height),
+            beforeText,
+            newText));
+    }
+
     // Duplicates a figure (the "Copy" menu): same shape, nudged so it shows
     // as a second one, kept inside the visible crop and selected so it can be
     // dragged away right away.

@@ -1,5 +1,7 @@
 using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Resources.Strings;
+using PiccoloReader.Core.Services;
+using PiccoloReader.Core.ViewModels;
 
 namespace PiccoloReader.Views;
 
@@ -35,7 +37,7 @@ public partial class SheetViewerPage
     // landed on a figure, so the listener drops the rest of the gesture.
     private bool HandleContainerLongPress(double normalizedX, double normalizedY)
     {
-        if (ToolSheet.IsVisible || _viewModel.IsDrawingToolActive || PageContainer.Width <= 0 || PageContainer.Height <= 0)
+        if (ToolSheet.IsVisible || _viewModel.ActiveTool is AnnotationTool.Pencil or AnnotationTool.Highlighter or AnnotationTool.Eraser || PageContainer.Width <= 0 || PageContainer.Height <= 0)
         {
             return false;
         }
@@ -65,11 +67,84 @@ public partial class SheetViewerPage
         }
 
         var copy = AppStrings.CopyFigure;
-        var choice = await DisplayActionSheetAsync(null, AppStrings.Cancel, null, copy);
+        var edit = AppStrings.EditText;
+        var options = figure.IsText ? new[] { edit, copy } : new[] { copy };
+        var choice = await DisplayActionSheetAsync(null, AppStrings.Cancel, null, options);
         if (choice == copy)
         {
             await _viewModel.CopyAnnotationAsync(figure);
             UpdateSelectionOverlay();
+        }
+        else if (choice == edit)
+        {
+            await EditTextAsync(figure);
+        }
+    }
+
+    private bool _textPromptOpen;
+
+    // Asks for text and adds it with its top-left at the tapped page point.
+    private async Task AddTextAtAsync(double pageX, double pageY)
+    {
+        if (_textPromptOpen)
+        {
+            return;
+        }
+
+        var text = await PromptTextAsync(string.Empty);
+        if (text is null)
+        {
+            return;
+        }
+
+        var aspect = _viewModel.CurrentPageAspectRatio;
+        var (width, height) = TextFigure.Size(AnnotationPainter.MeasureTextAspect(text), TextFigure.DefaultHeight, aspect);
+        var (x, y) = TextFigure.Place(pageX, pageY, width, height, _viewModel.CurrentPageCrop);
+        await _viewModel.AddTextAsync(text, _viewModel.PencilColorHex, x, y, width, height);
+        UpdateSelectionOverlay();
+    }
+
+    // The new text box keeps the height and takes the new text's width.
+    private async Task EditTextAsync(Annotation annotation)
+    {
+        var text = await PromptTextAsync(annotation.Text ?? string.Empty);
+        if (text is null || text == annotation.Text)
+        {
+            return;
+        }
+
+        var aspect = _viewModel.CurrentPageAspectRatio;
+        var (width, _) = TextFigure.Size(AnnotationPainter.MeasureTextAspect(text), annotation.Height, aspect);
+        var crop = _viewModel.CurrentPageCrop;
+        var x = Math.Clamp(annotation.X, crop.Left, Math.Max(crop.Left, crop.Right - width));
+        await _viewModel.EditTextAsync(annotation, text, x, width);
+        UpdateSelectionOverlay();
+    }
+
+    // The normalized text typed by the user, or null when cancelled or empty
+    // (an empty text keeps what was there).
+    private async Task<string?> PromptTextAsync(string initial)
+    {
+        _textPromptOpen = true;
+        try
+        {
+            var input = await DisplayPromptAsync(
+                AppStrings.AddTextTitle,
+                AppStrings.TextTool,
+                accept: AppStrings.OK,
+                cancel: AppStrings.Cancel,
+                maxLength: TextFigure.MaxLength,
+                initialValue: initial);
+#if ANDROID
+            // The keyboard leaves the window insets stale, see OnPageIndicatorTapped.
+            RequestAndroidWindowInsetsRefresh();
+            Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(300), RequestAndroidWindowInsetsRefresh);
+#endif
+            return TextFigure.Normalize(input);
+        }
+        finally
+        {
+            _textPromptOpen = false;
         }
     }
 }

@@ -257,7 +257,7 @@
                     StrokeThickness="0"
                     StrokeShape="RoundRectangle 14"
                     BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource BackgroundDark}}">
-                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="4">
+                    <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="4">
                         <Border
                             x:Name="ToolSegmentPencil"
                             Grid.Column="0"
@@ -340,6 +340,27 @@
                                     </Image.Source>
                                 </Image>
                                 <Label x:Name="ToolSegmentSymbolsLabel" Text="{x:Static strings:AppStrings.Symbols}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Border>
+                        <Border
+                            x:Name="ToolSegmentText"
+                            Grid.Column="4"
+                            AutomationId="ToolSegmentText"
+                            HeightRequest="44"
+                            Padding="0"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 10"
+                            BackgroundColor="Transparent">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnToolSegmentTextTapped" />
+                            </Border.GestureRecognizers>
+                            <HorizontalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
+                                    <Image.Source>
+                                        <FontImageSource x:Name="ToolSegmentTextGlyph" Glyph="&#xE264;" FontFamily="MaterialOutlined" Size="20" />
+                                    </Image.Source>
+                                </Image>
+                                <Label x:Name="ToolSegmentTextLabel" Text="{x:Static strings:AppStrings.TextTool}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
                             </HorizontalStackLayout>
                         </Border>
                     </Grid>
@@ -437,6 +458,9 @@
                                 </VerticalStackLayout>
                             </Grid>
 
+                            <VerticalStackLayout x:Name="TextSection" IsVisible="False" Spacing="10">
+                                <Label Text="{x:Static strings:AppStrings.TextToolHint}" Style="{StaticResource SectionLabel}" />
+                            </VerticalStackLayout>
                             <VerticalStackLayout x:Name="EraserSection" IsVisible="False" Spacing="10">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Text="{x:Static strings:AppStrings.Size}" Style="{StaticResource SectionLabel}" />

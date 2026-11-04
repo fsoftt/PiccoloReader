@@ -1156,7 +1156,10 @@ public partial class SheetViewerPage : ContentPage
         if (ToolSheet.IsVisible)
         {
             ToolSheet.IsVisible = false;
-            return;
+            if (_viewModel.ActiveTool != AnnotationTool.Text)
+            {
+                return;
+            }
         }
 
         if (_isToolFabExpanded)
@@ -1197,6 +1200,13 @@ public partial class SheetViewerPage : ContentPage
         {
             _viewModel.SelectedAnnotation = hit;
             UpdateSelectionOverlay();
+            return;
+        }
+
+        // With the Text tool a tap on empty page asks for the text to put there.
+        if (_viewModel.ActiveTool == AnnotationTool.Text && _viewModel.CurrentPageCrop.Contains(pageX, pageY))
+        {
+            _ = AddTextAtAsync(pageX, pageY);
             return;
         }
 
@@ -1705,6 +1715,13 @@ public partial class SheetViewerPage : ContentPage
                 _resizeStartX, annotation.Width, annotation.Height,
                 _viewModel.CurrentPageAspectRatio, _viewModel.CurrentPageCrop.Right);
         }
+        else if (annotation.IsText && _resizeStartWidth > 0 && _resizeStartHeight > 0)
+        {
+            // Text keeps its proportions; the average of both drags scales it.
+            var scale = (annotation.Width / _resizeStartWidth + annotation.Height / _resizeStartHeight) / 2;
+            annotation.Height = Math.Clamp(_resizeStartHeight * scale, TextFigure.MinHeight, TextFigure.MaxHeight);
+            annotation.Width = _resizeStartWidth * annotation.Height / _resizeStartHeight;
+        }
 
         RepositionSelectionOverlay();
         InvalidateAnnotations();
@@ -2021,7 +2038,10 @@ public partial class SheetViewerPage : ContentPage
         if (ToolSheet.IsVisible)
         {
             ToolSheet.IsVisible = false;
-            return;
+            if (_viewModel.ActiveTool != AnnotationTool.Text)
+            {
+                return;
+            }
         }
 
         if (_isToolFabExpanded)
@@ -3652,6 +3672,7 @@ public partial class SheetViewerPage : ContentPage
         PencilSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Pencil;
         HighlighterSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Highlighter;
         EraserSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Eraser;
+        TextSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Text;
 
         // InputTransparent is left False permanently in XAML (never toggled
         // here) rather than True/False alongside IsVisible - confirmed
@@ -3708,6 +3729,7 @@ public partial class SheetViewerPage : ContentPage
         SetSegment(ToolSegmentHighlighter, ToolSegmentHighlighterLabel, ToolSegmentHighlighterGlyph, _viewModel.ActiveTool == AnnotationTool.Highlighter);
         SetSegment(ToolSegmentEraser, ToolSegmentEraserLabel, ToolSegmentEraserGlyph, _viewModel.ActiveTool == AnnotationTool.Eraser);
         SetSegment(ToolSegmentSymbols, ToolSegmentSymbolsLabel, ToolSegmentSymbolsGlyph, _viewModel.ActiveTool == AnnotationTool.MusicIcons);
+        SetSegment(ToolSegmentText, ToolSegmentTextLabel, ToolSegmentTextGlyph, _viewModel.ActiveTool == AnnotationTool.Text);
     }
 
     private static void SetSegment(Border segment, Label label, FontImageSource glyph, bool selected)
@@ -3768,6 +3790,7 @@ public partial class SheetViewerPage : ContentPage
 
                 break;
             case AnnotationTool.Eraser:
+            case AnnotationTool.Text:
                 height = header + (landscape ? 82 : 100);
                 break;
             default:
@@ -3942,6 +3965,9 @@ public partial class SheetViewerPage : ContentPage
 
     private async void OnToolSegmentEraserTapped(object? sender, TappedEventArgs e) =>
         await SelectToolSegmentAsync(AnnotationTool.Eraser);
+
+    private async void OnToolSegmentTextTapped(object? sender, TappedEventArgs e) =>
+        await SelectToolSegmentAsync(AnnotationTool.Text);
 
     private async void OnToolSegmentSymbolsTapped(object? sender, TappedEventArgs e) =>
         await SelectToolSegmentAsync(AnnotationTool.MusicIcons);
