@@ -274,6 +274,12 @@ public partial class SheetViewerViewModel : ObservableObject
     private double _pencilStrokeWidth = 0.008;
 
     [ObservableProperty]
+    private string _highlighterColorHex = HighlighterPalette.Default;
+
+    [ObservableProperty]
+    private double _highlighterStrokeWidth = HighlighterPalette.DefaultStrokeWidth;
+
+    [ObservableProperty]
     private double _eraserRadius = 0.05;
 
     [ObservableProperty]
