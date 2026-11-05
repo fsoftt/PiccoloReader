@@ -268,6 +268,49 @@ public class ShapeRecognizerTests
     }
 
     [Fact]
+    public void Hairpin_NarrowFiveDegrees_IsRecognized()
+    {
+        var shape = Recognize(Polyline((0.4, 0.5 - 0.0094), (0.1, 0.5), (0.4, 0.5 + 0.0094)));
+
+        Assert.Equal(RecognizedShapeKind.Hairpin, shape.Kind);
+        Assert.Equal(HairpinGeometry.CrescendoKey, shape.HairpinKey);
+    }
+
+    [Fact]
+    public void TwoStrokeHairpin_NarrowCrossingApex_IsRecognized()
+    {
+        // Both strokes run 0.01 past the apex, so they cross there.
+        var upper = Polyline((0.09, 0.5 + 0.0003), (0.4, 0.5 - 0.0094));
+        var lower = Polyline((0.09, 0.5 - 0.0003), (0.4, 0.5 + 0.0094));
+
+        var shape = ShapeRecognizer.RecognizeTwoStrokeHairpin(upper, lower, Aspect);
+
+        Assert.Equal(RecognizedShapeKind.Hairpin, shape.Kind);
+        Assert.Equal(HairpinGeometry.CrescendoKey, shape.HairpinKey);
+    }
+
+    [Fact]
+    public void TwoStrokeHairpin_NarrowDecrescendoWithGap_IsRecognized()
+    {
+        var upper = Polyline((0.1, 0.5 - 0.0094), (0.4, 0.5));
+        var lower = Polyline((0.1, 0.5 + 0.0094), (0.41, 0.502));
+
+        var shape = ShapeRecognizer.RecognizeTwoStrokeHairpin(upper, lower, Aspect);
+
+        Assert.Equal(RecognizedShapeKind.Hairpin, shape.Kind);
+        Assert.Equal(HairpinGeometry.DecrescendoKey, shape.HairpinKey);
+    }
+
+    [Fact]
+    public void TwoStrokeHairpin_EndToEndLine_IsNothing()
+    {
+        var left = Polyline((0.1, 0.5), (0.3, 0.5));
+        var right = Polyline((0.3, 0.5), (0.5, 0.5));
+
+        Assert.Equal(RecognizedShapeKind.None, ShapeRecognizer.RecognizeTwoStrokeHairpin(left, right, Aspect).Kind);
+    }
+
+    [Fact]
     public void Hairpin_TooWideOpening_IsNothing()
     {
         Assert.Equal(RecognizedShapeKind.None, Recognize(Polyline((0.3, 0.4), (0.1, 0.5), (0.3, 0.6))).Kind);

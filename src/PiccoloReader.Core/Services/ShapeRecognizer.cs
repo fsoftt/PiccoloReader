@@ -50,15 +50,16 @@ public static class ShapeRecognizer
     // Hairpin.
     private const double MinArm = 0.03;
     private const double MinArmRatio = 0.6;
-    private const double MinOpeningDegrees = 10;
+    private const double MinOpeningDegrees = 3;
     private const double MaxOpeningDegrees = 40;
     private const double MaxBisectorAngleDegrees = 20;
     private const double MaxArmBend = 0.06;
 
     // Two strokes making a hairpin: the shared end points may be this far
     // apart (page widths), and at most this fraction of the shorter stroke.
-    private const double MaxJoinGap = 0.02;
-    private const double MaxJoinGapOfArm = 0.35;
+    // The same distance is how far a stroke may cross past the apex.
+    private const double MaxJoinGap = 0.03;
+    private const double MaxJoinGapOfArm = 0.5;
 
     // Points are page fractions; pageAspectRatio is the page's height / width.
     public static RecognizedShape Recognize(IReadOnlyList<StrokePoint> points, double pageAspectRatio)
@@ -109,7 +110,34 @@ public static class ShapeRecognizer
             }
         }
 
-        return best <= maxGap ? ClassifyHairpin(apex, armA, armB, pageAspectRatio) : RecognizedShape.None;
+        if (best <= maxGap)
+        {
+            return ClassifyHairpin(apex, armA, armB, pageAspectRatio);
+        }
+
+        // Strokes that cross a little past each other: the apex is where
+        // their lines meet, if both strokes end close to it.
+        var d1x = a[^1].X - a[0].X;
+        var d1y = a[^1].Y - a[0].Y;
+        var d2x = b[^1].X - b[0].X;
+        var d2y = b[^1].Y - b[0].Y;
+        var cross = d1x * d2y - d1y * d2x;
+        if (Math.Abs(cross) < 1e-12)
+        {
+            return RecognizedShape.None;
+        }
+
+        var t = ((b[0].X - a[0].X) * d2y - (b[0].Y - a[0].Y) * d2x) / cross;
+        var meet = (X: a[0].X + t * d1x, Y: a[0].Y + t * d1y);
+        var nearA = Distance(meet, a[0]) <= Distance(meet, a[^1]) ? 0 : a.Count - 1;
+        var nearB = Distance(meet, b[0]) <= Distance(meet, b[^1]) ? 0 : b.Count - 1;
+        if (Distance(meet, a[nearA]) > maxGap || Distance(meet, b[nearB]) > maxGap)
+        {
+            return RecognizedShape.None;
+        }
+
+        return ClassifyHairpin(
+            meet, a[nearA == 0 ? a.Count - 1 : 0], b[nearB == 0 ? b.Count - 1 : 0], pageAspectRatio);
     }
 
     // True when a stroke is a single, nearly straight line (a candidate arm).
