@@ -66,6 +66,9 @@ public partial class SettingsViewModel : ObservableObject
     private bool _stylusDrawsDirectly;
 
     [ObservableProperty]
+    private bool _recognizeShapes;
+
+    [ObservableProperty]
     private bool _concertModeEnabled;
 
     [ObservableProperty]
@@ -77,6 +80,7 @@ public partial class SettingsViewModel : ObservableObject
         _tunerStripPreferenceService = tunerStripPreferenceService;
         _stylusPreferenceService = stylusPreferenceService;
         _stylusDrawsDirectly = stylusPreferenceService.DrawsDirectly;
+        _recognizeShapes = stylusPreferenceService.RecognizesShapes;
         _concertModePreferenceService = concertModePreferenceService;
         _concertModeEnabled = concertModePreferenceService.Enabled;
         _concertTutorialPreferenceService = concertTutorialPreferenceService;
@@ -97,6 +101,9 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnStylusDrawsDirectlyChanged(bool value) =>
         _stylusPreferenceService.DrawsDirectly = value;
+
+    partial void OnRecognizeShapesChanged(bool value) =>
+        _stylusPreferenceService.RecognizesShapes = value;
 
     partial void OnConcertModeEnabledChanged(bool value) =>
         _concertModePreferenceService.Enabled = value;

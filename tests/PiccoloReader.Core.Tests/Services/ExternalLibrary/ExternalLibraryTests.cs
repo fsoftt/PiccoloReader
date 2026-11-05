@@ -454,6 +454,50 @@ public class ExternalLibraryTests
         Assert.Equal(sheet.FileName, parsed.Annotations.Single().SheetKey);
     }
 
+    [Fact]
+    public async Task Recovery_KeepsTextAndFigureControlPoints()
+    {
+        const string points = "[{\"X\":0,\"Y\":1},{\"X\":0.25,\"Y\":-0.3},{\"X\":0.75,\"Y\":-0.3},{\"X\":1,\"Y\":1}]";
+        string before;
+        using (var old = new AppInstall(_store))
+        {
+            var song = await old.ImportPdfAsync("Song", "song-bytes");
+            await old.Annotations.AddTextAsync(song.Id, 0, "dolce", "#ff0000", 0.1, 0.2, 0.15, 0.025);
+            var slur = await old.Annotations.AddIconAsync(song.Id, 0, "slurAbove", 0.3, 0.3, 0.2, 0.04);
+            slur.Points = points;
+            slur.ColorHex = "#0000ff";
+            await old.Annotations.UpdateAnnotationAsync(slur);
+            await old.Sync.WaitForPendingAsync();
+            before = await old.NormalizedSnapshotAsync();
+        }
+
+        using var fresh = new AppInstall(_store);
+        await fresh.Recovery.RecoverAsync(_store);
+        await fresh.Sync.SyncAllAsync();
+
+        var sheet = (await fresh.Library.GetSheetsAsync(null)).Single();
+        var restored = await fresh.Annotations.GetAnnotationsAsync(sheet.Id, 0);
+        Assert.Equal(before, await fresh.NormalizedSnapshotAsync());
+        var text = restored.Single(a => a.IsText);
+        Assert.Equal("dolce", text.Text);
+        Assert.Equal("#ff0000", text.ColorHex);
+        var figure = restored.Single(a => a.IconKey == "slurAbove");
+        Assert.Equal(points, figure.Points);
+        Assert.Equal("#0000ff", figure.ColorHex);
+    }
+
+    [Fact]
+    public void TryParse_OldSnapshotWithoutText_ReadsAnnotationWithNullText()
+    {
+        const string json = """
+            { "Version": 1, "Annotations": [ { "SyncId": "a", "SheetKey": "x.pdf", "Type": "Icon", "IconKey": "forte", "X": 0.1, "Y": 0.1, "Width": 0.1, "Height": 0.1 } ] }
+            """;
+
+        var snapshot = LibrarySnapshot.TryParse(json)!;
+
+        Assert.Null(snapshot.Annotations.Single().Text);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

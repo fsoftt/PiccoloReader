@@ -259,6 +259,8 @@
   <data name="TunerStripPositionTop" xml:space="preserve"><value>Top</value></data>
   <data name="StylusDrawsDirectlyLabel" xml:space="preserve"><value>Stylus draws directly</value></data>
   <data name="StylusDrawsDirectlyDescription" xml:space="preserve"><value>Draw with a stylus without opening the pencil tool. The pen side button or eraser end erases.</value></data>
+  <data name="ConcertPullNext" xml:space="preserve"><value>Release for next: {0}</value></data>
+  <data name="ConcertPullPrevious" xml:space="preserve"><value>Release for previous: {0}</value></data>
   <data name="ConcertModeLabel" xml:space="preserve"><value>Concert mode</value></data>
   <data name="ConcertModeDescription" xml:space="preserve"><value>At the last page, next opens the next score of the list</value></data>
   <data name="Metronome" xml:space="preserve"><value>Metronome</value></data>
@@ -350,4 +352,16 @@
   <data name="CoachViewerNext" xml:space="preserve"><value>On the last page, tap here (or press the pedal) to open the next score</value></data>
   <data name="CoachViewerPrevious" xml:space="preserve"><value>On the first page, tap here to go back to the previous score</value></data>
   <data name="CoachViewerSettings" xml:space="preserve"><value>You can turn concert mode off in Settings</value></data>
+  <data name="CopyFigure" xml:space="preserve"><value>Copy</value></data>
+  <data name="CategorySlurs" xml:space="preserve"><value>Slurs</value></data>
+  <data name="IconSlurAbove" xml:space="preserve"><value>Slur (above)</value></data>
+  <data name="IconSlurBelow" xml:space="preserve"><value>Slur (below)</value></data>
+  <data name="RecognizeShapesLabel" xml:space="preserve"><value>Recognize drawn slurs and hairpins</value></data>
+  <data name="RecognizeShapesDescription" xml:space="preserve"><value>A slur or hairpin drawn with the pencil becomes a clean figure. Undo brings back the drawing.</value></data>
+  <data name="TextTool" xml:space="preserve"><value>Text</value></data>
+  <data name="AddTextTitle" xml:space="preserve"><value>Add text</value></data>
+  <data name="EditText" xml:space="preserve"><value>Edit text</value></data>
+  <data name="TextToolHint" xml:space="preserve"><value>Tap the page where the text goes. It uses the pencil color.</value></data>
+  <data name="ShapeConvertedSlur" xml:space="preserve"><value>Converted to slur — Undo restores your stroke</value></data>
+  <data name="ShapeConvertedHairpin" xml:space="preserve"><value>Converted to hairpin — Undo restores your stroke</value></data>
 </root>

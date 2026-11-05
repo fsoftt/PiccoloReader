@@ -48,6 +48,12 @@ public partial class SheetViewerViewModel
     public bool CanCrossToPreviousSheet(bool atDocumentStart = false) => CrossTarget(next: false, atDocumentStart) is not null;
 
     /// <summary>
+    /// The score a pull past the end (start) of the continuous list would
+    /// open, or null when none applies.
+    /// </summary>
+    public int? ConcertPullTarget(bool next) => CrossTarget(next, atEdgeOfContinuousList: true);
+
+    /// <summary>
     /// True when concert mode is on and the open sheet came from a list with a
     /// next or previous score (what the viewer tutorial explains).
     /// </summary>

@@ -241,6 +241,10 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnDisappearing();
 #if ANDROID
+        _pageContainerTouchListener?.CancelLongPress();
+        _selectionMoveTouchListener?.CancelLongPress();
+#endif
+#if ANDROID
         AbortStylusGestures();
 #endif
         _viewModel.SaveCurrentPageThumbnail();
@@ -457,6 +461,7 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnAppearing();
         _tunerStripPosition = _tunerStripPreferences.Position;
+        LoadTextColorPreference();
         _coachPageVisible = true;
         _viewModel.StartSpinnerWatchdog();
         _metronome.PropertyChanged += OnMetronomePropertyChanged;
@@ -1200,6 +1205,13 @@ public partial class SheetViewerPage : ContentPage
             return;
         }
 
+        // With the Text tool a tap on empty page asks for the text to put there.
+        if (_viewModel.ActiveTool == AnnotationTool.Text && _viewModel.CurrentPageCrop.Contains(pageX, pageY))
+        {
+            _ = AddTextAtAsync(pageX, pageY);
+            return;
+        }
+
         if (_viewModel.SelectedAnnotation is not null)
         {
             _viewModel.SelectedAnnotation = null;
@@ -1699,6 +1711,22 @@ public partial class SheetViewerPage : ContentPage
                 _resizeStartX, annotation.Width, annotation.Height,
                 _viewModel.CurrentPageAspectRatio, _viewModel.CurrentPageCrop.Right);
         }
+        else if (SlurGeometry.IsSlur(annotation.IconKey))
+        {
+            (annotation.X, annotation.Width, annotation.Height) = SlurGeometry.ClampBox(
+                _resizeStartX, annotation.Width, annotation.Height,
+                _viewModel.CurrentPageAspectRatio, _viewModel.CurrentPageCrop.Right);
+        }
+        else if (annotation.IsText && _resizeStartWidth > 0 && _resizeStartHeight > 0)
+        {
+            // Text keeps its proportions; the average of both drags scales it.
+            var scale = (annotation.Width / _resizeStartWidth + annotation.Height / _resizeStartHeight) / 2;
+            // Never past the visible right or bottom edge (the top-left stays put).
+            var crop = _viewModel.CurrentPageCrop;
+            scale = Math.Min(scale, Math.Min((crop.Right - annotation.X) / _resizeStartWidth, (crop.Bottom - annotation.Y) / _resizeStartHeight));
+            annotation.Height = Math.Clamp(_resizeStartHeight * scale, TextFigure.MinHeight, TextFigure.MaxHeight);
+            annotation.Width = _resizeStartWidth * annotation.Height / _resizeStartHeight;
+        }
 
         RepositionSelectionOverlay();
         InvalidateAnnotations();
@@ -2065,6 +2093,9 @@ public partial class SheetViewerPage : ContentPage
                     onHorizontalPan: ContinuousPanHorizontally,
                     onPinchPan: ContinuousPanBy);
                 _continuousZoomTouchListener.Stylus = TrackStylusHandler(CreateContinuousStylusHandler());
+                _continuousZoomTouchListener.PageCount = () => _viewModel.ContinuousPages.Count;
+                _continuousZoomTouchListener.OnOverscroll = OnConcertPull;
+                _continuousZoomTouchListener.OnOverscrollEnd = OnConcertPullEnd;
                 recyclerView.AddOnItemTouchListener(_continuousZoomTouchListener);
             }
         };
@@ -2086,6 +2117,7 @@ public partial class SheetViewerPage : ContentPage
                     onPanUpdate: AndroidHandlePanRunning,
                     onPanEnd: AndroidHandlePanEnded);
                 _pageContainerTouchListener.Stylus = TrackStylusHandler(CreateStylusHandler(nativePencil: false));
+                _pageContainerTouchListener.OnLongPress = HandleContainerLongPress;
                 platformView.SetOnTouchListener(_pageContainerTouchListener);
             }
         };
@@ -2334,7 +2366,13 @@ public partial class SheetViewerPage : ContentPage
         {
             if (page is not null && !dropped && stroke.Count >= 2 && sheetId > 0)
             {
-                await _viewModel.AddStrokeToContinuousPageAsync(page, sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, stroke);
+                var recognition = await _viewModel.AddStrokeToContinuousPageAsync(
+                    page, sheetId, _viewModel.PencilColorHex, _viewModel.PencilStrokeWidth, stroke, _stylusPreferences.RecognizesShapes);
+                if (recognition is not null)
+                {
+                    var kind = SlurGeometry.IsSlur(recognition.Figure.IconKey) ? RecognizedShapeKind.Slur : RecognizedShapeKind.Hairpin;
+                    ShowShapeConvertedHint(kind, () => _viewModel.RevertContinuousRecognitionAsync(page, recognition));
+                }
             }
         }
         catch (Exception ex)
@@ -2498,6 +2536,7 @@ public partial class SheetViewerPage : ContentPage
                     onStarted: HandleSelectionMoveStarted,
                     onRunning: HandleSelectionMoveRunning,
                     onEnded: () => _ = HandleSelectionMoveEndedAsync());
+                _selectionMoveTouchListener.OnLongPress = () => _ = ShowFigureMenuAsync(_viewModel.SelectedAnnotation);
                 platformView.SetOnTouchListener(_selectionMoveTouchListener);
             }
         };
@@ -3042,6 +3081,81 @@ public partial class SheetViewerPage : ContentPage
         });
     }
 
+    // Concert mode in the continuous list: pulling past the end (start) of the
+    // list far enough and releasing opens the next (previous) score.
+    private const double ConcertPullThresholdDp = 80;
+
+    private int _concertPullTargetId;
+    private string? _concertPullTitle;
+    private bool _concertPullTitleLoading;
+
+    private bool CanConcertPull =>
+        IsContinuousListActive && _continuousZoom <= ZoomedInThreshold && CanAcceptPageTurn;
+
+    private void OnConcertPull(double pull)
+    {
+        var next = pull > 0;
+        var target = CanConcertPull ? _viewModel.ConcertPullTarget(next) : null;
+        if (target is not { } id || Math.Abs(pull) < ConcertPullThresholdDp / 2)
+        {
+            ConcertPullHint.IsVisible = false;
+            return;
+        }
+
+        if (_concertPullTargetId != id)
+        {
+            _concertPullTargetId = id;
+            _concertPullTitle = null;
+            _concertPullTitleLoading = false;
+        }
+
+        if (_concertPullTitle is null && !_concertPullTitleLoading)
+        {
+            _concertPullTitleLoading = true;
+            _ = LoadConcertPullTitleAsync(id);
+        }
+
+        ConcertPullHint.VerticalOptions = next ? LayoutOptions.End : LayoutOptions.Start;
+        ConcertPullHintLabel.Text = string.Format(
+            next ? AppStrings.ConcertPullNext : AppStrings.ConcertPullPrevious, _concertPullTitle ?? "...");
+        ConcertPullHint.IsVisible = true;
+    }
+
+    private async Task LoadConcertPullTitleAsync(int sheetId)
+    {
+        try
+        {
+            var sheet = await _libraryService.GetSheetAsync(sheetId);
+            if (_concertPullTargetId == sheetId)
+            {
+                _concertPullTitle = sheet.Title;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Concert pull title failed: {ex.Message}");
+        }
+        finally
+        {
+            _concertPullTitleLoading = false;
+        }
+    }
+
+    private void OnConcertPullEnd(double pull, bool cancelled)
+    {
+        ConcertPullHint.IsVisible = false;
+        if (cancelled || !CanConcertPull || Math.Abs(pull) < ConcertPullThresholdDp)
+        {
+            return;
+        }
+
+        var next = pull > 0;
+        if (_viewModel.ConcertPullTarget(next) is not null)
+        {
+            _ = CrossSheetAsync(next, atDocumentEdge: true);
+        }
+    }
+
     private async void OnContinuousPagesScrolled(object? sender, ItemsViewScrolledEventArgs e)
     {
         _continuousScrollOffsetFallback = e.VerticalOffset;
@@ -3181,6 +3295,32 @@ public partial class SheetViewerPage : ContentPage
 
         _continuousScrollRemainderPx = 0;
         var scroll = ContinuousScrollOffset();
+
+        // Edge first, judged by how far the list can still scroll (not by
+        // page alignment): a short last page is at the end while its top is
+        // still mid-screen.
+        var pages = _viewModel.ContinuousPages;
+        var distanceToStart = scroll;
+        var distanceToEnd = ContinuousEdge.DistanceToEnd(pages, width, ContinuousPageView.Spacing, scroll, height / _continuousZoom);
+#if ANDROID
+        if (_continuousRecyclerView is { } recyclerView)
+        {
+            (distanceToStart, distanceToEnd) = PiccoloReader.Platforms.Android.ContinuousEdges.Measure(recyclerView, pages.Count, _continuousZoom);
+        }
+#endif
+        if (intent != PageTurnIntent.None && ContinuousEdge.ShouldCross(intent, distanceToStart, distanceToEnd))
+        {
+            if (CanAcceptPageTurn
+                && (intent == PageTurnIntent.Next
+                    ? _viewModel.CanCrossToNextSheet(atDocumentEnd: true)
+                    : _viewModel.CanCrossToPreviousSheet(atDocumentStart: true)))
+            {
+                _ = CrossSheetAsync(next: intent == PageTurnIntent.Next, atDocumentEdge: true);
+            }
+
+            return true; // at the edge: never scroll back
+        }
+
         var target = ContinuousPageTurn.TargetOffset(
             _viewModel.ContinuousPages, width, ContinuousPageView.Spacing, scroll, height / _continuousZoom, intent);
         if (target is { } offset)
@@ -3644,6 +3784,11 @@ public partial class SheetViewerPage : ContentPage
         PencilSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Pencil;
         HighlighterSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Highlighter;
         EraserSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Eraser;
+        TextSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Text;
+        if (TextSection.IsVisible)
+        {
+            UpdateTextColorSwatchSelection();
+        }
 
         // InputTransparent is left False permanently in XAML (never toggled
         // here) rather than True/False alongside IsVisible - confirmed
@@ -3700,6 +3845,7 @@ public partial class SheetViewerPage : ContentPage
         SetSegment(ToolSegmentHighlighter, ToolSegmentHighlighterLabel, ToolSegmentHighlighterGlyph, _viewModel.ActiveTool == AnnotationTool.Highlighter);
         SetSegment(ToolSegmentEraser, ToolSegmentEraserLabel, ToolSegmentEraserGlyph, _viewModel.ActiveTool == AnnotationTool.Eraser);
         SetSegment(ToolSegmentSymbols, ToolSegmentSymbolsLabel, ToolSegmentSymbolsGlyph, _viewModel.ActiveTool == AnnotationTool.MusicIcons);
+        SetSegment(ToolSegmentText, ToolSegmentTextLabel, ToolSegmentTextGlyph, _viewModel.ActiveTool == AnnotationTool.Text);
     }
 
     private static void SetSegment(Border segment, Label label, FontImageSource glyph, bool selected)
@@ -3760,6 +3906,7 @@ public partial class SheetViewerPage : ContentPage
 
                 break;
             case AnnotationTool.Eraser:
+            case AnnotationTool.Text:
                 height = header + (landscape ? 82 : 100);
                 break;
             default:
@@ -3934,6 +4081,9 @@ public partial class SheetViewerPage : ContentPage
 
     private async void OnToolSegmentEraserTapped(object? sender, TappedEventArgs e) =>
         await SelectToolSegmentAsync(AnnotationTool.Eraser);
+
+    private async void OnToolSegmentTextTapped(object? sender, TappedEventArgs e) =>
+        await SelectToolSegmentAsync(AnnotationTool.Text);
 
     private async void OnToolSegmentSymbolsTapped(object? sender, TappedEventArgs e) =>
         await SelectToolSegmentAsync(AnnotationTool.MusicIcons);
@@ -4159,6 +4309,48 @@ public partial class SheetViewerPage : ContentPage
         }
     }
 
+    private void UpdateTextColorSwatchSelection()
+    {
+        var current = _viewModel.TextColorHex;
+        SetColorRingSelected(TextColorRingBlack, "#000000", current);
+        SetColorRingSelected(TextColorRingRed, "#FF0000", current);
+        SetColorRingSelected(TextColorRingBlue, "#0000FF", current);
+        SetColorRingSelected(TextColorRingGreen, "#008000", current);
+        SetColorRingSelected(TextColorRingOrange, "#FFA500", current);
+    }
+
+    private const string TextColorPreferenceKey = "TextColorHex";
+
+    // Text has its own color, apart from the pencil. Recolors the selected
+    // text too (undoable); the choice is saved off the UI thread.
+    private async void OnTextColorTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is not string colorHex)
+        {
+            return;
+        }
+
+        _viewModel.TextColorHex = colorHex;
+        UpdateTextColorSwatchSelection();
+        _ = Task.Run(() => Preferences.Default.Set(TextColorPreferenceKey, colorHex));
+        if (_viewModel.SelectedAnnotation is { IsText: true } selected)
+        {
+            await _viewModel.RecolorAnnotationAsync(selected, colorHex);
+            UpdateSelectionOverlay();
+        }
+    }
+
+    private void LoadTextColorPreference() =>
+        _ = Task.Run(() =>
+        {
+            var saved = Preferences.Default.Get(TextColorPreferenceKey, "#000000");
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                _viewModel.TextColorHex = saved;
+                UpdateTextColorSwatchSelection();
+            });
+        });
+
     private void OnPencilWidthChanged(object? sender, ValueChangedEventArgs e)
     {
         UpdatePencilDrawingViewLineWidth();
@@ -4299,8 +4491,47 @@ public partial class SheetViewerPage : ContentPage
     // place that saves a stroke with the active tool's color/width (and records undo).
     private async Task SavePencilStrokeAsync(int sheetId, IReadOnlyList<StrokePoint> normalizedPoints)
     {
-        await _viewModel.AddClippedStrokeAsync(sheetId, ActiveStrokeColorHex, ActiveStrokeWidth, normalizedPoints);
+        // Only the pencil and the stylus are recognized; the highlighter draws wide bands.
+        var recognize = _stylusPreferences.RecognizesShapes && _viewModel.ActiveTool != AnnotationTool.Highlighter;
+        var kind = await _viewModel.AddStrokeOrRecognizedShapeAsync(sheetId, ActiveStrokeColorHex, ActiveStrokeWidth, normalizedPoints, recognize);
+        ShowShapeConvertedHint(kind);
         InvalidateAnnotations();
+    }
+
+    // Tells the user, only the first few times, that a drawn stroke became a
+    // figure and that undo brings it back. In the continuous list there is no
+    // undo button, so the message carries an Undo action. Not blocking.
+    private void ShowShapeConvertedHint(RecognizedShapeKind kind, Func<Task>? undo = null)
+    {
+        const int MaxHints = 3;
+        if (kind == RecognizedShapeKind.None || _stylusPreferences.ShapeHintsShown >= MaxHints)
+        {
+            return;
+        }
+
+        _stylusPreferences.ShapeHintsShown++;
+        var message = kind == RecognizedShapeKind.Slur ? AppStrings.ShapeConvertedSlur : AppStrings.ShapeConvertedHairpin;
+        if (undo is null)
+        {
+            _ = CommunityToolkit.Maui.Alerts.Toast.Make(message, CommunityToolkit.Maui.Core.ToastDuration.Long).Show();
+            return;
+        }
+
+        _ = CommunityToolkit.Maui.Alerts.Snackbar.Make(
+            message,
+            async () =>
+            {
+                try
+                {
+                    await undo();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Undo of recognized shape failed: {ex}");
+                }
+            },
+            AppStrings.UndoAction,
+            TimeSpan.FromSeconds(6)).Show();
     }
 
     // Direct stylus drawing (no tool active). The stroke is kept in page-
@@ -4445,6 +4676,15 @@ public partial class SheetViewerPage : ContentPage
         }
 
         var info = e.Info;
+        if (SlurGeometry.IsSlur(icon.Key))
+        {
+            // Drawn as a curve like on the page, not with a font glyph.
+            var inset = Math.Min(info.Width, info.Height) * 0.15f;
+            var slurRect = new SKRect(inset, inset * 2, info.Width - inset, info.Height - inset * 2);
+            _annotationPainter.DrawSlur(canvas, SlurGeometry.DefaultPoints(SlurGeometry.IsAbove(icon.Key)), slurRect, info.Height * 0.07f, SKColors.Black);
+            return;
+        }
+
         _annotationPainter.DrawGlyphFitted(canvas, icon.Codepoint, new SKRect(0, 0, info.Width, info.Height), icon.VisualScale);
     }
 

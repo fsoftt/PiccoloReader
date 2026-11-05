@@ -62,6 +62,18 @@ public static class AppStrings
     public static string Color => Get(nameof(Color));
     public static string Width => Get(nameof(Width));
     public static string Eraser => Get(nameof(Eraser));
+    public static string ShapeConvertedHairpin => Get(nameof(ShapeConvertedHairpin));
+    public static string ShapeConvertedSlur => Get(nameof(ShapeConvertedSlur));
+    public static string TextToolHint => Get(nameof(TextToolHint));
+    public static string EditText => Get(nameof(EditText));
+    public static string AddTextTitle => Get(nameof(AddTextTitle));
+    public static string TextTool => Get(nameof(TextTool));
+    public static string RecognizeShapesDescription => Get(nameof(RecognizeShapesDescription));
+    public static string RecognizeShapesLabel => Get(nameof(RecognizeShapesLabel));
+    public static string IconSlurBelow => Get(nameof(IconSlurBelow));
+    public static string IconSlurAbove => Get(nameof(IconSlurAbove));
+    public static string CategorySlurs => Get(nameof(CategorySlurs));
+    public static string CopyFigure => Get(nameof(CopyFigure));
     public static string Size => Get(nameof(Size));
     public static string PageIndicatorFormat => Get(nameof(PageIndicatorFormat));
     public static string ReadingModeHorizontalMessage => Get(nameof(ReadingModeHorizontalMessage));
@@ -296,6 +308,8 @@ public static class AppStrings
     public static string TunerStripPositionLabel => Get(nameof(TunerStripPositionLabel));
     public static string StylusDrawsDirectlyLabel => Get(nameof(StylusDrawsDirectlyLabel));
     public static string StylusDrawsDirectlyDescription => Get(nameof(StylusDrawsDirectlyDescription));
+    public static string ConcertPullNext => Get(nameof(ConcertPullNext));
+    public static string ConcertPullPrevious => Get(nameof(ConcertPullPrevious));
     public static string ConcertModeLabel => Get(nameof(ConcertModeLabel));
     public static string ConcertModeDescription => Get(nameof(ConcertModeDescription));
     public static string ConcertTutorialLabel => Get(nameof(ConcertTutorialLabel));

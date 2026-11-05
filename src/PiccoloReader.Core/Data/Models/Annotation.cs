@@ -34,6 +34,9 @@ public class Annotation
 
     public string? Points { get; set; }
 
+    // The content of a Text annotation; null for every other type.
+    public string? Text { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     // Which rectangle X/Y/Width/Height, stroke points and StrokeWidth are
@@ -50,12 +53,15 @@ public class Annotation
     // anything that isn't explicitly "Stroke" as an icon means old rows
     // keep working with no backfill migration needed.
     public bool IsStroke => Type == AnnotationType.Stroke;
+
+    public bool IsText => Type == AnnotationType.Text;
 }
 
 public static class AnnotationType
 {
     public const string Icon = "Icon";
     public const string Stroke = "Stroke";
+    public const string Text = "Text";
 }
 
 public static class AnnotationCoordinateSpace

@@ -33,6 +33,15 @@ public static class MusicIconCatalog
             new("dynamicCrescendoHairpin", AppStrings.IconCrescendo, 0xE53E, 2.78),
             new("dynamicDiminuendoHairpin", AppStrings.IconDecrescendo, 0xE53F, 2.78),
         }),
+        // Category indices are not persisted (only the in-memory selected tab), so
+        // order can change freely; only E2E SymbolCategoryTab_<index> ids depend on it.
+        // Slurs are vector shapes (SlurGeometry), so the codepoint is only a
+        // placeholder: the picker and the page draw the curve instead.
+        new(AppStrings.CategorySlurs, new List<MusicIcon>
+        {
+            new(SlurGeometry.AboveKey, AppStrings.IconSlurAbove, 0xE53E, 4.0),
+            new(SlurGeometry.BelowKey, AppStrings.IconSlurBelow, 0xE53F, 4.0),
+        }),
         new(AppStrings.CategoryArticulations, new List<MusicIcon>
         {
             // Staccato's glyph is a small dot with tight ink bounds, so fitting
@@ -95,9 +104,7 @@ public static class MusicIconCatalog
             new("glissandoUp", AppStrings.IconGlissandoUp, 0xE585, 0.96),
             new("glissandoDown", AppStrings.IconGlissandoDown, 0xE586, 0.96),
         }),
-        // Notes and Rests are appended after the original categories so the
-        // existing SymbolCategoryTab_<index> automation ids (and any saved
-        // category position) stay valid. Aspect ratios are the glyphs' ink
+        // Notes and Rests come after the original categories. Aspect ratios are the glyphs' ink
         // bounds measured from Bravura.otf at 100pt (width / height); stemmed
         // notes are tall (~0.3-0.6) and DrawGlyphFitted fits that ink to the
         // icon box, same as the sharp/flat/ornament glyphs. The acciaccatura

@@ -101,6 +101,19 @@ public class SettingsViewModelTests
     }
 
     [Fact]
+    public void RecognizeShapes_DefaultsOnAndPersistsChanges()
+    {
+        var fakeStylus = new FakeStylusPreferenceService();
+        var sut = new SettingsViewModel(new FakeLanguagePreferenceService(), new FakeTunerStripPreferenceService(), fakeStylus, new FakeConcertModePreferenceService(), new FakeConcertTutorialPreferenceService());
+
+        Assert.True(sut.RecognizeShapes);
+
+        sut.RecognizeShapes = false;
+
+        Assert.False(fakeStylus.RecognizesShapes);
+    }
+
+    [Fact]
     public void ConcertModeEnabled_DefaultsOnAndPersistsChanges()
     {
         var fakeConcert = new FakeConcertModePreferenceService();

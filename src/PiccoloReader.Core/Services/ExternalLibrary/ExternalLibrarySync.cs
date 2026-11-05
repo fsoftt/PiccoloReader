@@ -260,6 +260,7 @@ public class ExternalLibrarySync : ILibraryChangeNotifier
                     ColorHex = a.ColorHex,
                     StrokeWidth = a.StrokeWidth,
                     Points = a.Points,
+                    Text = a.Text,
                     CreatedAt = a.CreatedAt,
                     CoordinateSpace = a.CoordinateSpace
                 }).ToList(),

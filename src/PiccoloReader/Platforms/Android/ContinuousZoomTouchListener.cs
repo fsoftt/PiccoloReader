@@ -37,7 +37,13 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
     private float _downY;
     private double _previousSpan;
     private float _lastPanX;
+    private float _lastY;
     private bool _hasLastPanX;
+
+    // Finger travel (dp) past the start or end of the list, signed: positive
+    // pulling up past the end (next score), negative pulling down past the
+    // start (previous score). Zero when not pulling.
+    private double _pull;
 
     // Pinch pointers are tracked by id so a third finger can't swap them.
     private int _pinchIdA;
@@ -80,6 +86,54 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
     // Stylus gestures (direct drawing, erasing) never scroll or zoom the list.
     public StylusGestureHandler? Stylus { get; set; }
 
+    // Concert mode pull past either end of the list: (signed distance in dp)
+    // while pulling, and (signed distance, cancelled) when the finger lifts
+    // or the gesture is taken over.
+    public Action<double>? OnOverscroll { get; set; }
+
+    public Action<double, bool>? OnOverscrollEnd { get; set; }
+
+    // Number of pages in the list (the last page view marks its end).
+    public Func<int>? PageCount { get; set; }
+
+    private void EndPull(bool cancelled)
+    {
+        if (_pull != 0)
+        {
+            var pull = _pull;
+            _pull = 0;
+            OnOverscrollEnd?.Invoke(pull, cancelled);
+        }
+    }
+
+    private void TrackPull(RecyclerView rv, double dy)
+    {
+        if (_pull == 0)
+        {
+            var (above, below) = ContinuousEdges.Measure(rv, PageCount?.Invoke() ?? 0, 1);
+            if ((dy < 0 && PiccoloReader.Core.Services.PageTurn.ContinuousEdge.IsAtEnd(below))
+                || (dy > 0 && PiccoloReader.Core.Services.PageTurn.ContinuousEdge.IsAtStart(above)))
+            {
+                _pull = -dy;
+            }
+        }
+        else
+        {
+            var next = _pull - dy;
+            _pull = Math.Sign(next) == Math.Sign(_pull) ? next : 0;
+            if (_pull == 0)
+            {
+                OnOverscrollEnd?.Invoke(0, true);
+                return;
+            }
+        }
+
+        if (_pull != 0)
+        {
+            OnOverscroll?.Invoke(_pull);
+        }
+    }
+
     private static float StableX(MotionEvent e, int pointerIndex, View v) => e.GetX(pointerIndex) * v.ScaleX + v.TranslationX;
 
     private static float StableY(MotionEvent e, int pointerIndex, View v) => e.GetY(pointerIndex) * v.ScaleY + v.TranslationY;
@@ -95,6 +149,7 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
     // pointers, with fresh span and midpoint baselines.
     private void StartPinch(RecyclerView rv, MotionEvent e)
     {
+        EndPull(cancelled: true);
         _isPinching = true;
         _isPanAfterPinch = false;
         IsTap = false;
@@ -145,6 +200,7 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
         _isPanAfterPinch = false;
         _hasLastPanX = false;
         IsTap = false;
+        EndPull(cancelled: true);
     }
 
     private bool InterceptFingerGesture(RecyclerView rv, MotionEvent e)
@@ -157,6 +213,8 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
                 _downY = StableY(e, 0, rv);
                 IsTap = true;
                 _lastPanX = _downX;
+                _lastY = _downY;
+                _pull = 0;
                 _hasLastPanX = true;
                 return false;
 
@@ -173,11 +231,15 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
 
                 _onHorizontalPan((x - _lastPanX) / _density);
                 _lastPanX = x;
+                var y = StableY(e, 0, rv);
+                TrackPull(rv, (y - _lastY) / _density);
+                _lastY = y;
                 return false;
 
             case MotionEventActions.Up:
             case MotionEventActions.Cancel:
                 _hasLastPanX = false;
+                EndPull(cancelled: e.ActionMasked == MotionEventActions.Cancel);
                 return false;
         }
 

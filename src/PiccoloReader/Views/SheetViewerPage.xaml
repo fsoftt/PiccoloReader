@@ -156,6 +156,25 @@
                     <BoxView x:Name="ContinuousZoomFooter" HeightRequest="0" Color="Transparent" />
                 </CollectionView.Footer>
             </CollectionView>
+            <Border
+                x:Name="ConcertPullHint"
+                IsVisible="False"
+                InputTransparent="True"
+                HorizontalOptions="Center"
+                Padding="16,8"
+                Margin="24,48"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 18"
+                Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}">
+                <Label
+                    x:Name="ConcertPullHintLabel"
+                    FontSize="13"
+                    FontFamily="OpenSansSemibold"
+                    LineBreakMode="TailTruncation"
+                    MaxLines="1"
+                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+            </Border>
         </Grid>
 
         <Border
@@ -257,7 +276,7 @@
                     StrokeThickness="0"
                     StrokeShape="RoundRectangle 14"
                     BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource BackgroundDark}}">
-                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="4">
+                    <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="4">
                         <Border
                             x:Name="ToolSegmentPencil"
                             Grid.Column="0"
@@ -270,14 +289,14 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnToolSegmentPencilTapped" />
                             </Border.GestureRecognizers>
-                            <HorizontalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                            <VerticalStackLayout Spacing="2" HorizontalOptions="Center" VerticalOptions="Center">
                                 <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
                                     <Image.Source>
                                         <FontImageSource x:Name="ToolSegmentPencilGlyph" Glyph="&#xE3C9;" FontFamily="MaterialOutlined" Size="20" />
                                     </Image.Source>
                                 </Image>
                                 <Label x:Name="ToolSegmentPencilLabel" Text="{x:Static strings:AppStrings.Pencil}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
-                            </HorizontalStackLayout>
+                            </VerticalStackLayout>
                         </Border>
                         <Border
                             x:Name="ToolSegmentHighlighter"
@@ -291,14 +310,14 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnToolSegmentHighlighterTapped" />
                             </Border.GestureRecognizers>
-                            <HorizontalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                            <VerticalStackLayout Spacing="2" HorizontalOptions="Center" VerticalOptions="Center">
                                 <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
                                     <Image.Source>
                                         <FontImageSource x:Name="ToolSegmentHighlighterGlyph" Glyph="&#xF82B;" FontFamily="MaterialOutlined" Size="20" />
                                     </Image.Source>
                                 </Image>
                                 <Label x:Name="ToolSegmentHighlighterLabel" Text="{x:Static strings:AppStrings.Highlighter}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
-                            </HorizontalStackLayout>
+                            </VerticalStackLayout>
                         </Border>
                         <Border
                             x:Name="ToolSegmentEraser"
@@ -312,14 +331,14 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnToolSegmentEraserTapped" />
                             </Border.GestureRecognizers>
-                            <HorizontalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                            <VerticalStackLayout Spacing="2" HorizontalOptions="Center" VerticalOptions="Center">
                                 <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
                                     <Image.Source>
                                         <FontImageSource x:Name="ToolSegmentEraserGlyph" Glyph="&#xE6D0;" FontFamily="MaterialOutlined" Size="20" />
                                     </Image.Source>
                                 </Image>
                                 <Label x:Name="ToolSegmentEraserLabel" Text="{x:Static strings:AppStrings.Eraser}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
-                            </HorizontalStackLayout>
+                            </VerticalStackLayout>
                         </Border>
                         <Border
                             x:Name="ToolSegmentSymbols"
@@ -333,14 +352,35 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnToolSegmentSymbolsTapped" />
                             </Border.GestureRecognizers>
-                            <HorizontalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                            <VerticalStackLayout Spacing="2" HorizontalOptions="Center" VerticalOptions="Center">
                                 <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
                                     <Image.Source>
                                         <FontImageSource x:Name="ToolSegmentSymbolsGlyph" Glyph="&#xE405;" FontFamily="MaterialOutlined" Size="20" />
                                     </Image.Source>
                                 </Image>
                                 <Label x:Name="ToolSegmentSymbolsLabel" Text="{x:Static strings:AppStrings.Symbols}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
-                            </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border
+                            x:Name="ToolSegmentText"
+                            Grid.Column="4"
+                            AutomationId="ToolSegmentText"
+                            HeightRequest="44"
+                            Padding="0"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 10"
+                            BackgroundColor="Transparent">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnToolSegmentTextTapped" />
+                            </Border.GestureRecognizers>
+                            <VerticalStackLayout Spacing="2" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image WidthRequest="20" HeightRequest="20" VerticalOptions="Center">
+                                    <Image.Source>
+                                        <FontImageSource x:Name="ToolSegmentTextGlyph" Glyph="&#xE264;" FontFamily="MaterialOutlined" Size="20" />
+                                    </Image.Source>
+                                </Image>
+                                <Label x:Name="ToolSegmentTextLabel" Text="{x:Static strings:AppStrings.TextTool}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
+                            </VerticalStackLayout>
                         </Border>
                     </Grid>
                 </Border>
@@ -437,6 +477,52 @@
                                 </VerticalStackLayout>
                             </Grid>
 
+                            <VerticalStackLayout x:Name="TextSection" IsVisible="False" Spacing="10">
+                            <Label Text="{x:Static strings:AppStrings.Color}" Style="{StaticResource SectionLabel}" />
+                            <HorizontalStackLayout Spacing="2" Margin="0,0,0,6">
+                                <Grid WidthRequest="44" HeightRequest="44" AutomationId="TextColorSwatch_0" SemanticProperties.Description="Black">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnTextColorTapped" CommandParameter="#000000" />
+                                    </Grid.GestureRecognizers>
+                                    <Border x:Name="TextColorRingBlack" WidthRequest="42" HeightRequest="42" StrokeThickness="2" Stroke="Transparent" BackgroundColor="Transparent" StrokeShape="RoundRectangle 21" HorizontalOptions="Center" VerticalOptions="Center">
+                                        <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Black" StrokeThickness="1" Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" StrokeShape="RoundRectangle 16" HorizontalOptions="Center" VerticalOptions="Center" />
+                                    </Border>
+                                </Grid>
+                                <Grid WidthRequest="44" HeightRequest="44" AutomationId="TextColorSwatch_1" SemanticProperties.Description="Red">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnTextColorTapped" CommandParameter="#FF0000" />
+                                    </Grid.GestureRecognizers>
+                                    <Border x:Name="TextColorRingRed" WidthRequest="42" HeightRequest="42" StrokeThickness="2" Stroke="Transparent" BackgroundColor="Transparent" StrokeShape="RoundRectangle 21" HorizontalOptions="Center" VerticalOptions="Center">
+                                        <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Red" StrokeThickness="1" Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" StrokeShape="RoundRectangle 16" HorizontalOptions="Center" VerticalOptions="Center" />
+                                    </Border>
+                                </Grid>
+                                <Grid WidthRequest="44" HeightRequest="44" AutomationId="TextColorSwatch_2" SemanticProperties.Description="Blue">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnTextColorTapped" CommandParameter="#0000FF" />
+                                    </Grid.GestureRecognizers>
+                                    <Border x:Name="TextColorRingBlue" WidthRequest="42" HeightRequest="42" StrokeThickness="2" Stroke="Transparent" BackgroundColor="Transparent" StrokeShape="RoundRectangle 21" HorizontalOptions="Center" VerticalOptions="Center">
+                                        <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Blue" StrokeThickness="1" Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" StrokeShape="RoundRectangle 16" HorizontalOptions="Center" VerticalOptions="Center" />
+                                    </Border>
+                                </Grid>
+                                <Grid WidthRequest="44" HeightRequest="44" AutomationId="TextColorSwatch_3" SemanticProperties.Description="Green">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnTextColorTapped" CommandParameter="#008000" />
+                                    </Grid.GestureRecognizers>
+                                    <Border x:Name="TextColorRingGreen" WidthRequest="42" HeightRequest="42" StrokeThickness="2" Stroke="Transparent" BackgroundColor="Transparent" StrokeShape="RoundRectangle 21" HorizontalOptions="Center" VerticalOptions="Center">
+                                        <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Green" StrokeThickness="1" Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" StrokeShape="RoundRectangle 16" HorizontalOptions="Center" VerticalOptions="Center" />
+                                    </Border>
+                                </Grid>
+                                <Grid WidthRequest="44" HeightRequest="44" AutomationId="TextColorSwatch_4" SemanticProperties.Description="Orange">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnTextColorTapped" CommandParameter="#FFA500" />
+                                    </Grid.GestureRecognizers>
+                                    <Border x:Name="TextColorRingOrange" WidthRequest="42" HeightRequest="42" StrokeThickness="2" Stroke="Transparent" BackgroundColor="Transparent" StrokeShape="RoundRectangle 21" HorizontalOptions="Center" VerticalOptions="Center">
+                                        <Border WidthRequest="32" HeightRequest="32" BackgroundColor="Orange" StrokeThickness="1" Stroke="{AppThemeBinding Light={StaticResource OutlineLight}, Dark={StaticResource OutlineDark}}" StrokeShape="RoundRectangle 16" HorizontalOptions="Center" VerticalOptions="Center" />
+                                    </Border>
+                                </Grid>
+                            </HorizontalStackLayout>
+                                <Label Text="{x:Static strings:AppStrings.TextToolHint}" Style="{StaticResource SectionLabel}" />
+                            </VerticalStackLayout>
                             <VerticalStackLayout x:Name="EraserSection" IsVisible="False" Spacing="10">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Text="{x:Static strings:AppStrings.Size}" Style="{StaticResource SectionLabel}" />

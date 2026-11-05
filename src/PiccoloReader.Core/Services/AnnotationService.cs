@@ -85,6 +85,29 @@ public class AnnotationService
         return annotation;
     }
 
+    public async Task<Annotation> AddTextAsync(
+        int sheetId, int pageIndex, string text, string colorHex, double x, double y, double width, double height)
+    {
+        var annotation = new Annotation
+        {
+            SheetId = sheetId,
+            PageIndex = pageIndex,
+            Type = AnnotationType.Text,
+            Text = text,
+            ColorHex = colorHex,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            CoordinateSpace = AnnotationCoordinateSpace.Page,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _database.Connection.InsertAsync(annotation);
+        _notifier?.NotifyChanged();
+        return annotation;
+    }
+
     public async Task InsertAnnotationAsync(Annotation annotation)
     {
         await _database.Connection.InsertAsync(annotation);

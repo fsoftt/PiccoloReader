@@ -5,5 +5,6 @@ public enum AnnotationTool
     MusicIcons,
     Pencil,
     Highlighter,
-    Eraser
+    Eraser,
+    Text
 }

@@ -5,13 +5,13 @@ namespace PiccoloReader.Core.Tests.Services;
 public class MusicIconCatalogTests
 {
     [Fact]
-    public void Categories_HasElevenCategoriesWithExpectedNames()
+    public void Categories_HasTwelveCategoriesWithExpectedNames()
     {
         var names = MusicIconCatalog.Categories.Select(c => c.Name).ToList();
 
         Assert.Equal(new[]
         {
-            "Dynamics", "Articulations", "Fermata & Breath",
+            "Dynamics", "Slurs", "Articulations", "Fermata & Breath",
             "Ornaments", "Bowing & Plucking", "Pedal Marks", "Repeats & Navigation",
             "Accidentals", "Tremolo & Glissando", "Notes", "Rests",
         }, names);
@@ -86,7 +86,6 @@ public class MusicIconCatalogTests
     public void Categories_NotesAndRestsAreLast()
     {
         var cats = MusicIconCatalog.Categories;
-
         Assert.Equal("Notes", cats[^2].Name);
         Assert.Equal("Rests", cats[^1].Name);
         Assert.Equal(15, cats[^2].Icons.Count);
