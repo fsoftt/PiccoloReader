@@ -135,7 +135,7 @@ public partial class SheetViewerPage
 
         var (width, height) = TextFigure.Size(AnnotationPainter.MeasureTextAspect(text), TextFigure.DefaultHeight, aspect);
         var (x, y) = TextFigure.Place(pageX, pageY, width, height, crop);
-        await _viewModel.AddTextAsync(text, _viewModel.PencilColorHex, x, y, width, height);
+        await _viewModel.AddTextAsync(text, _viewModel.TextColorHex, x, y, width, height);
         UpdateSelectionOverlay();
     }
 
