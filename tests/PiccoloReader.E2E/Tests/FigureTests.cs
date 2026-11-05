@@ -14,8 +14,8 @@ public class FigureTests : E2ETestBase
 {
     private const string Crescendo = "dynamicCrescendoHairpin";
 
-    // The phrasing category (slurs) sits right after the dynamics in the catalog.
-    private const string PhrasingTab = "SymbolCategoryTab_1";
+    // The phrasing category (slurs) is the last one in the catalog (index 11).
+    private const string PhrasingTab = "SymbolCategoryTab_11";
 
     [SetUp]
     public void OpenSample() => LibraryScreen.OpenSheet(SheetTitle);
