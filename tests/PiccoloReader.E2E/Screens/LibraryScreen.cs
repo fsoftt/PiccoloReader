@@ -53,6 +53,7 @@ public static class LibraryScreen
         RetryStale(() =>
         {
             var rowY = SheetRow(title).Location.Y;
+            Ui.Poll(() => Ui.FindAll(MoreButton).Count > 0, 10, $"the more button of '{title}'");
             return Ui.FindAll(MoreButton).OrderBy(b => Math.Abs(b.Location.Y + b.Size.Height / 2 - rowY)).First();
         });
 
