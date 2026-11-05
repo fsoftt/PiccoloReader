@@ -32,6 +32,10 @@ public static class AppStrings
     public static string DeleteSheetsOption => Get(nameof(DeleteSheetsOption));
     public static string KeepSheetsOption => Get(nameof(KeepSheetsOption));
     public static string Move => Get(nameof(Move));
+    public static string Rename => Get(nameof(Rename));
+    public static string RenameSheetTitle => Get(nameof(RenameSheetTitle));
+    public static string SheetNamePrompt => Get(nameof(SheetNamePrompt));
+    public static string SheetNameEmptyMessage => Get(nameof(SheetNameEmptyMessage));
     public static string Delete => Get(nameof(Delete));
     public static string DeleteSheetTitle => Get(nameof(DeleteSheetTitle));
     public static string DeleteSheetMessageFormat => Get(nameof(DeleteSheetMessageFormat));

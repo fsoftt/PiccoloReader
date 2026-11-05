@@ -116,6 +116,17 @@ public static class LibraryScreen
         Ui.Poll(() => FolderNames().Contains(name), 30, $"folder '{name}' to appear");
     }
 
+    public static void RenameSheet(string title, string newTitle)
+    {
+        OpenSheetMenu(title);
+        Ui.TapText(AppStrings.Rename);
+        var field = Ui.FindDialogEditText();
+        field.Clear();
+        field.SendKeys(newTitle);
+        Ui.TapText(AppStrings.OK);
+        Ui.Poll(() => HasSheet(newTitle), 30, $"sheet '{newTitle}' to appear");
+    }
+
     public static void OpenFolder(string name)
     {
         Ui.Poll(() => FolderNames().Contains(name), 30, $"folder '{name}'");
