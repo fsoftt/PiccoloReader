@@ -15,7 +15,7 @@ public class FigureTests : E2ETestBase
     private const string Crescendo = "dynamicCrescendoHairpin";
 
     // The phrasing category (slurs) is the last one in the catalog (index 11).
-    private const string PhrasingTab = "SymbolCategoryTab_11";
+    private const string SlursTab = "SymbolCategoryTab_1";
 
     [SetUp]
     public void OpenSample() => LibraryScreen.OpenSheet(SheetTitle);
@@ -97,7 +97,7 @@ public class FigureTests : E2ETestBase
     [Test]
     public void Slur_PlacedMovedAndDeleted()
     {
-        PlaceSymbol("slurAbove", PhrasingTab);
+        PlaceSymbol("slurAbove", SlursTab);
         var before = AppDb.WaitForAnnotations(r => r.Count == 1, "slur stored").Single();
         Assert.That(before.IconKey, Is.EqualTo("slurAbove"));
         Assert.That(before.IsIcon, Is.True);

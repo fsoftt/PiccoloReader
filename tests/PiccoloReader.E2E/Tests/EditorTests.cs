@@ -113,7 +113,7 @@ public class EditorTests : E2ETestBase
         Ui.Find("SymbolItem_" + ViewerScreen.FirstSymbolKey);
         Assert.That(Ui.Exists("SymbolItem_articAccentAbove"), Is.False, "articulations are on another tab");
 
-        Ui.Tap("SymbolCategoryTab_1");
+        Ui.Tap("SymbolCategoryTab_2"); // Dynamics, Slurs, Articulations
 
         Ui.Find("SymbolItem_articAccentAbove");
         Assert.That(Ui.Exists("SymbolItem_" + ViewerScreen.FirstSymbolKey), Is.False);
