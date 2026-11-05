@@ -270,6 +270,10 @@ public partial class SheetViewerViewModel : ObservableObject
     [ObservableProperty]
     private string _pencilColorHex = "#000000";
 
+    // Text has its own color, apart from the pencil.
+    [ObservableProperty]
+    private string _textColorHex = "#000000";
+
     [ObservableProperty]
     private double _pencilStrokeWidth = 0.008;
 
@@ -786,6 +790,23 @@ public partial class SheetViewerViewModel : ObservableObject
             (annotation.X, annotation.Y, annotation.Width, annotation.Height),
             beforeText,
             newText));
+    }
+
+    // Changes the color of a figure. One undo step.
+    public async Task RecolorAnnotationAsync(Annotation annotation, string colorHex)
+    {
+        var box = (annotation.X, annotation.Y, annotation.Width, annotation.Height);
+        var beforeColor = annotation.ColorHex;
+        if (string.Equals(beforeColor, colorHex, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        annotation.ColorHex = colorHex;
+        await _annotationService.UpdateAnnotationAsync(annotation);
+
+        RecordAction(new UpdateAnnotationAction(
+            _annotationService, annotation, box, box, beforeColor: beforeColor ?? "#000000", afterColor: colorHex));
     }
 
     // Duplicates a figure (the "Copy" menu): same shape, nudged so it shows

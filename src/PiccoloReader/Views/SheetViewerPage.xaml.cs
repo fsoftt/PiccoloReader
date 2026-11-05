@@ -461,6 +461,7 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnAppearing();
         _tunerStripPosition = _tunerStripPreferences.Position;
+        LoadTextColorPreference();
         _coachPageVisible = true;
         _viewModel.StartSpinnerWatchdog();
         _metronome.PropertyChanged += OnMetronomePropertyChanged;
@@ -2092,6 +2093,8 @@ public partial class SheetViewerPage : ContentPage
                     onHorizontalPan: ContinuousPanHorizontally,
                     onPinchPan: ContinuousPanBy);
                 _continuousZoomTouchListener.Stylus = TrackStylusHandler(CreateContinuousStylusHandler());
+                _continuousZoomTouchListener.OnOverscroll = OnConcertPull;
+                _continuousZoomTouchListener.OnOverscrollEnd = OnConcertPullEnd;
                 recyclerView.AddOnItemTouchListener(_continuousZoomTouchListener);
             }
         };
@@ -3077,6 +3080,81 @@ public partial class SheetViewerPage : ContentPage
         });
     }
 
+    // Concert mode in the continuous list: pulling past the end (start) of the
+    // list far enough and releasing opens the next (previous) score.
+    private const double ConcertPullThresholdDp = 80;
+
+    private int _concertPullTargetId;
+    private string? _concertPullTitle;
+    private bool _concertPullTitleLoading;
+
+    private bool CanConcertPull =>
+        IsContinuousListActive && _continuousZoom <= ZoomedInThreshold && CanAcceptPageTurn;
+
+    private void OnConcertPull(double pull)
+    {
+        var next = pull > 0;
+        var target = CanConcertPull ? _viewModel.ConcertPullTarget(next) : null;
+        if (target is not { } id || Math.Abs(pull) < ConcertPullThresholdDp / 2)
+        {
+            ConcertPullHint.IsVisible = false;
+            return;
+        }
+
+        if (_concertPullTargetId != id)
+        {
+            _concertPullTargetId = id;
+            _concertPullTitle = null;
+            _concertPullTitleLoading = false;
+        }
+
+        if (_concertPullTitle is null && !_concertPullTitleLoading)
+        {
+            _concertPullTitleLoading = true;
+            _ = LoadConcertPullTitleAsync(id);
+        }
+
+        ConcertPullHint.VerticalOptions = next ? LayoutOptions.End : LayoutOptions.Start;
+        ConcertPullHintLabel.Text = string.Format(
+            next ? AppStrings.ConcertPullNext : AppStrings.ConcertPullPrevious, _concertPullTitle ?? "...");
+        ConcertPullHint.IsVisible = true;
+    }
+
+    private async Task LoadConcertPullTitleAsync(int sheetId)
+    {
+        try
+        {
+            var sheet = await _libraryService.GetSheetAsync(sheetId);
+            if (_concertPullTargetId == sheetId)
+            {
+                _concertPullTitle = sheet.Title;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Concert pull title failed: {ex.Message}");
+        }
+        finally
+        {
+            _concertPullTitleLoading = false;
+        }
+    }
+
+    private void OnConcertPullEnd(double pull, bool cancelled)
+    {
+        ConcertPullHint.IsVisible = false;
+        if (cancelled || !CanConcertPull || Math.Abs(pull) < ConcertPullThresholdDp)
+        {
+            return;
+        }
+
+        var next = pull > 0;
+        if (_viewModel.ConcertPullTarget(next) is not null)
+        {
+            _ = CrossSheetAsync(next, atDocumentEdge: true);
+        }
+    }
+
     private async void OnContinuousPagesScrolled(object? sender, ItemsViewScrolledEventArgs e)
     {
         _continuousScrollOffsetFallback = e.VerticalOffset;
@@ -3680,6 +3758,10 @@ public partial class SheetViewerPage : ContentPage
         HighlighterSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Highlighter;
         EraserSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Eraser;
         TextSection.IsVisible = _viewModel.ActiveTool == AnnotationTool.Text;
+        if (TextSection.IsVisible)
+        {
+            UpdateTextColorSwatchSelection();
+        }
 
         // InputTransparent is left False permanently in XAML (never toggled
         // here) rather than True/False alongside IsVisible - confirmed
@@ -4199,6 +4281,48 @@ public partial class SheetViewerPage : ContentPage
             UpdatePencilColorSwatchSelection();
         }
     }
+
+    private void UpdateTextColorSwatchSelection()
+    {
+        var current = _viewModel.TextColorHex;
+        SetColorRingSelected(TextColorRingBlack, "#000000", current);
+        SetColorRingSelected(TextColorRingRed, "#FF0000", current);
+        SetColorRingSelected(TextColorRingBlue, "#0000FF", current);
+        SetColorRingSelected(TextColorRingGreen, "#008000", current);
+        SetColorRingSelected(TextColorRingOrange, "#FFA500", current);
+    }
+
+    private const string TextColorPreferenceKey = "TextColorHex";
+
+    // Text has its own color, apart from the pencil. Recolors the selected
+    // text too (undoable); the choice is saved off the UI thread.
+    private async void OnTextColorTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is not string colorHex)
+        {
+            return;
+        }
+
+        _viewModel.TextColorHex = colorHex;
+        UpdateTextColorSwatchSelection();
+        _ = Task.Run(() => Preferences.Default.Set(TextColorPreferenceKey, colorHex));
+        if (_viewModel.SelectedAnnotation is { IsText: true } selected)
+        {
+            await _viewModel.RecolorAnnotationAsync(selected, colorHex);
+            UpdateSelectionOverlay();
+        }
+    }
+
+    private void LoadTextColorPreference() =>
+        _ = Task.Run(() =>
+        {
+            var saved = Preferences.Default.Get(TextColorPreferenceKey, "#000000");
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                _viewModel.TextColorHex = saved;
+                UpdateTextColorSwatchSelection();
+            });
+        });
 
     private void OnPencilWidthChanged(object? sender, ValueChangedEventArgs e)
     {

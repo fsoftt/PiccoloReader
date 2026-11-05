@@ -35,7 +35,7 @@ public class HighlighterPaletteTests
 
     [Theory]
     [InlineData("en", "Highlighter")]
-    [InlineData("es", "Resaltador")]
+    [InlineData("es", "Resaltar")]
     public void HighlighterString_IsLocalized(string culture, string expected)
     {
         var original = CultureInfo.CurrentUICulture;

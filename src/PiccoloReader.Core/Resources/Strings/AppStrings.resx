@@ -259,6 +259,8 @@
   <data name="TunerStripPositionTop" xml:space="preserve"><value>Top</value></data>
   <data name="StylusDrawsDirectlyLabel" xml:space="preserve"><value>Stylus draws directly</value></data>
   <data name="StylusDrawsDirectlyDescription" xml:space="preserve"><value>Draw with a stylus without opening the pencil tool. The pen side button or eraser end erases.</value></data>
+  <data name="ConcertPullNext" xml:space="preserve"><value>Release for next: {0}</value></data>
+  <data name="ConcertPullPrevious" xml:space="preserve"><value>Release for previous: {0}</value></data>
   <data name="ConcertModeLabel" xml:space="preserve"><value>Concert mode</value></data>
   <data name="ConcertModeDescription" xml:space="preserve"><value>At the last page, next opens the next score of the list</value></data>
   <data name="Metronome" xml:space="preserve"><value>Metronome</value></data>

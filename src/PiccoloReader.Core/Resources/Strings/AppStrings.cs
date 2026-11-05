@@ -308,6 +308,8 @@ public static class AppStrings
     public static string TunerStripPositionLabel => Get(nameof(TunerStripPositionLabel));
     public static string StylusDrawsDirectlyLabel => Get(nameof(StylusDrawsDirectlyLabel));
     public static string StylusDrawsDirectlyDescription => Get(nameof(StylusDrawsDirectlyDescription));
+    public static string ConcertPullNext => Get(nameof(ConcertPullNext));
+    public static string ConcertPullPrevious => Get(nameof(ConcertPullPrevious));
     public static string ConcertModeLabel => Get(nameof(ConcertModeLabel));
     public static string ConcertModeDescription => Get(nameof(ConcertModeDescription));
     public static string ConcertTutorialLabel => Get(nameof(ConcertTutorialLabel));

@@ -72,10 +72,10 @@
   <data name="Add" xml:space="preserve"><value>Añadir</value></data>
   <data name="MusicIcons" xml:space="preserve"><value>Iconos musicales</value></data>
   <data name="Pencil" xml:space="preserve"><value>Lápiz</value></data>
-  <data name="Highlighter" xml:space="preserve"><value>Resaltador</value></data>
+  <data name="Highlighter" xml:space="preserve"><value>Resaltar</value></data>
   <data name="Color" xml:space="preserve"><value>Color</value></data>
   <data name="Width" xml:space="preserve"><value>Grosor</value></data>
-  <data name="Eraser" xml:space="preserve"><value>Borrador</value></data>
+  <data name="Eraser" xml:space="preserve"><value>Borrar</value></data>
   <data name="Size" xml:space="preserve"><value>Tamaño</value></data>
   <data name="PageIndicatorFormat" xml:space="preserve"><value>Página {0} de {1}</value></data>
   <data name="ReadingModeHorizontalMessage" xml:space="preserve"><value>Modo de lectura: izquierda a derecha</value></data>
@@ -259,6 +259,8 @@
   <data name="TunerStripPositionTop" xml:space="preserve"><value>Arriba</value></data>
   <data name="StylusDrawsDirectlyLabel" xml:space="preserve"><value>El lápiz óptico dibuja directamente</value></data>
   <data name="StylusDrawsDirectlyDescription" xml:space="preserve"><value>Dibuja con el lápiz óptico sin abrir la herramienta de lápiz. El botón lateral o el extremo borrador borra.</value></data>
+  <data name="ConcertPullNext" xml:space="preserve"><value>Suelta para la siguiente: {0}</value></data>
+  <data name="ConcertPullPrevious" xml:space="preserve"><value>Suelta para la anterior: {0}</value></data>
   <data name="ConcertModeLabel" xml:space="preserve"><value>Modo concierto</value></data>
   <data name="ConcertModeDescription" xml:space="preserve"><value>En la última hoja, siguiente abre la siguiente partitura de la lista</value></data>
   <data name="Metronome" xml:space="preserve"><value>Metrónomo</value></data>
