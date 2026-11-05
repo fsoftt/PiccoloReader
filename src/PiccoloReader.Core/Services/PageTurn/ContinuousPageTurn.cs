@@ -96,6 +96,12 @@ public static class ContinuousPageTurn
             // the last scroll position is total - visibleHeight.
             var maxOffset = Math.Max(0, ContinuousLayout.PageTop(pages, pages.Count, width, spacing) - visibleHeight);
             target = Math.Min(target, maxOffset);
+            if (target <= scrollTop)
+            {
+                // Forward never scrolls backward (a short last page, or a
+                // mis-estimated list end, can put the end above the view).
+                return null;
+            }
         }
 
         return Math.Abs(target - scrollTop) < 0.5 ? null : target;

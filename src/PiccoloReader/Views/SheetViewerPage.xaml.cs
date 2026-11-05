@@ -2093,6 +2093,7 @@ public partial class SheetViewerPage : ContentPage
                     onHorizontalPan: ContinuousPanHorizontally,
                     onPinchPan: ContinuousPanBy);
                 _continuousZoomTouchListener.Stylus = TrackStylusHandler(CreateContinuousStylusHandler());
+                _continuousZoomTouchListener.PageCount = () => _viewModel.ContinuousPages.Count;
                 _continuousZoomTouchListener.OnOverscroll = OnConcertPull;
                 _continuousZoomTouchListener.OnOverscrollEnd = OnConcertPullEnd;
                 recyclerView.AddOnItemTouchListener(_continuousZoomTouchListener);
@@ -3294,6 +3295,32 @@ public partial class SheetViewerPage : ContentPage
 
         _continuousScrollRemainderPx = 0;
         var scroll = ContinuousScrollOffset();
+
+        // Edge first, judged by how far the list can still scroll (not by
+        // page alignment): a short last page is at the end while its top is
+        // still mid-screen.
+        var pages = _viewModel.ContinuousPages;
+        var distanceToStart = scroll;
+        var distanceToEnd = ContinuousEdge.DistanceToEnd(pages, width, ContinuousPageView.Spacing, scroll, height / _continuousZoom);
+#if ANDROID
+        if (_continuousRecyclerView is { } recyclerView)
+        {
+            (distanceToStart, distanceToEnd) = PiccoloReader.Platforms.Android.ContinuousEdges.Measure(recyclerView, pages.Count, _continuousZoom);
+        }
+#endif
+        if (intent != PageTurnIntent.None && ContinuousEdge.ShouldCross(intent, distanceToStart, distanceToEnd))
+        {
+            if (CanAcceptPageTurn
+                && (intent == PageTurnIntent.Next
+                    ? _viewModel.CanCrossToNextSheet(atDocumentEnd: true)
+                    : _viewModel.CanCrossToPreviousSheet(atDocumentStart: true)))
+            {
+                _ = CrossSheetAsync(next: intent == PageTurnIntent.Next, atDocumentEdge: true);
+            }
+
+            return true; // at the edge: never scroll back
+        }
+
         var target = ContinuousPageTurn.TargetOffset(
             _viewModel.ContinuousPages, width, ContinuousPageView.Spacing, scroll, height / _continuousZoom, intent);
         if (target is { } offset)

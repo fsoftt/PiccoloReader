@@ -93,6 +93,9 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
 
     public Action<double, bool>? OnOverscrollEnd { get; set; }
 
+    // Number of pages in the list (the last page view marks its end).
+    public Func<int>? PageCount { get; set; }
+
     private void EndPull(bool cancelled)
     {
         if (_pull != 0)
@@ -107,7 +110,9 @@ public sealed class ContinuousZoomTouchListener : Java.Lang.Object, RecyclerView
     {
         if (_pull == 0)
         {
-            if ((dy < 0 && !rv.CanScrollVertically(1)) || (dy > 0 && !rv.CanScrollVertically(-1)))
+            var (above, below) = ContinuousEdges.Measure(rv, PageCount?.Invoke() ?? 0, 1);
+            if ((dy < 0 && PiccoloReader.Core.Services.PageTurn.ContinuousEdge.IsAtEnd(below))
+                || (dy > 0 && PiccoloReader.Core.Services.PageTurn.ContinuousEdge.IsAtStart(above)))
             {
                 _pull = -dy;
             }
