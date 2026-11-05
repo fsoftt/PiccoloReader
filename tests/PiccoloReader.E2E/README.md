@@ -59,7 +59,7 @@ The tests change global emulator settings (rotation lock) and write PDFs to `/sd
   via `adb exec-out run-as ... cat`), `Gestures` (tap, long-press, drag, pinch via W3C actions),
   `PdfFactory` (hand-written test PDFs), `Ui` (AutomationId lookup).
 - `Screens/` - page objects (`LibraryScreen`, `ViewerScreen`) holding the AutomationIds. Only the import test goes through the system file picker; every other test starts with the PDFs already seeded into the library (files + DB rows), on top of an empty database captured once per run from a real first launch (which skips the tutorial through `TutorialSkipButton`).
-- `Tests/` - `LibraryTests`, `ImportTests`, `PianoTests`, `ViewerTests`, `ReadingGestureTests` (pinch zoom, swipes), `PedalTests` (hardware page-turn keys), `ConcertTests`, `CropTests`, `EditorTests`, `SettingsTests`. Annotations are drawn on a Skia canvas, so editor tests assert on the app SQLite database. Each starts from a fresh app (data wiped with `run-as rm -rf`, English, portrait).
+- `Tests/` - `LibraryTests`, `ImportTests`, `PianoTests`, `ViewerTests`, `ReadingGestureTests` (pinch zoom, swipes), `PedalTests` (hardware page-turn keys), `ConcertTests`, `CropTests`, `FigureTests` (copy, slur, recognition, text), `RecognitionSettingTests`, `EditorTests`, `SettingsTests`. Annotations are drawn on a Skia canvas, so editor tests assert on the app SQLite database. Each starts from a fresh app (data wiped with `run-as rm -rf`, English, portrait).
 
 ## CI
 
@@ -67,7 +67,7 @@ The tests change global emulator settings (rotation lock) and write PDFs to `/sd
 
 | Shard | Filter |
 | --- | --- |
-| `editor` | `EditorTests` |
+| `editor` | `EditorTests`, `FigureTests`, `RecognitionSettingTests` |
 | `library` | `LibraryTests`, `ImportTests` |
 | `viewer-settings` | `ViewerTests`, `SettingsTests`, `PianoTests` |
 | `reading` | `ReadingGestureTests`, `PedalTests`, `ConcertTests`, `CropTests` |

@@ -6,7 +6,7 @@ using PiccoloReader.E2E.Infrastructure;
 
 namespace PiccoloReader.E2E.Screens;
 
-public enum Tool { Symbols, Pencil, Highlighter, Eraser }
+public enum Tool { Symbols, Pencil, Highlighter, Eraser, Text }
 
 /// <summary>Page object for the sheet viewer / editor (SheetViewerPage), keyed on AutomationIds.</summary>
 public static class ViewerScreen
@@ -137,6 +137,7 @@ public static class ViewerScreen
             Tool.Symbols => "ToolSegmentSymbols",
             Tool.Pencil => "ToolSegmentPencil",
             Tool.Highlighter => "ToolSegmentHighlighter",
+            Tool.Text => "ToolSegmentText",
             _ => "ToolSegmentEraser"
         };
         Ui.Tap(id);

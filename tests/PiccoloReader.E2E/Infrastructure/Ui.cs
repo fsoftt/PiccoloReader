@@ -52,6 +52,9 @@ public static class Ui
     /// Scrolls the page's scrollable container until the element is on screen (UiAutomator does not
     /// see children that are scrolled out of view).
     /// </summary>
+    public static void ScrollToTop() =>
+        D.FindElement(MobileBy.AndroidUIAutomator("new UiScrollable(new UiSelector().scrollable(true)).scrollToBeginning(10)"));
+
     public static IWebElement ScrollIntoView(string automationId)
     {
         if (TryFind(automationId) is { } visible)

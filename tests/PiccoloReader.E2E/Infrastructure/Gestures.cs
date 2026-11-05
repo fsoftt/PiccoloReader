@@ -69,6 +69,35 @@ public static class Gestures
     }
 
     /// <summary>
+    /// Two fingers down side by side, both dragged by <paramref name="dx"/>/<paramref name="dy"/>; then the
+    /// second finger lifts and the first keeps dragging by the same amount again (pan hand-off).
+    /// </summary>
+    public static void TwoFingerDragThenOneFinger(Point center, int halfSpan, int dx, int dy, int durationMs = 600)
+    {
+        var f1 = new PointerInputDevice(PointerKind.Touch, "finger1");
+        var s1 = new ActionSequence(f1);
+        s1.AddAction(f1.CreatePointerMove(CoordinateOrigin.Viewport, center.X - halfSpan, center.Y, TimeSpan.Zero));
+        s1.AddAction(f1.CreatePointerDown(MouseButton.Left));
+        s1.AddAction(f1.CreatePause(TimeSpan.FromMilliseconds(100)));
+        s1.AddAction(f1.CreatePointerMove(CoordinateOrigin.Viewport, center.X - halfSpan + dx, center.Y + dy, TimeSpan.FromMilliseconds(durationMs)));
+        s1.AddAction(f1.CreatePointerMove(CoordinateOrigin.Viewport, center.X - halfSpan + 2 * dx, center.Y + 2 * dy, TimeSpan.FromMilliseconds(durationMs)));
+        s1.AddAction(f1.CreatePause(TimeSpan.FromMilliseconds(100)));
+        s1.AddAction(f1.CreatePointerUp(MouseButton.Left));
+
+        var f2 = new PointerInputDevice(PointerKind.Touch, "finger2");
+        var s2 = new ActionSequence(f2);
+        s2.AddAction(f2.CreatePointerMove(CoordinateOrigin.Viewport, center.X + halfSpan, center.Y, TimeSpan.Zero));
+        s2.AddAction(f2.CreatePointerDown(MouseButton.Left));
+        s2.AddAction(f2.CreatePause(TimeSpan.FromMilliseconds(100)));
+        s2.AddAction(f2.CreatePointerMove(CoordinateOrigin.Viewport, center.X + halfSpan + dx, center.Y + dy, TimeSpan.FromMilliseconds(durationMs)));
+        s2.AddAction(f2.CreatePointerUp(MouseButton.Left)); // lifts while the first finger is still moving
+        s2.AddAction(f2.CreatePause(TimeSpan.FromMilliseconds(100)));
+        s2.AddAction(f2.CreatePause(TimeSpan.FromMilliseconds(100)));
+
+        Perform(s1, s2);
+    }
+
+    /// <summary>
     /// Two-finger pinch around <paramref name="center"/> along the horizontal axis. Fingers go from
     /// <paramref name="startHalfSpan"/> to <paramref name="endHalfSpan"/> px from the center
     /// (end &gt; start zooms in, end &lt; start zooms out).

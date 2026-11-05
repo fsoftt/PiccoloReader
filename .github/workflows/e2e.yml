@@ -81,7 +81,7 @@ jobs:
       matrix:
         include:
           - shard: editor
-            filter: "FullyQualifiedName~EditorTests"
+            filter: "FullyQualifiedName~EditorTests|FullyQualifiedName~FigureTests|FullyQualifiedName~RecognitionSettingTests"
           - shard: library
             filter: "FullyQualifiedName~LibraryTests|FullyQualifiedName~ImportTests"
           - shard: viewer-settings

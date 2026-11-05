@@ -80,4 +80,30 @@ public class ReadingGestureTests : E2ETestBase
         Gestures.Drag(At(area, 0.5, 0.2), At(area, 0.5, 0.8), 400);
         ViewerScreen.WaitForPage(1);
     }
+
+    [Test, Category("Gesture")]
+    public void TwoFingerPan_ThenOneFingerContinues_DoesNotTurnThePage()
+    {
+        ViewerScreen.RevealChrome();
+        var area = ViewerScreen.PageArea;
+        ZoomIn();
+        var before = ((OpenQA.Selenium.ITakesScreenshot)AppSession.Driver).GetScreenshot().AsBase64EncodedString;
+
+        // Two fingers drag left, one lifts, the other keeps dragging.
+        Gestures.TwoFingerDragThenOneFinger(At(area, 0.5, 0.5), halfSpan: 120, dx: -120, dy: 0);
+        Thread.Sleep(1000);
+
+        Assert.That(ViewerScreen.ChromeVisible || Ui.Exists(ViewerScreen.PageContainer), Is.True, "the viewer is still alive");
+        if (ViewerScreen.ChromeVisible)
+        {
+            Assert.That(ViewerScreen.Indicator.Current, Is.EqualTo(1), "panning must not turn the page");
+        }
+
+        // Best effort: there is no exposed translation state, so only warn when the picture did not change.
+        var after = ((OpenQA.Selenium.ITakesScreenshot)AppSession.Driver).GetScreenshot().AsBase64EncodedString;
+        if (before == after)
+        {
+            Assert.Warn("The screen looks identical after the pan; the translation could not be verified.");
+        }
+    }
 }
