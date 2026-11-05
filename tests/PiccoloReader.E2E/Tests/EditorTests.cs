@@ -113,7 +113,7 @@ public class EditorTests : E2ETestBase
         Ui.Find("SymbolItem_" + ViewerScreen.FirstSymbolKey);
         Assert.That(Ui.Exists("SymbolItem_articAccentAbove"), Is.False, "articulations are on another tab");
 
-        Ui.Tap("SymbolCategoryTab_1");
+        Ui.Tap("SymbolCategoryTab_2"); // Dynamics, Slurs, Articulations
 
         Ui.Find("SymbolItem_articAccentAbove");
         Assert.That(Ui.Exists("SymbolItem_" + ViewerScreen.FirstSymbolKey), Is.False);
@@ -248,5 +248,35 @@ public class EditorTests : E2ETestBase
 
         ViewerScreen.EndEditing();
         Ui.Find(ViewerScreen.ContinuousHost, 10);
+    }
+
+    // ---- highlighter ----
+
+    [Test]
+    public void Highlighter_DrawsTranslucentWideStroke()
+    {
+        ViewerScreen.OpenToolSheet(Tool.Highlighter);
+        ViewerScreen.DragAlongStrokePath();
+
+        var stroke = OnlyRow(AppDb.WaitForAnnotations(r => r.Count == 1, "one highlighter stroke row after drawing"));
+
+        Assert.That(stroke.IsStroke, Is.True);
+        Assert.That(stroke.ColorHex, Is.EqualTo("#66FFEB3B"), "highlighter colors are stored as #AARRGGBB: default yellow at alpha 0x66");
+        Assert.That(stroke.StrokeWidth, Is.InRange(0.01, 0.05), "the highlighter width range");
+        Assert.That(stroke.StrokePoints(), Has.Count.GreaterThanOrEqualTo(3));
+    }
+
+    [Test, Category("Gesture")]
+    public void PencilWidthSlider_AtMinimum_ShowsTwoPoints()
+    {
+        ViewerScreen.OpenToolSheet(Tool.Pencil);
+
+        var slider = Ui.RectOf("PencilWidthSlider");
+        Gestures.Drag(
+            new Point(slider.X + slider.Width / 2, slider.Y + slider.Height / 2),
+            new Point(slider.X - 80, slider.Y + slider.Height / 2),
+            600);
+
+        Ui.Poll(() => Ui.TextOf("PencilWidthValueLabel") == "2 pt", 10, "the pencil width label to read 2 pt at the minimum");
     }
 }

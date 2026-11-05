@@ -5,7 +5,7 @@ namespace PiccoloReader.E2E.Infrastructure;
 public record AnnotationRow(
     int Id, int SheetId, int PageIndex, string? Type, string? IconKey,
     double X, double Y, double Width, double Height,
-    string? ColorHex, double StrokeWidth, string? Points, int CoordinateSpace)
+    string? ColorHex, double StrokeWidth, string? Points, int CoordinateSpace, string? Text = null)
 {
     public bool IsStroke => Type == "Stroke";
     public bool IsIcon => !IsStroke;
@@ -27,6 +27,8 @@ public record AnnotationRow(
 public record FolderRow(int Id, string Name);
 
 public record BookmarkRow(int Id, int SheetId, int PageIndex, string? Name);
+
+public record PageCropRow(int Id, int SheetId, int PageIndex, double Left, double Top, double Right, double Bottom);
 
 public record SheetRow(int Id, int? FolderId, string Title, string FileName, int PageCount, int LastViewedPageIndex);
 
@@ -83,7 +85,7 @@ public static class AppDb
     public static List<AnnotationRow> Annotations() => Query(c =>
     {
         using var cmd = c.CreateCommand();
-        cmd.CommandText = "SELECT Id, SheetId, PageIndex, Type, IconKey, X, Y, Width, Height, ColorHex, StrokeWidth, Points, CoordinateSpace FROM Annotation ORDER BY Id";
+        cmd.CommandText = "SELECT Id, SheetId, PageIndex, Type, IconKey, X, Y, Width, Height, ColorHex, StrokeWidth, Points, CoordinateSpace, Text FROM Annotation ORDER BY Id";
         using var r = cmd.ExecuteReader();
         var rows = new List<AnnotationRow>();
         while (r.Read())
@@ -93,7 +95,7 @@ public static class AppDb
                 r.IsDBNull(3) ? null : r.GetString(3), r.IsDBNull(4) ? null : r.GetString(4),
                 r.GetDouble(5), r.GetDouble(6), r.GetDouble(7), r.GetDouble(8),
                 r.IsDBNull(9) ? null : r.GetString(9), r.GetDouble(10),
-                r.IsDBNull(11) ? null : r.GetString(11), r.GetInt32(12)));
+                r.IsDBNull(11) ? null : r.GetString(11), r.GetInt32(12), r.IsDBNull(13) ? null : r.GetString(13)));
         }
 
         return rows;
@@ -138,6 +140,20 @@ public static class AppDb
             rows.Add(new SheetRow(
                 r.GetInt32(0), r.IsDBNull(1) ? null : r.GetInt32(1), r.GetString(2), r.GetString(3),
                 r.GetInt32(4), r.GetInt32(5)));
+        }
+
+        return rows;
+    });
+
+    public static List<PageCropRow> PageCrops() => Query(c =>
+    {
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT Id, SheetId, PageIndex, \"Left\", \"Top\", \"Right\", \"Bottom\" FROM SheetPageCrop ORDER BY Id";
+        using var r = cmd.ExecuteReader();
+        var rows = new List<PageCropRow>();
+        while (r.Read())
+        {
+            rows.Add(new PageCropRow(r.GetInt32(0), r.GetInt32(1), r.GetInt32(2), r.GetDouble(3), r.GetDouble(4), r.GetDouble(5), r.GetDouble(6)));
         }
 
         return rows;

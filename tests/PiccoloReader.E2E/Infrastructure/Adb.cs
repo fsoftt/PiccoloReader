@@ -127,5 +127,11 @@ public static class Adb
 
     public static void Shell(string command) => Run("shell", command);
 
+    /// <summary>True when a file exists on shared storage (e.g. the visible copy under Documents/PiccoloReader).</summary>
+    public static bool SharedFileExists(string path) =>
+        Run(true, "shell", $"ls \"{path}\"").Trim().EndsWith(Path.GetFileName(path), StringComparison.Ordinal);
+
+    public static void DeleteSharedFile(string path) => Run(true, "shell", $"rm -f \"{path}\"");
+
     public static string Logcat(int lines = 400) => Run(true, "logcat", "-d", "-t", lines.ToString());
 }

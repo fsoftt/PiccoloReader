@@ -59,7 +59,9 @@ public class SettingsTests : E2ETestBase
         Assert.That(settingsEs, Is.EqualTo("Ajustes"), "sanity: Spanish resource");
         OpenSettingsTab(settingsEs);
         Assert.That(Ui.TextOf("SettingsLanguageValue"), Is.EqualTo("Español"));
+        Ui.ScrollIntoView("SettingsTutorialRow");
         Assert.That(Ui.TextExists(InCulture("es", () => AppStrings.ShowTutorial)), Is.True, "labels are in Spanish");
+        Ui.ScrollToTop();
 
         // And back to English.
         Ui.Tap("SettingsLanguageRow");
@@ -68,6 +70,7 @@ public class SettingsTests : E2ETestBase
         Ui.Poll(() => AppSession.ReadStringPreference("AppLanguage") == "en", 10, "English saved again");
         AppSession.Relaunch();
         OpenSettingsTab(AppStrings.Settings);
+        Ui.ScrollIntoView("SettingsTutorialRow");
         Assert.That(Ui.TextExists(AppStrings.ShowTutorial), Is.True, "labels are back in English");
     }
 
@@ -76,13 +79,14 @@ public class SettingsTests : E2ETestBase
     {
         OpenSettingsTab(AppStrings.Settings);
 
+        Ui.ScrollIntoView("SettingsTutorialRow");
         Ui.Tap("SettingsTutorialRow");
 
         Ui.Find("TutorialCarousel", 15);
         Ui.Find("TutorialSkipButton");
         Ui.Tap("TutorialSkipButton");
 
-        Ui.Find("SettingsTutorialRow", 15);
+        Ui.Poll(() => { try { Ui.ScrollIntoView("SettingsTutorialRow"); return true; } catch (WebDriverException) { return false; } }, 20, "the Settings page to be back");
         Assert.That(Ui.Exists("TutorialCarousel"), Is.False, "the tutorial closes back to Settings");
     }
 

@@ -111,28 +111,61 @@ public class LibraryTests : E2ETestBase
         LibraryScreen.WaitSheetGone(Bravo);
         Assert.That(AppDb.Sheets().Select(s => s.Title), Is.EquivalentTo(new[] { Alpha }));
     }
-}
 
-/// <summary>Importing a PDF through the system document picker (empty library).</summary>
-[TestFixture]
-public class ImportTests : E2ETestBase
-{
-    protected override IReadOnlyList<SeedSheet> Sheets => Array.Empty<SeedSheet>();
+    // The library mirrors every sheet into Documents/PiccoloReader (the visible copy). Deleting
+    // removes the sheet from the library and the private copy; the visible copy goes only when
+    // the "also delete the file from storage" checkbox is ticked (PR 175).
+    private static string ExternalCopy(string title) => $"/sdcard/Documents/PiccoloReader/{title}.pdf";
+
+    // The checkbox only shows for sheets already mirrored when the library list was loaded.
+    private static void MirrorThenRelaunch()
+    {
+        Ui.Poll(() => Adb.SharedFileExists(ExternalCopy(Bravo)) && Adb.SharedFileExists(ExternalCopy(Alpha)), 60, "the sheets to be mirrored into Documents/PiccoloReader");
+        Thread.Sleep(2000); // the sheet row gets its external path right after the file is written
+        AppSession.Relaunch();
+    }
+
+    [TearDown]
+    public void RemoveExternalCopies()
+    {
+        Adb.DeleteSharedFile(ExternalCopy(Alpha));
+        Adb.DeleteSharedFile(ExternalCopy(Bravo));
+    }
 
     [Test]
-    public void ImportPdf_ViaPicker_ShowsInLibraryAndOpensInViewer()
+    public void DeleteSheet_WithFileCheckbox_RemovesTheStorageCopyToo()
     {
-        var pdf = PdfFactory.CreatePortrait(
-            Path.Combine(Path.GetTempPath(), "piccolo-e2e", "Imported Score.pdf"), 3);
+        MirrorThenRelaunch();
+        var privateCopy = $"files/Sheets/{AppDb.Sheets().Single(s => s.Title == Bravo).FileName}";
 
-        // Empty library: the header button and the empty-state button both import.
-        LibraryScreen.ImportPdfViaPicker(pdf);
+        LibraryScreen.OpenSheetMenu(Bravo);
+        Ui.TapText(AppStrings.Delete);
+        Ui.Find(LibraryScreen.DeleteConfirmOverlay, 10);
+        Assert.That(Ui.IsChecked(LibraryScreen.DeleteConfirmCheckBox), Is.False, "the delete-file checkbox starts unchecked");
+        LibraryScreen.ConfirmDelete(alsoDeleteFile: true);
 
-        LibraryScreen.SheetRow("Imported Score");
-        Assert.That(AppDb.Sheets().Select(s => s.Title), Does.Contain("Imported Score"));
+        LibraryScreen.WaitSheetGone(Bravo);
+        Ui.Poll(() => !Adb.SharedFileExists(ExternalCopy(Bravo)), 30, "the storage copy to be deleted");
+        Assert.That(Adb.RunAs($"ls {privateCopy}", allowFailure: true), Does.Not.Contain(".pdf"), "the private copy is removed too");
+        Assert.That(Adb.SharedFileExists(ExternalCopy(Alpha)), Is.True, "the other sheet's storage copy is untouched");
+    }
 
-        LibraryScreen.OpenSheet("Imported Score");
-        ViewerScreen.RevealChrome();
-        Assert.That(ViewerScreen.Indicator.Total, Is.EqualTo(3));
+    [Test]
+    public void DeleteSheet_WithoutFileCheckbox_KeepsTheStorageCopy()
+    {
+        MirrorThenRelaunch();
+        var privateCopy = $"files/Sheets/{AppDb.Sheets().Single(s => s.Title == Bravo).FileName}";
+
+        LibraryScreen.OpenSheetMenu(Bravo);
+        Ui.TapText(AppStrings.Delete);
+        Ui.Find(LibraryScreen.DeleteConfirmOverlay, 10);
+        Assert.That(Ui.IsChecked(LibraryScreen.DeleteConfirmCheckBox), Is.False, "the delete-file checkbox starts unchecked");
+        LibraryScreen.ConfirmDelete();
+
+        LibraryScreen.WaitSheetGone(Bravo);
+        Assert.That(AppDb.Sheets().Select(s => s.Title), Is.EquivalentTo(new[] { Alpha }));
+        Assert.That(Adb.RunAs($"ls {privateCopy}", allowFailure: true), Does.Not.Contain(".pdf"), "the private copy is removed");
+        Thread.Sleep(2500); // give a (wrong) asynchronous storage delete time to happen
+        Assert.That(Adb.SharedFileExists(ExternalCopy(Bravo)), Is.True, "the storage copy stays when the checkbox is not ticked");
     }
 }

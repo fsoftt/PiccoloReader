@@ -6,7 +6,7 @@ using PiccoloReader.E2E.Infrastructure;
 
 namespace PiccoloReader.E2E.Screens;
 
-public enum Tool { Symbols, Pencil, Eraser }
+public enum Tool { Symbols, Pencil, Highlighter, Eraser, Text }
 
 /// <summary>Page object for the sheet viewer / editor (SheetViewerPage), keyed on AutomationIds.</summary>
 public static class ViewerScreen
@@ -18,6 +18,7 @@ public static class ViewerScreen
     public const string ToolsFab = "ViewerToolsFab";
     public const string ModeButton = "ViewerModeButton";
     public const string BookmarkButton = "ViewerBookmarkButton";
+    public const string MoreButton = "ViewerMoreButton";
     public const string BackButton = "ViewerBackButton";
     public const string UndoButton = "EditorUndoButton";
     public const string RedoButton = "EditorRedoButton";
@@ -121,6 +122,7 @@ public static class ViewerScreen
         {
             Tool.Symbols => "ViewerToolIcons",
             Tool.Pencil => "ViewerToolPencil",
+            Tool.Highlighter => "ViewerToolHighlighter",
             _ => "ViewerToolEraser"
         };
         Ui.Tap(id);
@@ -134,6 +136,8 @@ public static class ViewerScreen
         {
             Tool.Symbols => "ToolSegmentSymbols",
             Tool.Pencil => "ToolSegmentPencil",
+            Tool.Highlighter => "ToolSegmentHighlighter",
+            Tool.Text => "ToolSegmentText",
             _ => "ToolSegmentEraser"
         };
         Ui.Tap(id);
