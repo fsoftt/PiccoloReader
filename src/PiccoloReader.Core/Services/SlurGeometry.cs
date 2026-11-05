@@ -14,12 +14,12 @@ public static class SlurGeometry
 
     // The thickest part of the slur (its middle), as a multiple of the
     // hairpin stroke thickness; the tips taper to TipThicknessFactor of it.
-    public const double MaxThicknessFactor = 2.5;
-    public const double TipThicknessFactor = 0.4;
+    public const double MaxThicknessFactor = 1.9;
+    public const double TipThicknessFactor = 0.25;
 
     // Never thinner than this in the middle, in rendered pixels, so a slur on
     // a small or zoomed-out page stays visible.
-    public const double MinThicknessPx = 2.5;
+    public const double MinThicknessPx = 2.0;
 
     // Smallest box extent (page fractions) a curve is normalized against.
     public const double MinExtent = 1e-3;
