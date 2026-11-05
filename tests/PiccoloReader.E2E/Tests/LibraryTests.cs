@@ -29,6 +29,19 @@ public class LibraryTests : E2ETestBase
     }
 
     [Test]
+    public void RenameSheet_ShowsNewTitleAndKeepsFileName()
+    {
+        var before = AppDb.Sheets().Single(s => s.Title == Alpha);
+
+        LibraryScreen.RenameSheet(Alpha, "Alpha renamed");
+
+        LibraryScreen.WaitSheetGone(Alpha);
+        var after = AppDb.Sheets().Single(s => s.Id == before.Id);
+        Assert.That(after.Title, Is.EqualTo("Alpha renamed"));
+        Assert.That(after.FileName, Is.EqualTo(before.FileName));
+    }
+
+    [Test]
     public void MoveSheetToFolder_LeavesRootAndShowsInsideFolder()
     {
         LibraryScreen.CreateFolder("Choir");

@@ -364,11 +364,30 @@ public partial class LibraryPage : ContentPage
 
     private async Task ShowSheetMenuAsync(Sheet sheet)
     {
-        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, ShareSupported ? new[] { AppStrings.Share, AppStrings.Move, AppStrings.Delete } : new[] { AppStrings.Move, AppStrings.Delete });
+        var choice = await DisplayActionSheetAsync($"\"{sheet.Title}\"", AppStrings.Cancel, null, ShareSupported ? new[] { AppStrings.Share, AppStrings.Rename, AppStrings.Move, AppStrings.Delete } : new[] { AppStrings.Rename, AppStrings.Move, AppStrings.Delete });
 
         if (choice == AppStrings.Share)
         {
             await _shareFlow.ShareAsync(this, sheet, SheetViewerPage.LegacyPortraitReadingArea());
+            return;
+        }
+
+        if (choice == AppStrings.Rename)
+        {
+            var newTitle = await DisplayPromptAsync(AppStrings.RenameSheetTitle, AppStrings.SheetNamePrompt, accept: AppStrings.OK, cancel: AppStrings.Cancel, initialValue: sheet.Title);
+
+            if (newTitle is null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(newTitle))
+            {
+                await DisplayAlertAsync(AppStrings.RenameSheetTitle, AppStrings.SheetNameEmptyMessage, AppStrings.OK);
+                return;
+            }
+
+            await _viewModel.RenameSheetCommand.ExecuteAsync((sheet, newTitle));
             return;
         }
 

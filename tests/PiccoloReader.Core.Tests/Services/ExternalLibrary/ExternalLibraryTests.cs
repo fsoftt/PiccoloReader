@@ -159,6 +159,60 @@ public class ExternalLibraryTests
     }
 
     [Fact]
+    public async Task RenameSheet_RenamesExternalFile_KeepsFileName()
+    {
+        using var app = new AppInstall(_store);
+        var sheet = await app.ImportPdfAsync("Song", "s");
+        var fileName = sheet.FileName;
+
+        await app.Library.RenameSheetAsync(sheet, "  New: Song  ");
+
+        var saved = await app.Library.GetSheetAsync(sheet.Id);
+        Assert.Equal("New: Song", saved.Title);
+        Assert.Equal(fileName, saved.FileName);
+        Assert.Equal("New_ Song.pdf", saved.ExternalPath);
+        Assert.False(_store.Files.ContainsKey("Song.pdf"));
+        Assert.True(_store.Files.ContainsKey("New_ Song.pdf"));
+    }
+
+    [Fact]
+    public async Task RenameSheet_ToTakenName_GetsSuffix()
+    {
+        using var app = new AppInstall(_store);
+        await app.ImportPdfAsync("Etude", "a");
+        var b = await app.ImportPdfAsync("Song", "b");
+
+        await app.Library.RenameSheetAsync(b, "Etude");
+
+        Assert.Equal("Etude (2).pdf", (await app.Library.GetSheetAsync(b.Id)).ExternalPath);
+        Assert.True(_store.Files.ContainsKey("Etude.pdf"));
+        Assert.True(_store.Files.ContainsKey("Etude (2).pdf"));
+    }
+
+    [Fact]
+    public async Task RenameSheet_Unchanged_IsNoOp()
+    {
+        using var app = new AppInstall(_store);
+        var sheet = await app.ImportPdfAsync("Song", "s");
+
+        await app.Library.RenameSheetAsync(sheet, " Song ");
+
+        Assert.Equal("Song.pdf", (await app.Library.GetSheetAsync(sheet.Id)).ExternalPath);
+        Assert.Single(_store.Files.Keys.Where(k => k.EndsWith(".pdf")));
+    }
+
+    [Fact]
+    public async Task RenameSheet_Empty_Throws()
+    {
+        using var app = new AppInstall(_store);
+        var sheet = await app.ImportPdfAsync("Song", "s");
+
+        await Assert.ThrowsAsync<ArgumentException>(() => app.Library.RenameSheetAsync(sheet, "   "));
+
+        Assert.Equal("Song", (await app.Library.GetSheetAsync(sheet.Id)).Title);
+    }
+
+    [Fact]
     public async Task DeleteSheet_RemovesExternalFile()
     {
         using var app = new AppInstall(_store);

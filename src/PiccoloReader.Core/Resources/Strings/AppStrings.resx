@@ -58,6 +58,10 @@
   <data name="MoveToTitle" xml:space="preserve"><value>Move to…</value></data>
   <data name="NoFoldersToMoveMessage" xml:space="preserve"><value>Create a folder first to move sheets into.</value></data>
   <data name="FolderNameEmptyMessage" xml:space="preserve"><value>Folder name can't be empty.</value></data>
+  <data name="Rename" xml:space="preserve"><value>Rename</value></data>
+  <data name="RenameSheetTitle" xml:space="preserve"><value>Rename sheet</value></data>
+  <data name="SheetNamePrompt" xml:space="preserve"><value>New name</value></data>
+  <data name="SheetNameEmptyMessage" xml:space="preserve"><value>Sheet name can't be empty.</value></data>
   <data name="OK" xml:space="preserve"><value>OK</value></data>
   <data name="Folder" xml:space="preserve"><value>Folder</value></data>
   <data name="GoToPageTitle" xml:space="preserve"><value>Go to Page</value></data>

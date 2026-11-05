@@ -58,6 +58,10 @@
   <data name="MoveToTitle" xml:space="preserve"><value>Mover a…</value></data>
   <data name="NoFoldersToMoveMessage" xml:space="preserve"><value>Primero crea una carpeta para poder mover partituras a ella.</value></data>
   <data name="FolderNameEmptyMessage" xml:space="preserve"><value>El nombre de la carpeta no puede estar vacío.</value></data>
+  <data name="Rename" xml:space="preserve"><value>Renombrar</value></data>
+  <data name="RenameSheetTitle" xml:space="preserve"><value>Renombrar partitura</value></data>
+  <data name="SheetNamePrompt" xml:space="preserve"><value>Nuevo nombre</value></data>
+  <data name="SheetNameEmptyMessage" xml:space="preserve"><value>El nombre de la partitura no puede estar vacío.</value></data>
   <data name="OK" xml:space="preserve"><value>Aceptar</value></data>
   <data name="Folder" xml:space="preserve"><value>Carpeta</value></data>
   <data name="GoToPageTitle" xml:space="preserve"><value>Ir a la página</value></data>

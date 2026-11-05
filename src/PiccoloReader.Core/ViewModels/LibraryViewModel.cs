@@ -258,6 +258,13 @@ public partial class LibraryViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task RenameSheetAsync((Sheet Sheet, string NewTitle) args)
+    {
+        await _libraryService.RenameSheetAsync(args.Sheet, args.NewTitle);
+        await LoadAsync();
+    }
+
+    [RelayCommand]
     private async Task MoveSheetAsync((Sheet Sheet, int? TargetFolderId) args)
     {
         await _libraryService.MoveSheetAsync(args.Sheet, args.TargetFolderId);

@@ -122,6 +122,31 @@ public class LibraryService
         }
     }
 
+    // Changes the display title only. FileName (the sync key) is never touched; the
+    // external copy follows the title through the usual sync (rename, collision suffix).
+    public async Task RenameSheetAsync(Sheet sheet, string newTitle)
+    {
+        var title = newTitle?.Trim();
+        if (string.IsNullOrEmpty(title))
+        {
+            throw new ArgumentException("Sheet title cannot be empty or whitespace.", nameof(newTitle));
+        }
+
+        if (string.Equals(sheet.Title, title, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        sheet.Title = title;
+        await _database.Connection.ExecuteAsync("UPDATE Sheet SET Title = ? WHERE Id = ?", title, sheet.Id);
+
+        if (_externalSync is not null)
+        {
+            await _externalSync.SyncSheetAsync(sheet, requestAccess: false);
+            _externalSync.NotifyChanged();
+        }
+    }
+
     // Persists a full order for one folder (root = null) in a single transaction:
     // each id gets its index as SortOrder.
     public async Task SetSheetOrderAsync(int? folderId, IReadOnlyList<int> sheetIds)
