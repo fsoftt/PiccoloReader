@@ -1804,7 +1804,9 @@ public partial class SheetViewerPage : ContentPage
     // use that path) and the Android touch listener - both have already
     // updated _currentScale by this point using their own platform's scale
     // semantics; this just applies the resulting translation.
-    private void ApplyPinchTranslation(double previousScale, double originXFraction, double originYFraction)
+    // panXDp/panYDp: finger-midpoint motion since the last frame (Android only),
+    // added after the zoom anchoring so the content follows the fingers.
+    private void ApplyPinchTranslation(double previousScale, double originXFraction, double originYFraction, double panXDp = 0, double panYDp = 0)
     {
         var previousTranslationX = PageContainer.TranslationX;
         var previousTranslationY = PageContainer.TranslationY;
@@ -1813,8 +1815,8 @@ public partial class SheetViewerPage : ContentPage
         var localY = originYFraction * PageContainer.Height;
         var scaleDelta = _currentScale - previousScale;
 
-        var targetX = previousTranslationX - localX * scaleDelta;
-        var targetY = previousTranslationY - localY * scaleDelta;
+        var targetX = PagedViewport.PinchTranslation(previousTranslationX, localX, scaleDelta, panXDp);
+        var targetY = PagedViewport.PinchTranslation(previousTranslationY, localY, scaleDelta, panYDp);
 
         PageContainer.TranslationX = targetX;
         PageContainer.TranslationY = targetY;
@@ -1962,11 +1964,11 @@ public partial class SheetViewerPage : ContentPage
     // bypassed entirely on Android now). Composing it multiplicatively
     // (_currentScale *= rawScaleFactor) is the exact, not approximated,
     // equivalent of the +(e.Scale-1) summation OnPinchUpdated uses.
-    private void AndroidHandlePinchRunning(double rawScaleFactor, double originXFraction, double originYFraction)
+    private void AndroidHandlePinchRunning(double rawScaleFactor, double originXFraction, double originYFraction, double panXDp, double panYDp)
     {
         var previousScale = _currentScale;
         _currentScale = Math.Clamp(_currentScale * rawScaleFactor, 1, MaxPagedZoom);
-        ApplyPinchTranslation(previousScale, originXFraction, originYFraction);
+        ApplyPinchTranslation(previousScale, originXFraction, originYFraction, panXDp, panYDp);
     }
 
     private void AndroidHandlePinchEnded()
@@ -2060,7 +2062,8 @@ public partial class SheetViewerPage : ContentPage
                     onPinchStart: ContinuousPinchStarted,
                     onPinchUpdate: ContinuousPinchRunning,
                     onPinchEnd: ContinuousPinchEnded,
-                    onHorizontalPan: ContinuousPanHorizontally);
+                    onHorizontalPan: ContinuousPanHorizontally,
+                    onPinchPan: ContinuousPanBy);
                 _continuousZoomTouchListener.Stylus = TrackStylusHandler(CreateContinuousStylusHandler());
                 recyclerView.AddOnItemTouchListener(_continuousZoomTouchListener);
             }
@@ -3314,26 +3317,49 @@ public partial class SheetViewerPage : ContentPage
     // row under the fingers in place: a row at viewport position y is on
     // screen at y*zoom, so going from zoom k to k' needs a scroll of
     // y*(1 - k/k').
-    private void ContinuousPinchRunning(double rawScaleFactor, double focusXFraction, double focusYFraction)
+    // The finger midpoint's own motion (panXDp/panYDp) then pans the list the
+    // same way as ContinuousPanBy.
+    private void ContinuousPinchRunning(double rawScaleFactor, double focusXFraction, double focusYFraction, double panXDp, double panYDp)
     {
         var width = ContinuousPagesView.Width;
         var height = ContinuousPagesView.Height;
         var previousZoom = _continuousZoom;
         _continuousZoom = Math.Clamp(previousZoom * rawScaleFactor, 1, MaxContinuousZoom);
-        if (_continuousZoom == previousZoom || width <= 0 || height <= 0)
+        if (width <= 0 || height <= 0)
         {
             return;
         }
 
-        var targetX = ContinuousPagesView.TranslationX - focusXFraction * width * (_continuousZoom - previousZoom);
-        ContinuousPagesView.TranslationX = Math.Clamp(targetX, -width * (_continuousZoom - 1), 0);
-        ContinuousPagesView.Scale = _continuousZoom;
+        if (_continuousZoom != previousZoom)
+        {
+            var targetX = ContinuousPagesView.TranslationX - focusXFraction * width * (_continuousZoom - previousZoom);
+            ContinuousPagesView.TranslationX = Math.Clamp(targetX, -width * (_continuousZoom - 1), 0);
+            ContinuousPagesView.Scale = _continuousZoom;
 
-        // Room below the last page so it can still be scrolled fully into
-        // the on-screen part of the (scaled) viewport.
-        ContinuousZoomFooter.HeightRequest = height * (1 - 1 / _continuousZoom);
+            // Room below the last page so it can still be scrolled fully into
+            // the on-screen part of the (scaled) viewport.
+            ContinuousZoomFooter.HeightRequest = height * (1 - 1 / _continuousZoom);
 
-        ScrollContinuousBy(focusYFraction * height * (1 - previousZoom / _continuousZoom));
+            ScrollContinuousBy(focusYFraction * height * (1 - previousZoom / _continuousZoom));
+        }
+
+        ContinuousPanBy(panXDp, panYDp);
+    }
+
+    // Moves the content with the finger(s): dx via the horizontal translation,
+    // dy by scrolling the opposite way (content follows the fingers). The
+    // list is scaled, so a screen distance maps to dy/zoom in scroll units.
+    private void ContinuousPanBy(double deltaXDp, double deltaYDp)
+    {
+        if (deltaXDp != 0)
+        {
+            ContinuousPanHorizontally(deltaXDp);
+        }
+
+        if (deltaYDp != 0)
+        {
+            ScrollContinuousBy(-deltaYDp / _continuousZoom);
+        }
     }
 
     private async void ContinuousPinchEnded()

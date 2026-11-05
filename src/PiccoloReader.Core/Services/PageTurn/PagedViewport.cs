@@ -68,6 +68,17 @@ public static class PagedViewport
         return Math.Clamp(translation, min, max);
     }
 
+    // Local (unscaled view) fraction under a screen point, for a view with
+    // AnchorX/Y = 0: a local point lx renders at translation + lx * scale.
+    public static double FocusFraction(double screenPoint, double translation, double scale, double size) =>
+        size > 0 && scale > 0 ? (screenPoint - translation) / scale / size : 0;
+
+    // Translation after a pinch frame: the local point stays under the
+    // fingers while the scale changes (- local * scaleDelta), and the
+    // fingers' own midpoint motion pans the page (+ pan). Unclamped.
+    public static double PinchTranslation(double translation, double localPoint, double scaleDelta, double pan) =>
+        translation - localPoint * scaleDelta + pan;
+
     // Translation that puts the page's top (or bottom) edge at the top
     // (bottom) of the container, clamped to the allowed range.
     public static double AlignY(double container, double scale, double start, double end, bool bottom, bool fitToExtent)

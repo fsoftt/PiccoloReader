@@ -403,7 +403,7 @@
                                     x:Name="PencilWidthSlider"
                                     AutomationId="PencilWidthSlider"
                                     HeightRequest="44"
-                                    Minimum="0.003"
+                                    Minimum="0.002"
                                     Maximum="0.02"
                                     Value="{Binding PencilStrokeWidth}"
                                     MinimumTrackColor="{AppThemeBinding Light={StaticResource PrimaryLight}, Dark={StaticResource PrimaryDark}}"

@@ -1,5 +1,6 @@
 using Android.Content;
 using Android.Views;
+using PiccoloReader.Core.Services.PageTurn;
 using View = Android.Views.View;
 
 namespace PiccoloReader.Platforms.Android;
@@ -50,7 +51,7 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
 
     private readonly Action<double, double> _onTap;
     private readonly Action _onPinchStart;
-    private readonly Action<double, double, double> _onPinchUpdate;
+    private readonly Action<double, double, double, double, double> _onPinchUpdate;
     private readonly Action _onPinchEnd;
     private readonly Action<double, double> _onPanUpdate;
     private readonly Action _onPanEnd;
@@ -66,11 +67,24 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
     private long _downTimeMs;
     private double _previousSpan;
 
+    // The two pointers driving the pinch, tracked by id (not index) so a
+    // third finger touching down can't swap which fingers are measured.
+    private int _pinchIdA;
+    private int _pinchIdB;
+    private float _previousMidX;
+    private float _previousMidY;
+
+    // One finger left after a pinch: it keeps panning from where the pinch
+    // left the page. Never a tap or page turn; releasing just commits the
+    // offsets (through _onPinchEnd).
+    private bool _isPanAfterPinch;
+    private int _panPointerId;
+
     public PageContainerTouchListener(
         Context context,
         Action<double, double> onTap,
         Action onPinchStart,
-        Action<double, double, double> onPinchUpdate,
+        Action<double, double, double, double, double> onPinchUpdate,
         Action onPinchEnd,
         Action<double, double> onPanUpdate,
         Action onPanEnd)
@@ -93,6 +107,11 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
             _isPinching = false;
             _onPinchEnd();
         }
+        else if (_isPanAfterPinch)
+        {
+            _isPanAfterPinch = false;
+            _onPinchEnd();
+        }
         else if (_isPossiblePanOrTap)
         {
             _onPanEnd();
@@ -105,11 +124,26 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
 
     private static float StableY(MotionEvent e, int pointerIndex, View v) => e.GetY(pointerIndex) * v.ScaleY + v.TranslationY;
 
-    private static double Span(MotionEvent e, View v)
+    private static double Span(MotionEvent e, View v, int indexA, int indexB)
     {
-        var dx = StableX(e, 0, v) - StableX(e, 1, v);
-        var dy = StableY(e, 0, v) - StableY(e, 1, v);
+        var dx = StableX(e, indexA, v) - StableX(e, indexB, v);
+        var dy = StableY(e, indexA, v) - StableY(e, indexB, v);
         return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    // Starts (or resumes, after a pan-after-pinch) a pinch on the first two
+    // pointers, with fresh span and midpoint baselines.
+    private void StartPinch(MotionEvent e, View v)
+    {
+        _isPossiblePanOrTap = false;
+        _isPanAfterPinch = false;
+        _isPinching = true;
+        _pinchIdA = e.GetPointerId(0);
+        _pinchIdB = e.GetPointerId(1);
+        _previousSpan = Span(e, v, 0, 1);
+        _previousMidX = (StableX(e, 0, v) + StableX(e, 1, v)) / 2;
+        _previousMidY = (StableY(e, 0, v) + StableY(e, 1, v)) / 2;
+        _onPinchStart();
     }
 
     public bool OnTouch(View? v, MotionEvent? e)
@@ -129,19 +163,18 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
             case MotionEventActions.Down:
                 _isPossiblePanOrTap = true;
                 _isPinching = false;
+                _isPanAfterPinch = false;
                 _panStartX = StableX(e, 0, v);
                 _panStartY = StableY(e, 0, v);
                 _downTimeMs = Java.Lang.JavaSystem.CurrentTimeMillis();
                 break;
 
             case MotionEventActions.PointerDown:
-                // A second finger arrived - this is a pinch, not a pan/tap.
+                // A second finger arrived - this is a pinch, not a pan/tap
+                // (also when it follows a pan-after-pinch: pinch resumes).
                 if (e.PointerCount == 2)
                 {
-                    _isPossiblePanOrTap = false;
-                    _isPinching = true;
-                    _previousSpan = Span(e, v);
-                    _onPinchStart();
+                    StartPinch(e, v);
                 }
 
                 break;
@@ -149,16 +182,47 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
             case MotionEventActions.Move:
                 if (_isPinching && e.PointerCount >= 2)
                 {
-                    var currentSpan = Span(e, v);
+                    var indexA = e.FindPointerIndex(_pinchIdA);
+                    var indexB = e.FindPointerIndex(_pinchIdB);
+                    if (indexA < 0 || indexB < 0)
+                    {
+                        break;
+                    }
+
+                    var currentSpan = Span(e, v, indexA, indexB);
+                    var midX = (StableX(e, indexA, v) + StableX(e, indexB, v)) / 2;
+                    var midY = (StableY(e, indexA, v) + StableY(e, indexB, v)) / 2;
                     if (_previousSpan > 0 && v.Width > 0 && v.Height > 0)
                     {
                         var rawScaleFactor = currentSpan / _previousSpan;
-                        var focusXFraction = (e.GetX(0) + e.GetX(1)) / 2 / v.Width;
-                        var focusYFraction = (e.GetY(0) + e.GetY(1)) / 2 / v.Height;
-                        _onPinchUpdate(rawScaleFactor, focusXFraction, focusYFraction);
+
+                        // The stable midpoint is a screen position; with
+                        // AnchorX/Y = 0 the page point under it is
+                        // (mid - Translation) / Scale in the view's local
+                        // space. The focus is the point that was under the
+                        // fingers last frame (the previous midpoint, against
+                        // the unchanged current transform); the midpoint
+                        // delta is then added on top, so the zoom anchoring
+                        // and the pan stay exact.
+                        var focusXFraction = PagedViewport.FocusFraction(_previousMidX, v.TranslationX, v.ScaleX, v.Width);
+                        var focusYFraction = PagedViewport.FocusFraction(_previousMidY, v.TranslationY, v.ScaleY, v.Height);
+
+                        // The midpoint's own motion pans the page, in dp like
+                        // the one-finger pan deltas.
+                        _onPinchUpdate(rawScaleFactor, focusXFraction, focusYFraction, (midX - _previousMidX) / _density, (midY - _previousMidY) / _density);
                     }
 
                     _previousSpan = currentSpan;
+                    _previousMidX = midX;
+                    _previousMidY = midY;
+                }
+                else if (_isPanAfterPinch)
+                {
+                    var panIndex = e.FindPointerIndex(_panPointerId);
+                    if (panIndex >= 0)
+                    {
+                        _onPanUpdate((StableX(e, panIndex, v) - _panStartX) / _density, (StableY(e, panIndex, v) - _panStartY) / _density);
+                    }
                 }
                 else if (_isPossiblePanOrTap && e.PointerCount == 1)
                 {
@@ -168,14 +232,40 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
                 break;
 
             case MotionEventActions.PointerUp:
-                // Dropping from 2 fingers to 1 ends the pinch. The
-                // remaining finger isn't picked up as a pan candidate
-                // (matches the previous behavior) - the gesture just ends
-                // here, same as a full release.
-                if (_isPinching && e.PointerCount == 2)
+                // Lifting one of the two pinch fingers ends the pinch and the
+                // other one carries on as a pan from where the pinch left the
+                // page. Lifting some other (third) finger changes nothing.
+                if (_isPinching)
                 {
-                    _isPinching = false;
-                    _onPinchEnd();
+                    var liftedId = e.GetPointerId(e.ActionIndex);
+                    if (liftedId == _pinchIdA || liftedId == _pinchIdB)
+                    {
+                        var remainingId = liftedId == _pinchIdA ? _pinchIdB : _pinchIdA;
+                        var remainingIndex = e.FindPointerIndex(remainingId);
+                        _isPinching = false;
+                        _onPinchEnd();
+                        if (remainingIndex >= 0)
+                        {
+                            _isPanAfterPinch = true;
+                            _panPointerId = remainingId;
+                            _panStartX = StableX(e, remainingIndex, v);
+                            _panStartY = StableY(e, remainingIndex, v);
+                        }
+                    }
+                }
+                else if (_isPanAfterPinch && e.GetPointerId(e.ActionIndex) == _panPointerId)
+                {
+                    // The panning finger lifted while another is still down:
+                    // hand the pan over to it. _onPinchEnd re-bases the
+                    // offsets on the current translation, so no jump.
+                    var nextIndex = e.ActionIndex == 0 ? 1 : 0;
+                    if (nextIndex < e.PointerCount)
+                    {
+                        _onPinchEnd();
+                        _panPointerId = e.GetPointerId(nextIndex);
+                        _panStartX = StableX(e, nextIndex, v);
+                        _panStartY = StableY(e, nextIndex, v);
+                    }
                 }
 
                 break;
@@ -185,6 +275,12 @@ public sealed class PageContainerTouchListener : Java.Lang.Object, View.IOnTouch
                 if (_isPinching)
                 {
                     _isPinching = false;
+                    _onPinchEnd();
+                }
+                else if (_isPanAfterPinch)
+                {
+                    // Just commits the offsets - never a tap or page turn.
+                    _isPanAfterPinch = false;
                     _onPinchEnd();
                 }
                 else if (_isPossiblePanOrTap)
