@@ -13,8 +13,13 @@ public static class SlurGeometry
     public const string BelowKey = "slurBelow";
 
     // The thickest part of the slur (its middle), as a multiple of the
-    // hairpin stroke thickness; the tips are 0.
-    public const double MaxThicknessFactor = 1.6;
+    // hairpin stroke thickness; the tips taper to TipThicknessFactor of it.
+    public const double MaxThicknessFactor = 2.5;
+    public const double TipThicknessFactor = 0.4;
+
+    // Never thinner than this in the middle, in rendered pixels, so a slur on
+    // a small or zoomed-out page stays visible.
+    public const double MinThicknessPx = 2.5;
 
     // Smallest box extent (page fractions) a curve is normalized against.
     public const double MinExtent = 1e-3;
@@ -92,8 +97,10 @@ public static class SlurGeometry
     // Splits the shape into its two edges, in any consistent unit (pixels):
     // both run from the first to the last control point; the control points of
     // each are pushed apart perpendicular to the chord so the slur is
-    // thickness wide in the middle and 0 at the tips. A Bezier's middle only
-    // follows a control point by 3/4, hence the division.
+    // thickness wide in the middle and TipThicknessFactor of that at the tips
+    // (so the ends never vanish). The end points move apart by half the tip
+    // thickness; a Bezier's middle follows its end points by 1/4 and its
+    // control points by 3/4, which fixes how far the control points go.
     public static ((double X, double Y)[] Outer, (double X, double Y)[] Inner) Edges(
         IReadOnlyList<(double X, double Y)> p, double thickness)
     {
@@ -103,15 +110,16 @@ public static class SlurGeometry
         // The normal of the chord (zero chord: no thickness to place).
         var nx = length > 0 ? -dy / length : 0;
         var ny = length > 0 ? dx / length : 0;
-        var shift = thickness / 2 / 0.75;
+        var tip = thickness / 2 * TipThicknessFactor;
+        var shift = (thickness / 2 - 0.25 * tip) / 0.75;
 
         (double X, double Y)[] Side(double sign) =>
             new[]
             {
-                p[0],
+                (p[0].X + sign * nx * tip, p[0].Y + sign * ny * tip),
                 (p[1].X + sign * nx * shift, p[1].Y + sign * ny * shift),
                 (p[2].X + sign * nx * shift, p[2].Y + sign * ny * shift),
-                p[3]
+                (p[3].X + sign * nx * tip, p[3].Y + sign * ny * tip)
             };
 
         return (Side(1), Side(-1));

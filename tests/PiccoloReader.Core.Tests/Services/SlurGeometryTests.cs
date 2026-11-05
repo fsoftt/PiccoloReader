@@ -77,20 +77,20 @@ public class SlurGeometryTests
     }
 
     [Fact]
-    public void Edges_ShareEndPoints_AndSeparateByThicknessInTheMiddle()
+    public void Edges_TaperFromThicknessInTheMiddleToTipFactorAtTheEnds()
     {
         var p = new (double X, double Y)[] { (0, 100), (25, 0), (75, 0), (100, 100) };
 
         var (outer, inner) = SlurGeometry.Edges(p, 8);
 
-        Assert.Equal(p[0], outer[0]);
-        Assert.Equal(p[0], inner[0]);
-        Assert.Equal(p[3], outer[3]);
-        Assert.Equal(p[3], inner[3]);
-        var mid1 = SlurGeometry.Evaluate(outer, 0.5);
-        var mid2 = SlurGeometry.Evaluate(inner, 0.5);
-        var gap = Math.Sqrt(Math.Pow(mid1.X - mid2.X, 2) + Math.Pow(mid1.Y - mid2.Y, 2));
-        Assert.Equal(8, gap, 6);
+        static double Gap((double X, double Y) a, (double X, double Y) b) =>
+            Math.Sqrt(Math.Pow(a.X - b.X, 2) + Math.Pow(a.Y - b.Y, 2));
+        Assert.Equal(8, Gap(SlurGeometry.Evaluate(outer, 0.5), SlurGeometry.Evaluate(inner, 0.5)), 6);
+        Assert.Equal(8 * SlurGeometry.TipThicknessFactor, Gap(outer[0], inner[0]), 6);
+        Assert.Equal(8 * SlurGeometry.TipThicknessFactor, Gap(outer[3], inner[3]), 6);
+        // The tips stay centered on the end points.
+        Assert.Equal(p[0].X, (outer[0].X + inner[0].X) / 2, 6);
+        Assert.Equal(p[3].Y, (outer[3].Y + inner[3].Y) / 2, 6);
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using PiccoloReader.Core.Data.Models;
 using PiccoloReader.Core.Services;
+using PiccoloReader.Core.ViewModels;
 
 namespace PiccoloReader.Core.Tests;
 
@@ -97,6 +98,71 @@ public class ShapeRecognizerTests
         Assert.InRange(x, 0.19, 0.21);
         Assert.InRange(w, 0.19, 0.21);
         Assert.True(h > 0 && y > 0.3 && y + h < 0.6);
+    }
+
+    [Theory]
+    [InlineData(0.25, 0.75, 0.5, 0.05)]
+    [InlineData(0.2, 0.4, 0.5, 0.04)]
+    [InlineData(0.3, 0.8, 0.6, -0.06)]
+    public void Slur_BuiltAnnotationFollowsDrawnStroke(double x0, double x1, double y, double bulge)
+    {
+        var stroke = Arc(x0, x1, y, bulge);
+        var shape = Recognize(stroke);
+        Assert.Equal(RecognizedShapeKind.Slur, shape.Kind);
+
+        var annotation = RecognizedFigure.Create(shape, 1, 0, "#000000", PageCrop.Full);
+        Assert.NotNull(annotation);
+        Assert.InRange(annotation!.X, 0, 1);
+        Assert.InRange(annotation.Y, 0, 1);
+        Assert.True(annotation.X + annotation.Width <= 1.0001 && annotation.Y + annotation.Height <= 1.0001);
+
+        // Map back exactly as AnnotationPainter does (box fractions -> page).
+        var curve = SlurGeometry.ControlPoints(annotation)
+            .Select(p => (X: annotation.X + p.X * annotation.Width, Y: annotation.Y + p.Y * annotation.Height))
+            .ToArray();
+        var first = SlurGeometry.Evaluate(curve, 0);
+        var last = SlurGeometry.Evaluate(curve, 1);
+        Assert.Equal(stroke[0].X, first.X, 2);
+        Assert.Equal(stroke[0].Y, first.Y, 2);
+        Assert.Equal(stroke[^1].X, last.X, 2);
+        Assert.Equal(stroke[^1].Y, last.Y, 2);
+
+        // Every stroke point lies near the sampled curve (apex within ~2% of the page).
+        var samples = Enumerable.Range(0, 101).Select(i => SlurGeometry.Evaluate(curve, i / 100.0)).ToArray();
+        foreach (var point in stroke)
+        {
+            var nearest = samples.Min(c => Math.Sqrt(Math.Pow(c.X - point.X, 2) + Math.Pow((c.Y - point.Y) * Aspect, 2)));
+            Assert.True(nearest < 0.02, $"stroke point ({point.X}, {point.Y}) is {nearest} from the slur");
+        }
+    }
+
+    [Theory]
+    [InlineData(6, 1.0)]
+    [InlineData(8, 2.0)]
+    [InlineData(10, 3.0)]
+    [InlineData(12, 0.5)]
+    [InlineData(20, 2.5)]
+    public void Slur_SparseUnevenStroke_StaysCloseToDrawnArc(int count, double power)
+    {
+        var stroke = new List<StrokePoint>();
+        for (var i = 0; i < count; i++)
+        {
+            var t = Math.Pow(i / (double)(count - 1), power);
+            stroke.Add(new StrokePoint(0.25 + 0.5 * t, 0.5 - 4 * 0.05 * t * (1 - t) / Aspect));
+        }
+
+        var shape = Recognize(stroke);
+        if (shape.Kind != RecognizedShapeKind.Slur)
+        {
+            return;
+        }
+
+        var annotation = RecognizedFigure.Create(shape, 1, 0, "#000000", PageCrop.Full)!;
+        var curve = SlurGeometry.ControlPoints(annotation)
+            .Select(p => (X: annotation.X + p.X * annotation.Width, Y: annotation.Y + p.Y * annotation.Height))
+            .ToArray();
+        var apexY = Enumerable.Range(0, 101).Min(i => SlurGeometry.Evaluate(curve, i / 100.0).Y);
+        Assert.InRange((0.5 - apexY) * Aspect, 0.03, 0.07);
     }
 
     [Fact]

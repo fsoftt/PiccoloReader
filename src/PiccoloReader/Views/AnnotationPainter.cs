@@ -93,7 +93,7 @@ public class AnnotationPainter
             if (SlurGeometry.IsSlur(annotation.IconKey))
             {
                 DrawSlur(canvas, SlurGeometry.ControlPoints(annotation), targetRect,
-                    (float)(SlurGeometry.MaxThickness * frame.Width * width), ColorOf(annotation));
+                    (float)Math.Max(SlurGeometry.MaxThickness * frame.Width * width, SlurGeometry.MinThicknessPx), ColorOf(annotation));
                 continue;
             }
 
@@ -175,12 +175,17 @@ public class AnnotationPainter
         return runs;
     }
 
+    // One font for measuring and drawing a run: they must agree exactly (the
+    // subpixel flag changes advances at small sizes), or the text drawn is
+    // wider or narrower than the box measured for it.
+    private static SKFont TextFontFor(SKTypeface typeface, float size) => new(typeface, size) { Subpixel = true };
+
     private static float MeasureRuns(List<(string Text, SKTypeface Typeface)> runs, float size)
     {
         float width = 0;
         foreach (var (text, typeface) in runs)
         {
-            using var font = new SKFont(typeface, size);
+            using var font = TextFontFor(typeface, size);
             width += font.MeasureText(text);
         }
 
@@ -214,7 +219,7 @@ public class AnnotationPainter
         var x = 0f;
         foreach (var (run, typeface) in runs)
         {
-            using var font = new SKFont(typeface, size) { Subpixel = true };
+            using var font = TextFontFor(typeface, size);
             canvas.DrawText(run, x, -baseFont.Metrics.Ascent, font, paint);
             x += font.MeasureText(run);
         }
@@ -222,9 +227,9 @@ public class AnnotationPainter
         canvas.RestoreToCount(restore);
     }
 
-    // A slur is a filled crescent: two Bezier edges sharing the end points,
+    // A slur is a filled crescent: two Bezier edges from one end to the other,
     // pushed apart in the middle (see SlurGeometry.Edges), so its tips are
-    // sharp and its belly is thickest. Control points are box fractions.
+    // thin and its belly is thickest. Control points are box fractions.
     public void DrawSlur(SKCanvas canvas, IReadOnlyList<StrokePoint> controlPoints, SKRect rect, float thickness, SKColor color)
     {
         if (controlPoints.Count != 4 || rect.Width <= 0 || rect.Height <= 0)
@@ -240,6 +245,7 @@ public class AnnotationPainter
         using var path = new SKPath();
         path.MoveTo((float)outer[0].X, (float)outer[0].Y);
         path.CubicTo((float)outer[1].X, (float)outer[1].Y, (float)outer[2].X, (float)outer[2].Y, (float)outer[3].X, (float)outer[3].Y);
+        path.LineTo((float)inner[3].X, (float)inner[3].Y);
         path.CubicTo((float)inner[2].X, (float)inner[2].Y, (float)inner[1].X, (float)inner[1].Y, (float)inner[0].X, (float)inner[0].Y);
         path.Close();
 

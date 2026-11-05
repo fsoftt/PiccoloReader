@@ -50,6 +50,30 @@ public class TextFigureTests : IDisposable
         Assert.Equal(TextFigure.MaxLength, TextFigure.Normalize(new string('a', 500))!.Length);
     }
 
+    [Theory]
+    [InlineData(3.4, 0.025, 1.4)]
+    [InlineData(0.5, 0.025, 1.4)]
+    [InlineData(7.0, 0.05, 1.0)]
+    [InlineData(2.0, 0.025, 0.7)]
+    public void Size_BoxHasTheTextsOwnAspect_SoMeasuredTextFitsIt(double textAspect, double height, double pageAspectRatio)
+    {
+        var (width, boxHeight) = TextFigure.Size(textAspect, height, pageAspectRatio);
+
+        // On screen the box is (width * pageWidth) x (height * pageHeight); its
+        // width / height must equal the width / height the painter measured.
+        var boxAspectOnScreen = width / (boxHeight * pageAspectRatio);
+        Assert.Equal(textAspect, boxAspectOnScreen, 6);
+    }
+
+    [Fact]
+    public void Size_TextWiderThanThePage_ShrinksKeepingItsAspect()
+    {
+        var (width, height) = TextFigure.Size(60, 0.05, 1.4);
+
+        Assert.Equal(1.0, width, 9);
+        Assert.Equal(60, width / (height * 1.4), 6);
+    }
+
     [Fact]
     public void Size_WidthFollowsTextAspectInPageWidths()
     {
