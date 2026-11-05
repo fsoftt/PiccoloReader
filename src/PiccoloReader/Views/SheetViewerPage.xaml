@@ -437,7 +437,7 @@
                                 <VerticalStackLayout x:Name="PencilWidthBlock" Grid.Row="1" Spacing="10">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <Label Text="{x:Static strings:AppStrings.Width}" Style="{StaticResource SectionLabel}" />
-                                    <Label x:Name="PencilWidthValueLabel" Grid.Column="1" Margin="0,0,8,0" Style="{StaticResource Caption}" />
+                                    <Label x:Name="PencilWidthValueLabel" AutomationId="PencilWidthValueLabel" Grid.Column="1" Margin="0,0,8,0" Style="{StaticResource Caption}" />
                                 </Grid>
                                 <Slider
                                     x:Name="PencilWidthSlider"
