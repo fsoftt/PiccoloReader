@@ -351,7 +351,7 @@
   <data name="CoachViewerPrevious" xml:space="preserve"><value>On the first page, tap here to go back to the previous score</value></data>
   <data name="CoachViewerSettings" xml:space="preserve"><value>You can turn concert mode off in Settings</value></data>
   <data name="CopyFigure" xml:space="preserve"><value>Copy</value></data>
-  <data name="CategoryPhrasing" xml:space="preserve"><value>Phrasing</value></data>
+  <data name="CategorySlurs" xml:space="preserve"><value>Slurs</value></data>
   <data name="IconSlurAbove" xml:space="preserve"><value>Slur (above)</value></data>
   <data name="IconSlurBelow" xml:space="preserve"><value>Slur (below)</value></data>
   <data name="RecognizeShapesLabel" xml:space="preserve"><value>Recognize drawn slurs and hairpins</value></data>

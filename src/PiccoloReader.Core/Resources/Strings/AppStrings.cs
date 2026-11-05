@@ -72,7 +72,7 @@ public static class AppStrings
     public static string RecognizeShapesLabel => Get(nameof(RecognizeShapesLabel));
     public static string IconSlurBelow => Get(nameof(IconSlurBelow));
     public static string IconSlurAbove => Get(nameof(IconSlurAbove));
-    public static string CategoryPhrasing => Get(nameof(CategoryPhrasing));
+    public static string CategorySlurs => Get(nameof(CategorySlurs));
     public static string CopyFigure => Get(nameof(CopyFigure));
     public static string Size => Get(nameof(Size));
     public static string PageIndicatorFormat => Get(nameof(PageIndicatorFormat));
