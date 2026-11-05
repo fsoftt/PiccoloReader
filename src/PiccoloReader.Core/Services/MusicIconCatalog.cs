@@ -33,13 +33,6 @@ public static class MusicIconCatalog
             new("dynamicCrescendoHairpin", AppStrings.IconCrescendo, 0xE53E, 2.78),
             new("dynamicDiminuendoHairpin", AppStrings.IconDecrescendo, 0xE53F, 2.78),
         }),
-        // Slurs are vector shapes (SlurGeometry), so the codepoint is only a
-        // placeholder: the picker and the page draw the curve instead.
-        new(AppStrings.CategoryPhrasing, new List<MusicIcon>
-        {
-            new(SlurGeometry.AboveKey, AppStrings.IconSlurAbove, 0xE53E, 4.0),
-            new(SlurGeometry.BelowKey, AppStrings.IconSlurBelow, 0xE53F, 4.0),
-        }),
         new(AppStrings.CategoryArticulations, new List<MusicIcon>
         {
             // Staccato's glyph is a small dot with tight ink bounds, so fitting
@@ -137,6 +130,14 @@ public static class MusicIconCatalog
             new("rest8th", AppStrings.IconRest8th, 0xE4E6, 0.58),
             new("rest16th", AppStrings.IconRest16th, 0xE4E7, 0.47),
             new("rest32nd", AppStrings.IconRest32nd, 0xE4E8, 0.40),
+        }),
+        // Appended last (like Notes and Rests) so earlier tab ids stay valid.
+        // Slurs are vector shapes (SlurGeometry), so the codepoint is only a
+        // placeholder: the picker and the page draw the curve instead.
+        new(AppStrings.CategoryPhrasing, new List<MusicIcon>
+        {
+            new(SlurGeometry.AboveKey, AppStrings.IconSlurAbove, 0xE53E, 4.0),
+            new(SlurGeometry.BelowKey, AppStrings.IconSlurBelow, 0xE53F, 4.0),
         }),
     };
 

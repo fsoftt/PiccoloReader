@@ -11,9 +11,9 @@ public class MusicIconCatalogTests
 
         Assert.Equal(new[]
         {
-            "Dynamics", "Phrasing", "Articulations", "Fermata & Breath",
+            "Dynamics", "Articulations", "Fermata & Breath",
             "Ornaments", "Bowing & Plucking", "Pedal Marks", "Repeats & Navigation",
-            "Accidentals", "Tremolo & Glissando", "Notes", "Rests",
+            "Accidentals", "Tremolo & Glissando", "Notes", "Rests", "Phrasing",
         }, names);
     }
 
@@ -83,14 +83,15 @@ public class MusicIconCatalogTests
     }
 
     [Fact]
-    public void Categories_NotesAndRestsAreLast()
+    public void Categories_NotesRestsAndPhrasingAreLast()
     {
         var cats = MusicIconCatalog.Categories;
 
-        Assert.Equal("Notes", cats[^2].Name);
-        Assert.Equal("Rests", cats[^1].Name);
-        Assert.Equal(15, cats[^2].Icons.Count);
-        Assert.Equal(6, cats[^1].Icons.Count);
+        Assert.Equal("Notes", cats[^3].Name);
+        Assert.Equal("Rests", cats[^2].Name);
+        Assert.Equal(15, cats[^3].Icons.Count);
+        Assert.Equal(6, cats[^2].Icons.Count);
+        Assert.Equal("Phrasing", cats[^1].Name);
     }
 
     [Theory]
