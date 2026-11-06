@@ -247,6 +247,7 @@ public partial class SheetViewerPage : ContentPage
 #if ANDROID
         AbortStylusGestures();
 #endif
+        _viewModel.FlushToolSettingsSave();
         _viewModel.SaveCurrentPageThumbnail();
         _viewModel.CancelPreloads();
         _coachPageVisible = false;
@@ -276,6 +277,7 @@ public partial class SheetViewerPage : ContentPage
     // stop when hidden or the app goes to the background, restart on resume.
     private void OnWindowStopped(object? sender, EventArgs e)
     {
+        _viewModel.FlushToolSettingsSave();
         _tunerStrip.Detach();
         UpdateTunerStripButton();
     }

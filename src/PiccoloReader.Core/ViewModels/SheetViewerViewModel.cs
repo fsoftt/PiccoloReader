@@ -310,6 +310,42 @@ public partial class SheetViewerViewModel : ObservableObject
     private static readonly TimeSpan ToolSettingsSaveDelay = TimeSpan.FromMilliseconds(400);
     private readonly IAnnotationToolPreferenceService? _toolPreferences;
     private CancellationTokenSource? _toolSettingsSave;
+    private volatile bool _toolSettingsDirty;
+
+    // Saves a pending change now instead of waiting for the debounce. Called when
+    // the viewer is left or the app goes to the background. Does not block the caller.
+    public void FlushToolSettingsSave()
+    {
+        if (_toolPreferences is null || !_toolSettingsDirty)
+        {
+            return;
+        }
+
+        _toolSettingsSave?.Cancel();
+        _toolSettingsDirty = false;
+        var settings = CaptureToolSettings();
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                _toolPreferences.Save(settings);
+            }
+            catch (Exception)
+            {
+                // Losing a remembered size is not worth surfacing.
+            }
+        });
+    }
+
+    private AnnotationToolSettings CaptureToolSettings() => new()
+    {
+        PencilColorHex = PencilColorHex,
+        PencilStrokeWidth = PencilStrokeWidth,
+        HighlighterColorHex = HighlighterColorHex,
+        HighlighterStrokeWidth = HighlighterStrokeWidth,
+        EraserRadius = EraserRadius,
+        TextColorHex = TextColorHex,
+    };
 
     // Slider drags change a value many times a second: wait until it settles,
     // then save once, off the UI thread.
@@ -321,6 +357,7 @@ public partial class SheetViewerViewModel : ObservableObject
         }
 
         _toolSettingsSave?.Cancel();
+        _toolSettingsDirty = true;
         var cts = _toolSettingsSave = new CancellationTokenSource();
         _ = SaveToolSettingsAfterDelayAsync(cts.Token);
     }
@@ -330,15 +367,8 @@ public partial class SheetViewerViewModel : ObservableObject
         try
         {
             await Task.Delay(ToolSettingsSaveDelay, _timeProvider, token);
-            var settings = new AnnotationToolSettings
-            {
-                PencilColorHex = PencilColorHex,
-                PencilStrokeWidth = PencilStrokeWidth,
-                HighlighterColorHex = HighlighterColorHex,
-                HighlighterStrokeWidth = HighlighterStrokeWidth,
-                EraserRadius = EraserRadius,
-                TextColorHex = TextColorHex,
-            };
+            var settings = CaptureToolSettings();
+            _toolSettingsDirty = false;
             await Task.Run(() => _toolPreferences!.Save(settings), CancellationToken.None);
         }
         catch (OperationCanceledException)

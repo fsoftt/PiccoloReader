@@ -109,6 +109,33 @@ public class SheetViewerViewModelToolSettingsTests : IDisposable
     }
 
     [Fact]
+    public async Task Flush_SavesPendingChangeWithoutWaitingForDebounce()
+    {
+        var sut = Create();
+
+        sut.PencilStrokeWidth = 0.004;
+        sut.FlushToolSettingsSave();
+        await Task.Delay(200);
+
+        Assert.Equal(1, _prefs.SaveCount);
+        Assert.Equal(0.004, _prefs.Stored.PencilStrokeWidth);
+
+        await SettleAsync();
+        Assert.Equal(1, _prefs.SaveCount);
+    }
+
+    [Fact]
+    public async Task Flush_WithNothingPending_DoesNotSave()
+    {
+        var sut = Create();
+
+        sut.FlushToolSettingsSave();
+        await Task.Delay(100);
+
+        Assert.Equal(0, _prefs.SaveCount);
+    }
+
+    [Fact]
     public async Task DraggingSlider_SavesOnlyTheFinalValue()
     {
         var sut = Create();
