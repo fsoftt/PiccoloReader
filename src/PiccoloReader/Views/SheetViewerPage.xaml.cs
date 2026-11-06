@@ -247,6 +247,7 @@ public partial class SheetViewerPage : ContentPage
 #if ANDROID
         AbortStylusGestures();
 #endif
+        _viewModel.FlushToolSettingsSave();
         _viewModel.SaveCurrentPageThumbnail();
         _viewModel.CancelPreloads();
         _coachPageVisible = false;
@@ -276,6 +277,7 @@ public partial class SheetViewerPage : ContentPage
     // stop when hidden or the app goes to the background, restart on resume.
     private void OnWindowStopped(object? sender, EventArgs e)
     {
+        _viewModel.FlushToolSettingsSave();
         _tunerStrip.Detach();
         UpdateTunerStripButton();
     }
@@ -461,7 +463,6 @@ public partial class SheetViewerPage : ContentPage
     {
         base.OnAppearing();
         _tunerStripPosition = _tunerStripPreferences.Position;
-        LoadTextColorPreference();
         _coachPageVisible = true;
         _viewModel.StartSpinnerWatchdog();
         _metronome.PropertyChanged += OnMetronomePropertyChanged;
@@ -4319,8 +4320,6 @@ public partial class SheetViewerPage : ContentPage
         SetColorRingSelected(TextColorRingOrange, "#FFA500", current);
     }
 
-    private const string TextColorPreferenceKey = "TextColorHex";
-
     // Text has its own color, apart from the pencil. Recolors the selected
     // text too (undoable); the choice is saved off the UI thread.
     private async void OnTextColorTapped(object? sender, TappedEventArgs e)
@@ -4332,24 +4331,12 @@ public partial class SheetViewerPage : ContentPage
 
         _viewModel.TextColorHex = colorHex;
         UpdateTextColorSwatchSelection();
-        _ = Task.Run(() => Preferences.Default.Set(TextColorPreferenceKey, colorHex));
         if (_viewModel.SelectedAnnotation is { IsText: true } selected)
         {
             await _viewModel.RecolorAnnotationAsync(selected, colorHex);
             UpdateSelectionOverlay();
         }
     }
-
-    private void LoadTextColorPreference() =>
-        _ = Task.Run(() =>
-        {
-            var saved = Preferences.Default.Get(TextColorPreferenceKey, "#000000");
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                _viewModel.TextColorHex = saved;
-                UpdateTextColorSwatchSelection();
-            });
-        });
 
     private void OnPencilWidthChanged(object? sender, ValueChangedEventArgs e)
     {

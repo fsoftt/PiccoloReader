@@ -116,8 +116,22 @@ public partial class SheetViewerViewModel : ObservableObject
         IPageThumbnailStore? thumbnails = null,
         TimeProvider? timeProvider = null,
         IConcertQueue? concertQueue = null,
-        IConcertModePreferenceService? concertMode = null)
+        IConcertModePreferenceService? concertMode = null,
+        IAnnotationToolPreferenceService? toolPreferences = null)
     {
+        _toolPreferences = toolPreferences;
+        if (toolPreferences is not null)
+        {
+            // Backing fields: restoring must not trigger a save.
+            var saved = toolPreferences.Load().Sanitized();
+            _pencilColorHex = saved.PencilColorHex;
+            _pencilStrokeWidth = saved.PencilStrokeWidth;
+            _highlighterColorHex = saved.HighlighterColorHex;
+            _highlighterStrokeWidth = saved.HighlighterStrokeWidth;
+            _eraserRadius = saved.EraserRadius;
+            _textColorHex = saved.TextColorHex;
+        }
+
         _concertQueue = concertQueue;
         _concertMode = concertMode;
         _pageCropService = pageCropService;
@@ -275,7 +289,7 @@ public partial class SheetViewerViewModel : ObservableObject
     private string _textColorHex = "#000000";
 
     [ObservableProperty]
-    private double _pencilStrokeWidth = 0.008;
+    private double _pencilStrokeWidth = AnnotationToolSettings.DefaultPencilStrokeWidth;
 
     [ObservableProperty]
     private string _highlighterColorHex = HighlighterPalette.Default;
@@ -285,6 +299,86 @@ public partial class SheetViewerViewModel : ObservableObject
 
     [ObservableProperty]
     private double _eraserRadius = 0.05;
+
+    partial void OnPencilColorHexChanged(string value) => ScheduleToolSettingsSave();
+    partial void OnPencilStrokeWidthChanged(double value) => ScheduleToolSettingsSave();
+    partial void OnHighlighterColorHexChanged(string value) => ScheduleToolSettingsSave();
+    partial void OnHighlighterStrokeWidthChanged(double value) => ScheduleToolSettingsSave();
+    partial void OnEraserRadiusChanged(double value) => ScheduleToolSettingsSave();
+    partial void OnTextColorHexChanged(string value) => ScheduleToolSettingsSave();
+
+    private static readonly TimeSpan ToolSettingsSaveDelay = TimeSpan.FromMilliseconds(400);
+    private readonly IAnnotationToolPreferenceService? _toolPreferences;
+    private CancellationTokenSource? _toolSettingsSave;
+    private volatile bool _toolSettingsDirty;
+
+    // Saves a pending change now instead of waiting for the debounce. Called when
+    // the viewer is left or the app goes to the background. Does not block the caller.
+    public void FlushToolSettingsSave()
+    {
+        if (_toolPreferences is null || !_toolSettingsDirty)
+        {
+            return;
+        }
+
+        _toolSettingsSave?.Cancel();
+        _toolSettingsDirty = false;
+        var settings = CaptureToolSettings();
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                _toolPreferences.Save(settings);
+            }
+            catch (Exception)
+            {
+                // Losing a remembered size is not worth surfacing.
+            }
+        });
+    }
+
+    private AnnotationToolSettings CaptureToolSettings() => new()
+    {
+        PencilColorHex = PencilColorHex,
+        PencilStrokeWidth = PencilStrokeWidth,
+        HighlighterColorHex = HighlighterColorHex,
+        HighlighterStrokeWidth = HighlighterStrokeWidth,
+        EraserRadius = EraserRadius,
+        TextColorHex = TextColorHex,
+    };
+
+    // Slider drags change a value many times a second: wait until it settles,
+    // then save once, off the UI thread.
+    private void ScheduleToolSettingsSave()
+    {
+        if (_toolPreferences is null)
+        {
+            return;
+        }
+
+        _toolSettingsSave?.Cancel();
+        _toolSettingsDirty = true;
+        var cts = _toolSettingsSave = new CancellationTokenSource();
+        _ = SaveToolSettingsAfterDelayAsync(cts.Token);
+    }
+
+    private async Task SaveToolSettingsAfterDelayAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(ToolSettingsSaveDelay, _timeProvider, token);
+            var settings = CaptureToolSettings();
+            _toolSettingsDirty = false;
+            await Task.Run(() => _toolPreferences!.Save(settings), CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            // Losing a remembered size is not worth surfacing.
+        }
+    }
 
     [ObservableProperty]
     private bool _canUndo;
