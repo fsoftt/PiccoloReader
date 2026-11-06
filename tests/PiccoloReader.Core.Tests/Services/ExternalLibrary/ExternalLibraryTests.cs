@@ -712,6 +712,73 @@ public class ExternalLibraryTests
         Assert.Equal(1, result.OrphansImported);
     }
 
+    private void PutSnapshot(string path, string folderName, DateTime createdUtc) =>
+        _store.Files[path] = System.Text.Encoding.UTF8.GetBytes(new LibrarySnapshot
+        {
+            CreatedUtc = createdUtc,
+            Folders = { new SnapshotFolder { Name = folderName } }
+        }.ToJson());
+
+    private async Task<List<string>> RecoveredFolderNamesAsync()
+    {
+        using var app = new AppInstall(_store);
+        var result = await app.Recovery.RecoverAsync(_store);
+        Assert.True(result.SnapshotFound);
+        return (await app.Library.GetFoldersAsync()).Select(f => f.Name).ToList();
+    }
+
+    private static readonly DateTime T0 = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    [Fact]
+    public async Task Recovery_PicksNewestAmongPlainAndSuffixedSnapshots()
+    {
+        PutSnapshot("piccolo-library.json", "Plain", T0);
+        PutSnapshot("piccolo-library (2).json", "Newest", T0.AddDays(5));
+        PutSnapshot("piccolo-library (10).json", "Older", T0.AddDays(2));
+        PutSnapshot("PICCOLO-LIBRARY (3).JSON", "Old", T0.AddDays(1));
+
+        Assert.Equal(new[] { "Newest" }, await RecoveredFolderNamesAsync());
+    }
+
+    [Fact]
+    public async Task Recovery_TiedTimestamps_PrefersHighestSuffix()
+    {
+        PutSnapshot("piccolo-library.json", "Plain", T0);
+        PutSnapshot("piccolo-library (9).json", "Nine", T0);
+        PutSnapshot("piccolo-library (10).json", "Ten", T0);
+
+        Assert.Equal(new[] { "Ten" }, await RecoveredFolderNamesAsync());
+    }
+
+    [Fact]
+    public async Task Recovery_InvalidNewestSnapshot_FallsBackToNextValid()
+    {
+        PutSnapshot("piccolo-library.json", "Plain", T0);
+        PutSnapshot("piccolo-library (1).json", "Valid", T0.AddDays(1));
+        _store.Files["piccolo-library (2).json"] = System.Text.Encoding.UTF8.GetBytes("{broken");
+
+        Assert.Equal(new[] { "Valid" }, await RecoveredFolderNamesAsync());
+    }
+
+    [Fact]
+    public async Task Recovery_OnlyPlainSnapshot_StillWorks()
+    {
+        PutSnapshot("piccolo-library.json", "Plain", T0);
+
+        Assert.Equal(new[] { "Plain" }, await RecoveredFolderNamesAsync());
+    }
+
+    [Fact]
+    public async Task Recovery_IgnoresUnrelatedSnapshotLikeNames()
+    {
+        PutSnapshot("piccolo-library.json", "Plain", T0);
+        PutSnapshot("piccolo-library-backup.json", "Backup", T0.AddDays(9));
+        PutSnapshot("piccolo-library (x).json", "Bad", T0.AddDays(9));
+        PutSnapshot("Sub/piccolo-library (4).json", "Nested", T0.AddDays(9));
+
+        Assert.Equal(new[] { "Plain" }, await RecoveredFolderNamesAsync());
+    }
+
     [Fact]
     public async Task Migration_CopiesExistingSheets_AndIsIdempotent()
     {

@@ -287,23 +287,62 @@ public class LibraryRecovery
             annotationsAdded, bookmarksAdded, cropsAdded, missing);
     }
 
+    // On Android 10+ a reinstalled app cannot see the snapshot of its previous
+    // install, so each install writes "piccolo-library (n).json" next to the
+    // older ones. Read every candidate and keep the newest valid one: by the
+    // CreatedUtc stored inside (written by every sync), then by the highest (n)
+    // (the plain name counts as 0) when timestamps tie.
+    private static readonly System.Text.RegularExpressions.Regex SnapshotNamePattern = new(
+        @"^piccolo-library(?: \((\d+)\))?\.json$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
     private static async Task<LibrarySnapshot?> ReadSnapshotAsync(
         IExternalLibraryStore source, IReadOnlyList<string> files, CancellationToken cancellationToken)
     {
-        var path = files.FirstOrDefault(f => string.Equals(f, ExternalPaths.SnapshotFileName, StringComparison.OrdinalIgnoreCase));
-        if (path is null)
+        LibrarySnapshot? best = null;
+        var bestNumber = -1;
+        foreach (var file in files)
         {
-            return null;
+            var match = SnapshotNamePattern.Match(file);
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            var number = match.Groups[1].Success && int.TryParse(match.Groups[1].Value, out var n) ? n : 0;
+            LibrarySnapshot? snapshot;
+            try
+            {
+                await using var stream = await source.OpenReadAsync(file, cancellationToken);
+                if (stream is null)
+                {
+                    continue;
+                }
+
+                using var reader = new StreamReader(stream);
+                snapshot = LibrarySnapshot.TryParse(await reader.ReadToEndAsync(cancellationToken));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine($"Snapshot {file} unreadable: {ex.Message}");
+                continue;
+            }
+
+            if (snapshot is null)
+            {
+                continue;
+            }
+
+            if (best is null
+                || snapshot.CreatedUtc > best.CreatedUtc
+                || (snapshot.CreatedUtc == best.CreatedUtc && number > bestNumber))
+            {
+                best = snapshot;
+                bestNumber = number;
+            }
         }
 
-        await using var stream = await source.OpenReadAsync(path, cancellationToken);
-        if (stream is null)
-        {
-            return null;
-        }
-
-        using var reader = new StreamReader(stream);
-        return LibrarySnapshot.TryParse(await reader.ReadToEndAsync(cancellationToken));
+        return best;
     }
 
     // The PDF of a snapshot sheet: its recorded path if it still holds the same
