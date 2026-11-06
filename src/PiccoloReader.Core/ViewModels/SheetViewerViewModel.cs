@@ -289,7 +289,7 @@ public partial class SheetViewerViewModel : ObservableObject
     private string _textColorHex = "#000000";
 
     [ObservableProperty]
-    private double _pencilStrokeWidth = 0.008;
+    private double _pencilStrokeWidth = AnnotationToolSettings.DefaultPencilStrokeWidth;
 
     [ObservableProperty]
     private string _highlighterColorHex = HighlighterPalette.Default;

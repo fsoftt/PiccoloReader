@@ -8,7 +8,7 @@ namespace PiccoloReader.Core.Services;
 public sealed record AnnotationToolSettings
 {
     public const string DefaultColorHex = "#000000";
-    public const double DefaultPencilStrokeWidth = 0.008;
+    public const double DefaultPencilStrokeWidth = MinPencilStrokeWidth;
     public const double MinPencilStrokeWidth = 0.002;
     public const double MaxPencilStrokeWidth = 0.02;
     public const double DefaultEraserRadius = 0.05;

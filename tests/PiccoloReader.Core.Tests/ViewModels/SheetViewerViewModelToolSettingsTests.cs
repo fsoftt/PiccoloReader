@@ -37,7 +37,7 @@ public class SheetViewerViewModelToolSettingsTests : IDisposable
     {
         var sut = Create();
 
-        Assert.Equal(0.008, sut.PencilStrokeWidth);
+        Assert.Equal(AnnotationToolSettings.MinPencilStrokeWidth, sut.PencilStrokeWidth);
         Assert.Equal("#000000", sut.PencilColorHex);
         Assert.Equal(HighlighterPalette.Default, sut.HighlighterColorHex);
         Assert.Equal(HighlighterPalette.DefaultStrokeWidth, sut.HighlighterStrokeWidth);
@@ -51,7 +51,7 @@ public class SheetViewerViewModelToolSettingsTests : IDisposable
         _prefs.Stored = new AnnotationToolSettings
         {
             PencilColorHex = "#FF0000",
-            PencilStrokeWidth = 0.002,
+            PencilStrokeWidth = 0.012,
             HighlighterColorHex = "#6676FF03",
             HighlighterStrokeWidth = 0.04,
             EraserRadius = 0.07,
@@ -61,7 +61,7 @@ public class SheetViewerViewModelToolSettingsTests : IDisposable
         var sut = Create();
 
         Assert.Equal("#FF0000", sut.PencilColorHex);
-        Assert.Equal(0.002, sut.PencilStrokeWidth);
+        Assert.Equal(0.012, sut.PencilStrokeWidth);
         Assert.Equal("#6676FF03", sut.HighlighterColorHex);
         Assert.Equal(0.04, sut.HighlighterStrokeWidth);
         Assert.Equal(0.07, sut.EraserRadius);
