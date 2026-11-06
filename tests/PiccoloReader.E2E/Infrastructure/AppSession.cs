@@ -164,6 +164,8 @@ public static class AppSession
         driver.TerminateApp(E2EEnvironment.PackageName);
         // Cheaper than `pm clear`: drop only the app data (DB, sheets, prefs, cache) via run-as.
         Adb.RunAs("sh -c 'rm -rf databases files shared_prefs cache/* code_cache/*'", allowFailure: true);
+        // Snapshots left by earlier installs (piccolo-library (n).json) would be picked up by recovery.
+        Adb.Run(true, "shell", "rm -f /sdcard/Documents/PiccoloReader/piccolo-library*.json");
 
         try { driver.Orientation = ScreenOrientation.Portrait; } catch { /* already portrait */ }
     }
