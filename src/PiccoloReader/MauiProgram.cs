@@ -82,6 +82,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ILanguagePreferenceService, MauiLanguagePreferenceService>();
 		builder.Services.AddSingleton<ITutorialPreferenceService, MauiTutorialPreferenceService>();
 		builder.Services.AddSingleton<IReadingPreferenceService, MauiReadingPreferenceService>();
+		builder.Services.AddSingleton<IAnnotationToolPreferenceService, MauiAnnotationToolPreferenceService>();
 		builder.Services.AddSingleton<IPageThumbnailStore>(_ => new PiccoloReader.Services.SkiaPageThumbnailStore(Path.Combine(FileSystem.AppDataDirectory, "thumbnails")));
 		builder.Services.AddSingleton<IPageTurnInput, PageTurnInput>();
 		builder.Services.AddSingleton<IMetronomePreferenceService, MauiMetronomePreferenceService>();
