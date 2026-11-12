@@ -43,6 +43,8 @@ jobs:
 
       - name: Add web app to site under /app
         run: |
+          # jekyll-build-pages runs in a root container, so _site is root-owned.
+          sudo chown -R "$(id -u):$(id -g)" _site
           mkdir -p _site/app
           cp -r publish/wwwroot/. _site/app/
           # The app is served from /PiccoloReader/app/ (local dev uses "/").
