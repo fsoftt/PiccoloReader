@@ -32,3 +32,13 @@
 .coach-row .btn { height: 40px; padding: 6px 16px; }
 
 body.dragging::after { content: attr(data-drop); position: fixed; inset: 12px; z-index: 150; display: grid; place-items: center; border: 3px dashed var(--primary); border-radius: 24px; background: color-mix(in srgb, var(--primary-container) 85%, transparent); color: var(--on-primary-container); font-size: 20px; font-weight: 700; pointer-events: none; }
+
+/* iOS install help: hint on the library and the Share > Add to Home Screen sheet */
+.ios-hint { display: flex; align-items: center; gap: 8px; margin: 8px 20px 0; padding: 8px 4px 8px 14px; }
+.ios-hint .msg { flex: 1; font-size: 13px; font-weight: 600; }
+.ios-hint .btn { height: 36px; padding: 6px 12px; }
+.ios-steps { list-style: none; margin: 8px 0 16px; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.ios-steps li { display: flex; gap: 12px; align-items: center; font-size: var(--fs-body); }
+.ios-n { flex: none; width: 28px; height: 28px; border-radius: 14px; background: var(--primary-container); color: var(--on-primary-container); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+.ios-share { display: inline-flex; vertical-align: middle; color: var(--primary); }
+.ios-install .btn { width: 100%; }

@@ -33,6 +33,9 @@ public sealed class AnnotInterop(IJSRuntime js)
         await m.InvokeVoidAsync("paintTilesJson", container, specsJson);
     }
 
+    public async Task BindSheetHandleAsync<T>(ElementReference handle, DotNetObjectReference<T> self) where T : class
+        => await (await M()).InvokeVoidAsync("bindSheetHandle", handle, self);
+
     public async Task ExportBeginAsync() => await (await M()).InvokeVoidAsync("exportBegin");
 
     public async Task ExportPageAsync(string name, int page, string json) => await (await M()).InvokeVoidAsync("exportPage", name, page, json);

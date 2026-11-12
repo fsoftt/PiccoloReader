@@ -30,14 +30,14 @@
     private TaskCompletionSource<bool>? _done;
 
     // Completes when the user finished or skipped the guide.
-    public async Task ShowAsync(IEnumerable<Step> steps)
+    public async Task<bool> ShowAsync(IEnumerable<Step> steps)
     {
         _steps = steps.ToList();
         _index = 0;
         _open = true;
         _done = new TaskCompletionSource<bool>();
         await PlaceAsync();
-        await _done.Task;
+        return await _done.Task;
     }
 
     private async Task PlaceAsync()

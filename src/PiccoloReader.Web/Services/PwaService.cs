@@ -19,6 +19,11 @@ public sealed class PwaService(IJSRuntime js)
 
     public bool IsStandalone { get; private set; }
 
+    public bool IsIos { get; private set; }
+
+    // iOS Safari has no install prompt: the app is added through Share > Add to Home Screen.
+    public bool NeedsIosInstallHelp => IsIos && !IsStandalone;
+
     public event Action? Changed;
 
     public event Action? IncomingFiles;
@@ -31,6 +36,7 @@ public sealed class PwaService(IJSRuntime js)
         _inProc = m as IJSInProcessObjectReference;
         await m.InvokeVoidAsync("init", DotNetObjectReference.Create(this));
         IsStandalone = await m.InvokeAsync<bool>("isStandalone");
+        IsIos = await m.InvokeAsync<bool>("isIos");
         CanInstall = await m.InvokeAsync<bool>("canInstall");
         await m.InvokeVoidAsync("setDropText", WebText.DropPdfs);
     }

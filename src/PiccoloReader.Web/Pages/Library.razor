@@ -8,9 +8,21 @@
 @inject ITutorialPreferenceService Tutorial
 @inject IConcertModePreferenceService ConcertPrefs
 @inject IConcertTutorialPreferenceService CoachPrefs
+@inject ReorderInterop Reorder
+@inject PwaService Pwa
+@inject BrowserInterop Browser
 
 <CoachMarks @ref="_coach" />
 <div class="page">
+    @if (_iosHint)
+    {
+        <div class="ios-hint card" data-testid="ios-hint" role="note">
+            <Icon G="E6B8" Class="s20 c-primary" />
+            <span class="msg">@WebText.IosInstallHint</span>
+            <button class="btn text" data-testid="ios-hint-show" @onclick="ShowIosInstallAsync">@WebText.IosInstallShow</button>
+            <button class="icon-btn" data-testid="ios-hint-close" aria-label="@AppStrings.Cancel" @onclick="DismissIosHint"><Icon G="E5CD" Class="s20 c-muted" /></button>
+        </div>
+    }
     <div class="header">
         <div class="titles">
             <h1 class="page-title">@AppStrings.Library</h1>
@@ -83,8 +95,7 @@
         {
             var sheet = s;
             <SheetRow @key="sheet.Id" Sheet="sheet" CanReorder="Vm.CanReorderSheets"
-                      OnOpen="() => OpenSheet(sheet)" OnMore="() => SheetMenuAsync(sheet)"
-                      OnMoveUp="() => MoveAsync(sheet, -1)" OnMoveDown="() => MoveAsync(sheet, 1)" />
+                      OnOpen="() => OpenSheet(sheet)" OnMore="() => SheetMenuAsync(sheet)" />
         }
     }
     @if (Vm.HasNoSheetResults)
@@ -107,6 +118,30 @@
 </div>
 
 @code {
+    private DotNetObjectReference<Library>? _self;
+    private bool _iosHint;
+    private const string IosHintKey = "piccolo.iosHintDismissed";
+
+    private void DismissIosHint()
+    {
+        _iosHint = false;
+        Browser.SetLocalStorageSync(IosHintKey, "1");
+    }
+
+    private async Task ShowIosInstallAsync()
+    {
+        DismissIosHint();
+        await Ui.ShowIosInstallAsync(WebText.IosInstallTitle, WebText.GotIt);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _self = DotNetObjectReference.Create(this);
+        await Reorder.InitAsync(_self);
+        if (Pwa.NeedsIosInstallHelp && Browser.GetLocalStorageSync(IosHintKey) is null) { _iosHint = true; StateHasChanged(); }
+    }
+
     private bool _loaded;
 
     private string SheetSearch
@@ -137,6 +172,8 @@
 
     public void Dispose()
     {
+        _ = Reorder.DisposeAsync();
+        _self?.Dispose();
         Vm.PropertyChanged -= OnVmChanged;
         Importer.Imported -= OnImported;
     }
@@ -150,11 +187,11 @@
         if (!CoachDue()) return;
         await Task.Delay(900);
         if (_coach is null || !CoachDue()) return;
-        await _coach.ShowAsync([
-            new(AppStrings.CoachLibraryHandle, "[data-testid=sheet-row] .reorder .icon-btn"),
+        if (!await _coach.ShowAsync([
+            new(AppStrings.CoachLibraryHandle, "[data-testid=sheet-row] .reorder"),
             new(AppStrings.CoachLibraryList, "[data-testid=sheet-row]"),
             new(AppStrings.CoachLibrarySort, "[data-testid=sheet-sort]"),
-        ]);
+        ])) return;
         CoachPrefs.LibrarySeen = true;
     }
 
@@ -228,13 +265,12 @@
         Vm.ApplyFolderSort(field, dir);
     }
 
-    private async Task MoveAsync(Sheet s, int delta)
+    [JSInvokable]
+    public async Task OnSheetReordered(int from, int to)
     {
         var list = Vm.RootSheets;
-        var i = list.IndexOf(s);
-        var j = i + delta;
-        if (i < 0 || j < 0 || j >= list.Count) return;
-        list.Move(i, j);
+        if (from < 0 || to < 0 || from >= list.Count || to >= list.Count || from == to) return;
+        list.Move(from, to);
         await Vm.CommitSheetOrderAsync();
         await Lib.SetOrderAsync(null, list.Select(x => x.Id).ToList());
         await ReloadAsync();

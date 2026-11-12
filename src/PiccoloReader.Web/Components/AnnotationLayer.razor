@@ -32,8 +32,8 @@
 
 @if (_editing && _sheetOpen)
 {
-    <div class="tool-sheet" data-testid="tool-sheet" role="dialog" aria-label="@AppStrings.AnnotationToolsLabel">
-        <button class="sheet-handle-area" aria-label="@AppStrings.Cancel" @onclick="CloseSheet"><span class="sheet-handle"></span></button>
+    <div class="tool-sheet @(_sheetExpanded && _tool == AnnotationTool.MusicIcons ? "expanded" : "") t-@_tool.ToString().ToLowerInvariant()" data-testid="tool-sheet" role="dialog" aria-label="@AppStrings.AnnotationToolsLabel">
+        <div class="sheet-handle-area" @ref="_handle" data-testid="sheet-handle" aria-label="@AppStrings.AnnotationToolsLabel"><span class="sheet-handle"></span></div>
         <div class="segments">
             @Segment(AnnotationTool.Pencil, "E3C9", AppStrings.Pencil, "pencil")
             @Segment(AnnotationTool.Highlighter, "F82B", AppStrings.Highlighter, "highlighter")
@@ -45,7 +45,7 @@
             @switch (_tool)
             {
                 case AnnotationTool.Pencil:
-                    <div class="section-label">@AppStrings.Color</div>
+                    <div class="opt-block"><div class="section-label">@AppStrings.Color</div>
                     <div class="swatches" data-testid="pencil-colors">
                         @foreach (var (hex, name) in Palette)
                         {
@@ -53,11 +53,12 @@
                             <button class="swatch @(Same(_tools.PencilColorHex, h) ? "sel" : "")" aria-label="@name" data-testid="pencil-color" @onclick="() => SetPencilColor(h)"><i style="background:@h"></i></button>
                         }
                     </div>
-                    <div class="slider-head"><span class="section-label">@AppStrings.Width</span><span class="caption" data-testid="pencil-width-label">@Pt(_tools.PencilStrokeWidth)</span></div>
-                    <input type="range" class="slider" data-testid="pencil-width" min="@Inv(AnnotationToolSettings.MinPencilStrokeWidth)" max="@Inv(AnnotationToolSettings.MaxPencilStrokeWidth)" step="0.0005" value="@Inv(_tools.PencilStrokeWidth)" @oninput="OnPencilWidth" />
+                    </div>
+                    <div class="opt-block"><div class="slider-head"><span class="section-label">@AppStrings.Width</span><span class="caption" data-testid="pencil-width-label">@Pt(_tools.PencilStrokeWidth)</span></div>
+                    <input type="range" class="slider" data-testid="pencil-width" min="@Inv(AnnotationToolSettings.MinPencilStrokeWidth)" max="@Inv(AnnotationToolSettings.MaxPencilStrokeWidth)" step="0.0005" value="@Inv(_tools.PencilStrokeWidth)" @oninput="OnPencilWidth" /></div>
                     break;
                 case AnnotationTool.Highlighter:
-                    <div class="section-label">@AppStrings.Color</div>
+                    <div class="opt-block"><div class="section-label">@AppStrings.Color</div>
                     <div class="swatches" data-testid="highlighter-colors">
                         @for (var i = 0; i < HighlighterPalette.SwatchColors.Count; i++)
                         {
@@ -66,8 +67,9 @@
                             <button class="swatch @(Same(_tools.HighlighterColorHex, stored) ? "sel" : "")" data-testid="highlighter-color" aria-label="@sw" @onclick="() => SetHighlighterColor(stored)"><i style="background:@sw"></i></button>
                         }
                     </div>
-                    <div class="slider-head"><span class="section-label">@AppStrings.Width</span><span class="caption">@Pt(_tools.HighlighterStrokeWidth)</span></div>
-                    <input type="range" class="slider" data-testid="highlighter-width" min="@Inv(HighlighterPalette.MinStrokeWidth)" max="@Inv(HighlighterPalette.MaxStrokeWidth)" step="0.0005" value="@Inv(_tools.HighlighterStrokeWidth)" @oninput="OnHighlighterWidth" />
+                    </div>
+                    <div class="opt-block"><div class="slider-head"><span class="section-label">@AppStrings.Width</span><span class="caption">@Pt(_tools.HighlighterStrokeWidth)</span></div>
+                    <input type="range" class="slider" data-testid="highlighter-width" min="@Inv(HighlighterPalette.MinStrokeWidth)" max="@Inv(HighlighterPalette.MaxStrokeWidth)" step="0.0005" value="@Inv(_tools.HighlighterStrokeWidth)" @oninput="OnHighlighterWidth" /></div>
                     break;
                 case AnnotationTool.Eraser:
                     <div class="slider-head"><span class="section-label">@AppStrings.Size</span><span class="caption">@((_tools.EraserRadius * 100).ToString("0.#"))</span></div>
@@ -109,10 +111,10 @@ else if ((Chrome || _editing) && !_hideFab)
 {
     @if (_fabOpen)
     {
-        <button class="fab-mini" style="bottom:260px" data-testid="fab-highlighter" aria-label="@AppStrings.Highlighter" @onclick="() => EnterToolAsync(AnnotationTool.Highlighter)"><Icon G="F82B" /></button>
-        <button class="fab-mini" style="bottom:204px" data-testid="fab-symbols" aria-label="@AppStrings.Symbols" @onclick="() => EnterToolAsync(AnnotationTool.MusicIcons)"><Icon G="E405" /></button>
-        <button class="fab-mini" style="bottom:148px" data-testid="fab-pencil" aria-label="@AppStrings.Pencil" @onclick="() => EnterToolAsync(AnnotationTool.Pencil)"><Icon G="E3C9" /></button>
-        <button class="fab-mini" style="bottom:92px" data-testid="fab-eraser" aria-label="@AppStrings.Eraser" @onclick="() => EnterToolAsync(AnnotationTool.Eraser)"><Icon G="E6D0" /></button>
+        <button class="fab-mini fm4" data-testid="fab-highlighter" aria-label="@AppStrings.Highlighter" @onclick="() => EnterToolAsync(AnnotationTool.Highlighter)"><Icon G="F82B" /></button>
+        <button class="fab-mini fm3" data-testid="fab-symbols" aria-label="@AppStrings.Symbols" @onclick="() => EnterToolAsync(AnnotationTool.MusicIcons)"><Icon G="E405" /></button>
+        <button class="fab-mini fm2" data-testid="fab-pencil" aria-label="@AppStrings.Pencil" @onclick="() => EnterToolAsync(AnnotationTool.Pencil)"><Icon G="E3C9" /></button>
+        <button class="fab-mini fm1" data-testid="fab-eraser" aria-label="@AppStrings.Eraser" @onclick="() => EnterToolAsync(AnnotationTool.Eraser)"><Icon G="E6D0" /></button>
     }
     <button class="fab-main" data-testid="tools-fab" aria-label="@AppStrings.AnnotationToolsLabel" @onclick="OnMainFab"><Icon G="@(_fabOpen ? "E5CD" : "E3C9")" /></button>
 }
@@ -146,7 +148,9 @@ else if ((Chrome || _editing) && !_hideFab)
     private readonly Dictionary<int, PageState> _pages = new();
     private readonly SemaphoreSlim _strokeGate = new(1, 1);
     private DotNetObjectReference<AnnotationLayer>? _self;
-    private ElementReference _stage, _tiles;
+    private ElementReference _stage, _tiles, _handle;
+    private bool _sheetExpanded, _handleBound;
+    private DotNetObjectReference<AnnotationLayer>? _selfRef;
     private bool _attached, _editing, _sheetOpen, _fabOpen, _hideFab, _tilesDirty;
     private AnnotationTool _tool = AnnotationTool.MusicIcons;
     private AnnotationToolSettings _tools = new();
@@ -223,6 +227,13 @@ else if ((Chrome || _editing) && !_hideFab)
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_editing && _sheetOpen && !_handleBound)
+        {
+            _handleBound = true;
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await Js.BindSheetHandleAsync(_handle, _selfRef);
+        }
+        else if (!_sheetOpen) _handleBound = false;
         if (_editing && _sheetOpen && _tool == AnnotationTool.MusicIcons && _tilesDirty)
         {
             _tilesDirty = false;
@@ -254,7 +265,7 @@ else if ((Chrome || _editing) && !_hideFab)
         await SyncAsync();
     }
 
-    private void OpenSheet() { _sheetOpen = true; _tilesDirty = true; }
+    private void OpenSheet() { _sheetOpen = true; _tilesDirty = true; _sheetExpanded = false; }
 
     private void CloseSheet() => _sheetOpen = false;
 
@@ -341,6 +352,24 @@ else if ((Chrome || _editing) && !_hideFab)
     }
 
     // ---- JS callbacks
+
+    // Android: the handle drags the symbol picker taller (65% of the page) or back; a tap toggles it.
+    [JSInvokable]
+    public async Task OnSheetHandle(int dir)
+    {
+        if (dir == 2) return;
+        var next = dir == 0 ? !_sheetExpanded : dir > 0;
+        if (next == _sheetExpanded) return;
+        _sheetExpanded = next;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // A tap on the page while the tool sheet is open closes it (Android OnPageContainerTapped).
+    [JSInvokable]
+    public async Task OnPageTap()
+    {
+        if (_sheetOpen) { _sheetOpen = false; await InvokeAsync(StateHasChanged); }
+    }
 
     [JSInvokable]
     public async Task OnDrawStart()

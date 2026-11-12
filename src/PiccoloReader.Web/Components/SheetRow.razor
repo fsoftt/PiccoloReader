@@ -10,10 +10,7 @@
     </button>
     @if (CanReorder)
     {
-        <div class="reorder">
-            <button class="icon-btn" aria-label="@AppStrings.ReorderHandleLabel" @onclick="OnMoveUp"><Icon G="E316" Class="s20 c-muted" /></button>
-            <button class="icon-btn" aria-label="@AppStrings.ReorderHandleLabel" @onclick="OnMoveDown"><Icon G="E313" Class="s20 c-muted" /></button>
-        </div>
+        <div class="reorder" data-testid="sheet-drag-handle" role="button" aria-label="@AppStrings.ReorderHandleLabel"><Icon G="E945" Class="c-muted" /></div>
     }
     <button class="icon-btn" data-testid="sheet-more" aria-label="@AppStrings.MoreOptions" @onclick="OnMore"><Icon G="E5D4" Class="s20 c-muted" /></button>
 </div>
@@ -23,8 +20,6 @@
     [Parameter] public bool CanReorder { get; set; }
     [Parameter] public EventCallback OnOpen { get; set; }
     [Parameter] public EventCallback OnMore { get; set; }
-    [Parameter] public EventCallback OnMoveUp { get; set; }
-    [Parameter] public EventCallback OnMoveDown { get; set; }
 
     private string? _thumb;
     private int _thumbFor = -1;

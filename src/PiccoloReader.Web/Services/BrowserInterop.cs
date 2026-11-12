@@ -19,6 +19,19 @@ public sealed class BrowserInterop(IJSRuntime js)
     public async Task<byte[]?> ReadFileAsync(string name)
         => await (await ModuleAsync()).InvokeAsync<byte[]?>("readFile", name);
 
+    public async Task StageBeginAsync(string name) => await (await ModuleAsync()).InvokeVoidAsync("stageBegin", name);
+
+    public async Task StageAppendAsync(byte[] data) => await (await ModuleAsync()).InvokeVoidAsync("stageAppend", data);
+
+    public async Task StageEndAsync() => await (await ModuleAsync()).InvokeVoidAsync("stageEnd");
+
+    public async Task<long> FileSizeAsync(string name) => (long)await (await ModuleAsync()).InvokeAsync<double>("fileSize", name);
+
+    public async Task<byte[]> ReadRangeAsync(string name, long offset, long length)
+        => await (await ModuleAsync()).InvokeAsync<byte[]>("readRange", name, (double)offset, (double)length);
+
+    public async Task DeleteFileAsync(string name) => await (await ModuleAsync()).InvokeVoidAsync("deleteFile", name);
+
     public async Task<string> GetLanguageAsync()
         => await (await ModuleAsync()).InvokeAsync<string>("getLanguage");
 

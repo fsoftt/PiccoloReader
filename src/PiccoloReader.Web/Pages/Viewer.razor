@@ -15,8 +15,16 @@
 @inject UiService Ui
 @inject AnnotationService Anns
 @inject NavigationManager Nav
+@inject IConcertTutorialPreferenceService CoachPrefs
 
+<CoachMarks @ref="_coach" />
 <div class="viewer" data-testid="viewer">
+    @if (_coachZones)
+    {
+        var strips = _mode == ReadingMode.VerticalPaged;
+        <div class="coach-zone @(strips ? "v" : "h") zone-prev" data-testid="zone-prev"></div>
+        <div class="coach-zone @(strips ? "v" : "h") zone-next" data-testid="zone-next"></div>
+    }
     @if (_error is not null)
     {
         <div class="error-msg" data-testid="viewer-error">@_error</div>
@@ -228,10 +236,45 @@
             {
                 await RenderPagedAsync();
             }
+            _ = ShowCoachMarksAsync();
         }
         catch (Exception ex)
         {
             _error = ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    // Concert mode coach marks, stage B (Android SheetViewerPage.ConcertTutorial): the side tap zones
+    // that open the next / previous score, shown once for a sheet that has a neighbour in its list.
+    private CoachMarks? _coach;
+    private bool _coachZones, _coachRunning;
+
+    private bool CoachDue() => _sheet is not null && !_editing && !_cropEditing && _pageCount > 0
+        && ConcertTutorialPolicy.ShouldShowViewerStage(Concert.Enabled, CoachPrefs.ViewerSeen, pageVisible: true,
+            hasNeighbourScore: Queue.NextAfter(_sheet.Id) is not null || Queue.PreviousBefore(_sheet.Id) is not null);
+
+    private async Task ShowCoachMarksAsync()
+    {
+        if (_coachRunning || !CoachDue()) return;
+        _coachRunning = true;
+        try
+        {
+            await Task.Delay(900);
+            if (_coach is null || !CoachDue()) return;
+            _coachZones = true;
+            StateHasChanged();
+            await Task.Yield();
+            if (await _coach.ShowAsync([
+                new(AppStrings.CoachViewerNext, ".coach-zone.zone-next"),
+                new(AppStrings.CoachViewerPrevious, ".coach-zone.zone-prev"),
+                new(AppStrings.CoachViewerSettings, "#none"),
+            ])) CoachPrefs.ViewerSeen = true;
+        }
+        finally
+        {
+            _coachZones = false;
+            _coachRunning = false;
             StateHasChanged();
         }
     }

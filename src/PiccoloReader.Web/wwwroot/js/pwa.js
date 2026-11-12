@@ -37,6 +37,10 @@ export function applyUpdate() {
 
 // ---- install ----
 export function canInstall() { return !!installEvent; }
+// iPhone, iPad and iPadOS reporting itself as a Mac with a touch screen.
+export function isIos() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
 export function isStandalone() { return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; }
 export async function promptInstall() {
     if (!installEvent) return false;
