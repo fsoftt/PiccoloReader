@@ -3,6 +3,7 @@
 @using System.Globalization
 @using PiccoloReader.Core.Services.Tuner
 @inject TunerStripController Strip
+@inject PwaService Pwa
 @inject MetronomeViewModel Metro
 @inject ITunerStripPreferenceService StripPrefs
 @inject WebAudio Audio
@@ -47,6 +48,7 @@ else
         Metro.PropertyChanged += OnMetro;
         Strip.StateChanged += OnStripState;
         if (Part != "strip") return;
+        Pwa.VisibilityChanged += OnVisibility;
 
         _surface = new StripSurface(this);
         Strip.Bind(_surface);
@@ -59,6 +61,13 @@ else
     private void OnMetro(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MetronomeViewModel.IsPlaying)) _ = InvokeAsync(StateHasChanged);
+    }
+
+    // Like Android's window stop: no microphone while the page is hidden.
+    private void OnVisibility(bool hidden)
+    {
+        if (hidden) Strip.Detach();
+        else _ = InvokeAsync(Strip.AttachAsync);
     }
 
     private void OnStripState(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
@@ -99,6 +108,7 @@ else
         Strip.StateChanged -= OnStripState;
         if (Part == "strip")
         {
+            Pwa.VisibilityChanged -= OnVisibility;
             Strip.Detach();
             Strip.Bind(null);
         }

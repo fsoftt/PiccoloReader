@@ -1,0 +1,34 @@
+/* PWA additions: update banner, backup progress, tutorial, coach marks, drop overlay. Tokens only. */
+.update-banner { position: fixed; left: 16px; right: 16px; bottom: 88px; z-index: 130; max-width: 520px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; background: var(--surface-raised); box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+.update-banner .msg { flex: 1; font-size: var(--fs-body); font-weight: 600; }
+.update-banner .btn { height: 36px; padding: 6px 16px; }
+
+.progress-card { margin: 0 0 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.progress-card .bar { height: 4px; border-radius: 2px; background: var(--outline); overflow: hidden; }
+.progress-card .bar i { display: block; height: 100%; width: 40%; background: var(--primary); animation: slide 1.1s ease-in-out infinite; }
+@keyframes slide { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
+
+.tutorial { height: 100dvh; display: flex; flex-direction: column; padding: max(16px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; }
+.tutorial .slides { flex: 1; position: relative; }
+.tutorial .slide { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 12px 8px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.tutorial .slide.current { opacity: 1; pointer-events: auto; }
+.slide-icon { width: 96px; height: 96px; border-radius: 48px; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; }
+.slide-title { font-size: 26px; }
+.slide-text { margin: 0; font-size: 16px; color: var(--text-secondary); line-height: 1.5; }
+@media (orientation: landscape) and (max-height: 520px) { .slide-icon { display: none; } }
+.dots { display: flex; justify-content: center; gap: 8px; margin: 8px 0 16px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); opacity: .5; }
+.dot.on { background: var(--primary); opacity: 1; }
+.tutorial-actions { display: flex; align-items: center; gap: 12px; }
+.tutorial-actions .spacer, .coach-row .spacer { flex: 1; }
+.tutorial-actions .skip { color: var(--on-primary-container); height: 48px; }
+.tutorial-actions .next { height: 48px; border-radius: 24px; padding: 0 28px; }
+
+.coach { position: fixed; inset: 0; z-index: 140; }
+.coach-cutout { position: absolute; border-radius: 14px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.6); pointer-events: none; }
+.coach-bubble { position: absolute; background: var(--surface-raised); border: 1px solid var(--outline); border-radius: 18px; padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 12px; }
+.coach-text { font-size: 16px; }
+.coach-row { display: flex; align-items: center; gap: 8px; }
+.coach-row .btn { height: 40px; padding: 6px 16px; }
+
+body.dragging::after { content: attr(data-drop); position: fixed; inset: 12px; z-index: 150; display: grid; place-items: center; border: 3px dashed var(--primary); border-radius: 24px; background: color-mix(in srgb, var(--primary-container) 85%, transparent); color: var(--on-primary-container); font-size: 20px; font-weight: 700; pointer-events: none; }

@@ -16,7 +16,11 @@ async function load(name, bytes) {
 export async function importPdf(name, bytes) {
     const doc = await load(name, bytes);
     await writeFile("sheets/" + name, bytes);
-    return doc.numPages;
+    // Not kept open: openPdf reloads it from OPFS, and a bulk import must not hold every document.
+    docs.delete(name);
+    const pages = doc.numPages;
+    try { doc.destroy(); } catch { }
+    return pages;
 }
 
 export async function openPdf(name) {

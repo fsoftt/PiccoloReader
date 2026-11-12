@@ -1,0 +1,31 @@
+{
+  "id": "/PiccoloReader/app/",
+  "name": "Piccolo Reader",
+  "short_name": "Piccolo",
+  "description": "Sheet music reader with metronome, piano and tuner.",
+  "start_url": "/PiccoloReader/app/",
+  "scope": "/PiccoloReader/app/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0E0E16",
+  "theme_color": "#0E0E16",
+  "categories": ["music", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "share_target": {
+    "action": "/PiccoloReader/app/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [{ "name": "files", "accept": ["application/pdf", ".pdf"] }]
+    }
+  },
+  "file_handlers": [
+    { "action": "/PiccoloReader/app/", "accept": { "application/pdf": [".pdf"] } }
+  ],
+  "launch_handler": { "client_mode": "navigate-existing" }
+}

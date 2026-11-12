@@ -1,0 +1,81 @@
+@implements IDisposable
+@inject PwaService Pwa
+
+@* Coach marks: a dim layer with a cutout around the target and a bubble placed by Core's CoachMarkPlacement. *@
+@if (_open && _steps.Count > 0)
+{
+    <div class="coach" data-testid="coach" @onclick="Next">
+        <div class="coach-cutout" style="@CutoutStyle()"></div>
+        <div class="coach-bubble" data-testid="coach-bubble" style="@BubbleStyle()" @onclick:stopPropagation>
+            <div class="coach-text" data-testid="coach-text">@_steps[_index].Text</div>
+            <div class="coach-row">
+                <span class="caption">@string.Format(AppStrings.CoachStepFormat, _index + 1, _steps.Count)</span>
+                <span class="spacer"></span>
+                <button class="btn text" data-testid="coach-skip" @onclick="Skip">@AppStrings.CoachSkip</button>
+                <button class="btn" data-testid="coach-next" @onclick="Next">@(_index == _steps.Count - 1 ? AppStrings.CoachGotIt : AppStrings.CoachNext)</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    public sealed record Step(string Text, string Selector);
+
+    private List<Step> _steps = [];
+    private bool _open;
+    private int _index;
+    private CoachRect? _target;
+    private CoachBubblePlacement _place;
+    private bool _placed;
+    private TaskCompletionSource<bool>? _done;
+
+    // Completes when the user finished or skipped the guide.
+    public async Task ShowAsync(IEnumerable<Step> steps)
+    {
+        _steps = steps.ToList();
+        _index = 0;
+        _open = true;
+        _done = new TaskCompletionSource<bool>();
+        await PlaceAsync();
+        await _done.Task;
+    }
+
+    private async Task PlaceAsync()
+    {
+        _placed = false;
+        StateHasChanged();
+        await Task.Delay(30);
+        var r = await Pwa.CoachMeasureAsync(_steps[_index].Selector);
+        _target = r[2] > 0 ? new CoachRect(r[0], r[1], r[2], r[3]) : null;
+        var width = Math.Min(r[5] - 32, 340);
+        _place = CoachMarkPlacement.PlaceBubble(r[5], r[6], _target, width, r[4], new CoachInsets(0, 0, 0, 0), gap: 14);
+        _placed = true;
+        StateHasChanged();
+    }
+
+    private string CutoutStyle() => _target is { } t
+        ? FormattableString.Invariant($"left:{t.X - 6}px;top:{t.Y - 6}px;width:{t.Width + 12}px;height:{t.Height + 12}px")
+        : "display:none";
+
+    private string BubbleStyle() => _placed
+        ? FormattableString.Invariant($"left:{_place.X}px;top:{_place.Y}px;width:{(_place.Width > 0 ? _place.Width : 340)}px")
+        : "visibility:hidden;left:0;top:0;width:min(340px,calc(100vw - 32px))";
+
+    private async Task Next()
+    {
+        if (_index >= _steps.Count - 1) { Close(); return; }
+        _index++;
+        await PlaceAsync();
+    }
+
+    private void Skip() => Close();
+
+    private void Close()
+    {
+        _open = false;
+        _done?.TrySetResult(true);
+        StateHasChanged();
+    }
+
+    public void Dispose() => _done?.TrySetResult(false);
+}

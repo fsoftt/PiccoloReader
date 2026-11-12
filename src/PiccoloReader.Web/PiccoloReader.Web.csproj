@@ -23,6 +23,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Offline app shell: the published worker gets service-worker-assets.js (every file + hash). -->
+    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\PiccoloReader.Core\PiccoloReader.Core.csproj" />
   </ItemGroup>
 
