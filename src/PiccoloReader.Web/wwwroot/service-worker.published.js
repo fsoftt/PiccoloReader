@@ -19,7 +19,8 @@ const manifestUrls = new Set(self.assetsManifest.assets.map(a => new URL(a.url, 
 async function onInstall() {
     const assets = self.assetsManifest.assets
         .filter(a => include.some(p => p.test(a.url)) && !exclude.some(p => p.test(a.url)))
-        .map(a => new Request(a.url, { integrity: a.hash, cache: "no-cache" }));
+        // index.html is rewritten after publish (the Pages workflow sets the base href), so its hash no longer matches.
+        .map(a => new Request(a.url, a.url === "index.html" ? { cache: "no-cache" } : { integrity: a.hash, cache: "no-cache" }));
     const cache = await caches.open(cacheName);
     await cache.addAll(assets);
 }
@@ -47,6 +48,15 @@ async function onFetch(event) {
     if (manifestUrls.has(req.url)) {
         const hit = await cache.match(req);
         if (hit) return hit;
+    }
+    // Lazy fonts (Bravura for annotation symbols) are not precached; keep them once they were used.
+    if (url.origin === baseUrl.origin && /\.otf$/.test(url.pathname)) {
+        const runtime = await caches.open("piccolo-runtime");
+        const hit = await runtime.match(req);
+        if (hit) return hit;
+        const res = await fetch(req);
+        if (res.ok) runtime.put(req, res.clone());
+        return res;
     }
     return fetch(req);
 }

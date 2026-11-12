@@ -7,6 +7,7 @@
     <RootNamespace>PiccoloReader.Web</RootNamespace>
     <!-- Link the native e_sqlite3 static library into dotnet.native.wasm (needs the wasm-tools workload). -->
     <WasmBuildNative>true</WasmBuildNative>
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
     <InvariantGlobalization>true</InvariantGlobalization>
     <!-- Invariant mode would reject new CultureInfo("es"); the culture only selects AppStrings satellite resources. -->
     <PredefinedCulturesOnly>false</PredefinedCulturesOnly>
