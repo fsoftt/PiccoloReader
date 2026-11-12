@@ -11,6 +11,7 @@ en:
       - Open source (GPL-3.0)
     github: View on GitHub
     play: Get it on Google Play
+    web: Open the web app
     docs: Privacy & legal
     mock_label: "Illustration: a sheet of music open in Piccolo Reader, with a pencil mark around a bar, a bookmark ribbon and two music-symbol annotations."
   movements_intro:
@@ -60,6 +61,7 @@ es:
       - Código abierto (GPL-3.0)
     github: Ver en GitHub
     play: Consíguela en Google Play
+    web: Abrir la app web
     docs: Privacidad y aspectos legales
     mock_label: "Ilustración: una partitura abierta en Piccolo Reader, con un trazo de lápiz alrededor de un compás, una cinta de marcador y dos anotaciones con símbolos musicales."
   movements_intro:
