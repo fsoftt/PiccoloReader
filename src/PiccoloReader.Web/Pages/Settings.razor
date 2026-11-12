@@ -40,6 +40,8 @@
                 <span class="value" data-testid="reading-mode-value">@ModeName(Reading.GetReadingMode())</span>
                 <Icon G="E5CC" Class="s20 c-muted" />
             </button>
+            @if (_penSeen || _stylus)
+            {
             <button class="row" data-testid="stylus-row" role="switch" aria-checked="@_stylus.ToString().ToLowerInvariant()" @onclick="ToggleStylus">
                 <Icon G="E3C9" Class="s20 c-primary" />
                 <span class="stack">
@@ -48,6 +50,7 @@
                 </span>
                 <span class="switch @(_stylus ? "on" : "")"></span>
             </button>
+            }
             <button class="row" data-testid="shapes-row" role="switch" aria-checked="@_shapes.ToString().ToLowerInvariant()" @onclick="ToggleShapes">
                 <Icon G="E663" Class="s20 c-primary" />
                 <span class="stack">
@@ -124,7 +127,7 @@
 
         <span class="section-label">@AppStrings.SettingsHelpSection</span>
         <div class="card group">
-            @if (Pwa.CanInstall && !Pwa.IsStandalone)
+            @if ((Pwa.CanInstall && !Pwa.IsStandalone) || Pwa.NeedsIosInstallHelp)
             {
                 <button class="row" data-testid="install-row" @onclick="InstallAsync">
                     <Icon G="E1FE" Class="s20 c-primary" />
@@ -159,16 +162,33 @@
                 </span>
                 <Icon G="E89E" Class="s20 c-muted" />
             </a>
+            <a class="row" target="_blank" rel="noopener" href="https://github.com/fsoftt/PiccoloReader/blob/main/licenses/MuseScore_General-LICENSE.md">
+                <Icon G="E405" Class="s20 c-primary" />
+                <span class="stack">
+                    <span class="row-title">@AppStrings.SettingsMuseScoreCreditTitle</span>
+                    <span class="caption" style="font-size:12px">@AppStrings.SettingsMuseScoreCreditDescription</span>
+                </span>
+                <Icon G="E89E" Class="s20 c-muted" />
+            </a>
+            <a class="row" target="_blank" rel="noopener" href="https://github.com/fsoftt/PiccoloReader/blob/main/licenses/MeltySynth-LICENSE.txt">
+                <Icon G="E322" Class="s20 c-primary" />
+                <span class="stack">
+                    <span class="row-title">@AppStrings.SettingsMeltySynthCreditTitle</span>
+                    <span class="caption" style="font-size:12px">@AppStrings.SettingsMeltySynthCreditDescription</span>
+                </span>
+                <Icon G="E89E" Class="s20 c-muted" />
+            </a>
         </div>
 
         <div class="credits caption" style="font-size:12px">
             <span>@AppStrings.MadeWithLoveBy <a href="https://github.com/fsoftt" target="_blank" rel="noopener">@@fsoftt</a></span>
+            <span>@AppStrings.TestedWithLoveBy <a href="https://github.com/Giomelchors" target="_blank" rel="noopener">@@giomelchors</a></span>
         </div>
     </div>
 </div>
 
 @code {
-    private bool _concert, _stylus, _shapes;
+    private bool _concert, _stylus, _shapes, _penSeen;
     private bool _coach;
     private string? _busy;
     private StorageInfo? _storage;
@@ -178,10 +198,10 @@
     protected override async Task OnInitializedAsync()
     {
         _concert = Concert.Enabled;
-        _stylus = Stylus.DrawsDirectly;
+        _stylus = Stylus.DrawsDirectly; _penSeen = Browser.GetLocalStorageSync("piccolo.penSeen") == "1";
         _shapes = Stylus.RecognizesShapes;
         // The web guide has the library stage only, so it is pending until that one was seen.
-        _coach = !CoachPrefs.LibrarySeen;
+        _coach = ConcertTutorialPolicy.IsTutorialPending(CoachPrefs);
         Pwa.Changed += OnPwaChanged;
         Linked.Changed += OnPwaChanged;
         _storage = await Pwa.GetStorageAsync();
@@ -274,7 +294,11 @@
         _storage = await Pwa.GetStorageAsync();
     }
 
-    private async Task InstallAsync() => await Pwa.PromptInstallAsync();
+    private async Task InstallAsync()
+    {
+        if (Pwa.NeedsIosInstallHelp) { await Ui.ShowIosInstallAsync(WebText.IosInstallTitle, WebText.GotIt); return; }
+        await Pwa.PromptInstallAsync();
+    }
 
     private string LinkedStatus() => Linked.Linked switch
     {

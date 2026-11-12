@@ -332,6 +332,8 @@ function toPage(L, e) {
 
 function roleFor(e) {
     const pen = e.pointerType === "pen";
+    // The stylus setting only makes sense on devices with a pen: Settings shows it once one was seen.
+    if (pen) { try { localStorage.setItem("piccolo.penSeen", "1"); } catch { } }
     if (pen) {
         const eraserEnd = e.button === 5 || (e.buttons & 32) !== 0;
         const barrel = (e.buttons & 2) !== 0 || e.button === 2;
