@@ -1,9 +1,13 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
 using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Services.Concert;
+using PiccoloReader.Core.Services.Metronome;
+using PiccoloReader.Core.Services.Piano;
+using PiccoloReader.Core.Services.Tuner;
 using PiccoloReader.Core.ViewModels;
 using PiccoloReader.Web;
 using PiccoloReader.Web.Services;
@@ -28,6 +32,34 @@ builder.Services.AddSingleton<ILanguagePreferenceService, LocalStorageLanguagePr
 builder.Services.AddSingleton<IReadingPreferenceService, LocalStorageReadingPreferenceService>();
 builder.Services.AddSingleton<ISortPreferenceService, LocalStorageSortPreferenceService>();
 builder.Services.AddSingleton<IConcertModePreferenceService, LocalStorageConcertModePreferenceService>();
+builder.Services.AddSingleton<IMetronomePreferenceService, LocalStorageMetronomePreferenceService>();
+builder.Services.AddSingleton<IPianoPreferenceService, LocalStoragePianoPreferenceService>();
+builder.Services.AddSingleton<ITunerPreferenceService, LocalStorageTunerPreferenceService>();
+builder.Services.AddSingleton<ITunerStripPreferenceService, LocalStorageTunerStripPreferenceService>();
+
+// Audio tools: the worklet, the SoundFont and the microphone are only touched once a tool opens.
+builder.Services.AddSingleton<WebAudio>();
+builder.Services.AddSingleton<WebPianoOutput>();
+builder.Services.AddSingleton<IPianoAudioOutput>(sp => sp.GetRequiredService<WebPianoOutput>());
+builder.Services.AddSingleton<IMetronomePlayer, WebMetronomePlayer>();
+builder.Services.AddSingleton<ITunerInput, WebTunerInput>();
+builder.Services.AddSingleton<IMicrophonePermissionService, WebMicrophonePermission>();
+builder.Services.AddSingleton<IPianoService>(sp =>
+{
+    var audio = sp.GetRequiredService<WebAudio>();
+    var baseUri = sp.GetRequiredService<NavigationManager>().BaseUri;
+    return new PianoService(sp.GetRequiredService<IPianoAudioOutput>(), async () =>
+    {
+        // Worklet first (Start needs it), then the SoundFont from the HTTP/Cache API cache.
+        await audio.EnsureReadyAsync();
+        return new MemoryStream(await audio.FetchCachedAsync(baseUri + "sf2/piano.sf2"), writable: false);
+    });
+});
+builder.Services.AddSingleton(sp => new MetronomeViewModel(sp.GetRequiredService<IMetronomePlayer>(), sp.GetRequiredService<IMetronomePreferenceService>()));
+builder.Services.AddSingleton(sp => new PianoViewModel(sp.GetRequiredService<IPianoService>(), sp.GetRequiredService<IPianoPreferenceService>(), sp.GetRequiredService<ITunerPreferenceService>()));
+builder.Services.AddSingleton(sp => new TunerViewModel(sp.GetRequiredService<ITunerInput>(), sp.GetRequiredService<ITunerPreferenceService>(), sp.GetRequiredService<IMicrophonePermissionService>()));
+builder.Services.AddSingleton(sp => new TunerStripController(sp.GetRequiredService<ITunerInput>(), sp.GetRequiredService<ITunerPreferenceService>(),
+    sp.GetRequiredService<ITunerStripPreferenceService>(), sp.GetRequiredService<IMicrophonePermissionService>(), a => a()));
 
 // Core services and view models, reused as they are
 builder.Services.AddSingleton<IConcertQueue, ConcertQueue>();

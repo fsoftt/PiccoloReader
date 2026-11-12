@@ -1,0 +1,222 @@
+@page "/piano"
+@implements IAsyncDisposable
+@using System.ComponentModel
+@using System.Globalization
+@using PiccoloReader.Core.Services.Piano
+@using PiccoloReader.Core.Services.Tuner
+@inject PianoViewModel Vm
+@inject WebAudio Audio
+@inject UiService Ui
+
+@{
+    var layout = new PianoKeyboardLayout(Vm.FirstWhiteKey, Vm.WhiteKeyCount, 100f, 100f);
+    var instrument = Vm.Instrument;
+    var naming = Vm.ResolvedNaming;
+    var (mapLeft, mapWidth) = PianoKeyboardLayout.MiniMapWindow(Vm.FirstWhiteKey, Vm.WhiteKeyCount, 52f);
+    var from = PianoKeyboardLayout.MiniMapX(instrument.LowNote, 52f);
+    var to = PianoKeyboardLayout.MiniMapX(instrument.HighNote, 52f) + 1f;
+}
+
+<div class="piano-page @(_landscape ? "land" : "")">
+    <h1 class="page-title piano-title">@AppStrings.Piano</h1>
+
+    <button class="chip instrument-chip" data-testid="instrument" aria-label="@(AppStrings.PianoInstrument + ": " + instrument.Name)" @onclick="PickInstrument">
+        <Icon G="E521" Class="s20 c-primary" />@instrument.Name ▾
+    </button>
+
+    <div class="readout @(Vm.ReadoutIsDim ? "dim" : "")" data-testid="readout" style="font-size:@(ReadoutSize())px">@Vm.ReadoutText</div>
+
+    <svg class="minimap" data-minimap="1" data-testid="minimap" viewBox="0 0 52 36" preserveAspectRatio="none" role="img" aria-label="@AppStrings.PianoMiniMap" @ref="_map">
+        @for (var n = PianoKeyboardLayout.LowestNote; n <= PianoKeyboardLayout.HighestNote; n++)
+        {
+            if (PianoKeyboardLayout.IsBlack(n)) continue;
+            <rect class="mm-white" data-mm="@n" x="@F(PianoKeyboardLayout.MiniMapX(n, 52f) + 0.03f)" y="0" width="0.94" height="30"></rect>
+        }
+        @for (var n = PianoKeyboardLayout.LowestNote; n <= PianoKeyboardLayout.HighestNote; n++)
+        {
+            if (!PianoKeyboardLayout.IsBlack(n)) continue;
+            <rect class="mm-black" data-mm="@n" x="@F(PianoKeyboardLayout.MiniMapX(n, 52f) - 0.3f)" y="0" width="0.6" height="18"></rect>
+        }
+        <rect class="mm-frame" x="0" y="0" width="52" height="30"></rect>
+        <rect class="mm-window" x="@F(mapLeft)" y="0" width="@F(mapWidth)" height="30"></rect>
+        <path class="mm-bracket" d="M @F(from) 31 V 35 H @F(to) V 31"></path>
+    </svg>
+
+    <div class="controls">
+        <div class="group-ctl octave">
+            <button class="icon-btn" data-testid="octave-down" aria-label="@AppStrings.PianoOctaveDown" @onclick="() => Vm.OctaveDownCommand.Execute(null)"><Icon G="E5CB" /></button>
+            <span class="caption mid" data-testid="range">@Vm.RangeLabel</span>
+            <button class="icon-btn" data-testid="octave-up" aria-label="@AppStrings.PianoOctaveUp" @onclick="() => Vm.OctaveUpCommand.Execute(null)"><Icon G="E5CC" /></button>
+        </div>
+        <div class="group-ctl keys">
+            <button class="icon-btn" data-testid="keys-minus" aria-label="@AppStrings.PianoKeysMinus" @onclick="() => Vm.KeysMinusCommand.Execute(null)"><Icon G="E15B" /></button>
+            <span class="caption mid" data-testid="keys-count">@Vm.KeysLabel</span>
+            <button class="icon-btn" data-testid="keys-plus" aria-label="@AppStrings.PianoKeysPlus" @onclick="() => Vm.KeysPlusCommand.Execute(null)"><Icon G="E145" /></button>
+        </div>
+        <div class="toggles">
+            <button class="chip tall @(Vm.SustainOn ? "selected" : "")" data-testid="sustain" aria-label="@AppStrings.PianoSustain" aria-pressed="@Vm.SustainOn.ToString().ToLowerInvariant()" @onclick="() => Vm.ToggleSustainCommand.Execute(null)">
+                <Icon G="E176" Class="s20" /><span class="sustain-text">@AppStrings.PianoSustain</span>
+            </button>
+            <button class="chip tall" data-testid="labels" aria-label="@LabelsDescription()" @onclick="() => Vm.CycleLabelsCommand.Execute(null)">@LabelsText(naming)</button>
+        </div>
+    </div>
+
+    <div class="keyboard-wrap">
+        <div class="keyboard" data-testid="keyboard" role="group" aria-label="@AppStrings.PianoKeyboard" @ref="_keyboard">
+            @foreach (var key in layout.WhiteKeys)
+            {
+                <div @key="key.Note" class="key white @(instrument.IsInRange(key.Note) ? "" : "mute")" data-note="@key.Note" style="left:@(F(key.Left))%;width:@(F(key.Right - key.Left))%">
+                    @if (ShowLabel(key.Note))
+                    {
+                        <span class="klabel @(key.Note % 12 == 0 ? "c" : "")">@(key.Note % 12 == 0 ? Vm.NoteName(key.Note) : NoteNames.Get(key.Note % 12, naming))</span>
+                    }
+                </div>
+            }
+            @foreach (var key in layout.BlackKeys)
+            {
+                <div @key="key.Note" class="key black @(instrument.IsInRange(key.Note) ? "" : "mute")" data-note="@key.Note" style="left:@(F(key.Left))%;width:@(F(key.Right - key.Left))%;height:@(F(key.Bottom))%"></div>
+            }
+            @if (Vm.IsLoading || Vm.LoadFailed)
+            {
+                <div class="kb-status" data-testid="piano-status">@(Vm.LoadFailed ? AppStrings.PianoLoadFailed : AppStrings.PianoLoading)</div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (_picking)
+{
+    <div class="scrim" @onclick="() => _picking = false">
+        <div class="sheet instrument-sheet" role="dialog" data-testid="instrument-sheet" @onclick:stopPropagation>
+            <div class="handle"></div>
+            <div class="sheet-title big">@AppStrings.PianoChooseInstrument</div>
+            @{ PianoFamily? family = null; }
+            @foreach (var item in PianoInstruments.All)
+            {
+                if (family != item.Family)
+                {
+                    family = item.Family;
+                    <div class="section-label family">@PianoInstruments.FamilyName(item.Family)</div>
+                }
+                var chosen = item;
+                <button class="item @(chosen == instrument ? "current" : "")" data-testid="instrument-@chosen.Id" @onclick="() => Choose(chosen)">
+                    <span class="label">@chosen.Name</span>
+                    @if (chosen == instrument) { <Icon G="E5CA" Class="s20 c-primary" /> }
+                </button>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private ElementReference _keyboard, _map;
+    private DotNetObjectReference<Piano>? _self;
+    private bool _landscape, _picking, _disposed;
+    private float _grab;
+
+    private static string F(float v) => v.ToString("0.####", CultureInfo.InvariantCulture);
+
+    protected override void OnInitialized()
+    {
+        Vm.PropertyChanged += OnChanged;
+        // Takes the audio lease: the SoundFont is fetched (cached after the first time) and the stream started.
+        Vm.Attach();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        if (!await Audio.EnsureReadyAsync() || _disposed) return;
+        _self = DotNetObjectReference.Create(this);
+        Audio.PianoAttach(_keyboard, _self);
+        Audio.MinimapAttach(_map, _self);
+        Audio.WatchOrientation(_self);
+    }
+
+    private void OnChanged(object? sender, PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    [JSInvokable] public void NoteOn(int note, int velocity) => Vm.NoteOn(note, velocity);
+
+    [JSInvokable] public void NoteOff(int note) => Vm.NoteOff(note);
+
+    [JSInvokable]
+    public void OrientationChanged(bool landscape)
+    {
+        _landscape = landscape;
+        Vm.IsLandscape = landscape;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void MiniMapPress(double fraction)
+    {
+        var (left, width) = PianoKeyboardLayout.MiniMapWindow(Vm.FirstWhiteKey, Vm.WhiteKeyCount, 1000f);
+        var x = (float)(fraction * 1000);
+        // Grabbing the window keeps its offset under the finger; a tap elsewhere centres it there.
+        _grab = x >= left && x <= left + width ? x - left : width / 2f;
+        Vm.SetFirstWhiteKey(PianoKeyboardLayout.FirstWhiteKeyFromMiniMap(x - _grab, 1000f, Vm.WhiteKeyCount));
+    }
+
+    [JSInvokable]
+    public void MiniMapMove(double fraction) =>
+        Vm.SetFirstWhiteKey(PianoKeyboardLayout.FirstWhiteKeyFromMiniMap((float)(fraction * 1000) - _grab, 1000f, Vm.WhiteKeyCount));
+
+    private double ReadoutSize()
+    {
+        var baseSize = _landscape ? 28d : 68d;
+        var avail = _landscape ? 200d : 360d;
+        return Math.Clamp(avail / (Math.Max(Vm.ReadoutText.Length, 1) * 0.6), 16, baseSize);
+    }
+
+    private bool ShowLabel(int note)
+    {
+        if (Vm.Labels == PianoLabels.Off) return false;
+        if (Vm.Labels == PianoLabels.COnly && note % 12 != 0) return false;
+        return Vm.WhiteKeyCount <= 22 || note % 12 == 0;
+    }
+
+    private string LabelsText(NoteNaming naming)
+    {
+        var text = Vm.Labels switch
+        {
+            PianoLabels.COnly => NoteNames.Get(0, naming),
+            PianoLabels.All => $"{NoteNames.Get(0, naming)} {NoteNames.Get(2, naming)} {NoteNames.Get(4, naming)}",
+            _ => "–"
+        };
+        return _landscape ? text : string.Format(CultureInfo.CurrentCulture, AppStrings.PianoLabelsChipFormat, text);
+    }
+
+    private string LabelsDescription() => Vm.Labels switch
+    {
+        PianoLabels.COnly => AppStrings.PianoLabelsCOnly,
+        PianoLabels.All => AppStrings.PianoLabelsAll,
+        _ => AppStrings.PianoLabelsOff
+    };
+
+    private void PickInstrument()
+    {
+        Audio.PianoRelease(_keyboard);
+        _picking = true;
+    }
+
+    private void Choose(PianoInstrument item)
+    {
+        _picking = false;
+        Vm.SelectInstrument(item);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        Vm.PropertyChanged -= OnChanged;
+        if (_self is not null)
+        {
+            Audio.PianoDetach(_keyboard);
+            Audio.UnwatchOrientation();
+        }
+
+        Vm.Detach();
+        _self?.Dispose();
+        await Task.CompletedTask;
+    }
+}

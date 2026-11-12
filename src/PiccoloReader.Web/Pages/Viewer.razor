@@ -48,12 +48,14 @@
                 <span class="row-title ellipsis" data-testid="viewer-title">@_sheet.Title</span>
                 <span class="caption ellipsis">@ModeName(_mode)</span>
             </div>
+            <ViewerTools Part="buttons" />
             <button class="icon-btn" data-testid="mode" aria-label="@AppStrings.ReadingModeLabel" @onclick="PickModeAsync"><Icon G="@ModeGlyph(_mode)" /></button>
             <button class="icon-btn" data-testid="bookmarks" aria-label="@AppStrings.BookmarksTitle" @onclick="OpenBookmarks">
                 <Icon G="@(Bookmarked ? "E866" : "E867")" Class="@(Bookmarked ? "c-bookmark" : "")" />
             </button>
             <button class="icon-btn" data-testid="more" aria-label="@AppStrings.MoreOptions" @onclick="MoreAsync"><Icon G="E5D4" /></button>
         </div>
+        <ViewerTools Part="strip" />
         @if (_hint is not null) { <div class="hint-pill" data-testid="hint">@_hint</div> }
         <button class="page-indicator chrome @(_chrome ? "" : "hidden")" data-testid="page-indicator" @onclick="GoToPromptAsync">
             @string.Format(AppStrings.PageIndicatorFormat, _page + 1, _pageCount)

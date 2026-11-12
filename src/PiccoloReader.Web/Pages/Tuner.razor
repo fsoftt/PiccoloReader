@@ -1,0 +1,158 @@
+@page "/tuner"
+@implements IDisposable
+@using System.ComponentModel
+@using System.Globalization
+@using PiccoloReader.Core.Services.Tuner
+@inject TunerViewModel Vm
+@inject UiService Ui
+
+<div class="page">
+    <div class="header"><h1 class="page-title">@AppStrings.Tuner</h1></div>
+
+    <div class="tool-stack">
+        <div class="card tool-card">
+            <div class="note-row @(Listening ? "" : "dim")">
+                <span class="note" data-testid="tuner-note">@(HasNote ? Vm.NoteName : "-")</span>
+                <span class="octave" data-testid="tuner-octave">@(HasNote ? Vm.Octave.ToString(CultureInfo.InvariantCulture) : "")</span>
+            </div>
+            <div class="caption center status" data-testid="tuner-status">@StatusText</div>
+
+            <div class="needle" data-testid="tuner-needle" role="img" aria-label="@AppStrings.Tuner">
+                <span class="baseline"></span>
+                @for (var c = -50; c <= 50; c += 10)
+                {
+                    <span class="tick @(c == 0 ? "major" : "")" style="left:calc(16px + (100% - 32px) * @(Pos(c)))"></span>
+                }
+                @if (Listening)
+                {
+                    <span class="pointer @Band" data-testid="tuner-pointer" style="left:calc(16px + (100% - 32px) * @NeedlePos)"></span>
+                }
+            </div>
+            <div class="hz" data-testid="tuner-hz">@(Listening && Vm.FrequencyHz > 0 ? $"{Vm.FrequencyHz.ToString("0.0", CultureInfo.InvariantCulture)} Hz" : "")</div>
+
+            @if (Vm.State is TunerState.NoPermission or TunerState.Error)
+            {
+                <button class="btn" data-testid="tuner-retry" @onclick="RetryAsync">@AppStrings.TunerRetry</button>
+            }
+        </div>
+
+        <div class="card group">
+            <button class="row" data-testid="notation-row" aria-label="@AppStrings.TunerNotation" @onclick="PickNotationAsync">
+                <span class="stack"><span class="row-title">@AppStrings.TunerNotation</span></span>
+                <span class="value" data-testid="notation-value">@NotationName(Vm.NoteNaming)</span>
+                <Icon G="E5CC" Class="s20 c-muted" />
+            </button>
+            <div class="row static a4-row">
+                <span class="stack"><span class="row-title">@AppStrings.TunerReferencePitch</span></span>
+                <button class="icon-btn" data-testid="a4-minus" aria-label="@AppStrings.TunerDecreaseA4" @onclick="() => Vm.DecreaseA4Command.Execute(null)"><Icon G="E15B" /></button>
+                <span class="row-title a4-value" data-testid="a4-value">@Vm.A4Hz Hz</span>
+                <button class="icon-btn" data-testid="a4-plus" aria-label="@AppStrings.TunerIncreaseA4" @onclick="() => Vm.IncreaseA4Command.Execute(null)"><Icon G="E145" /></button>
+            </div>
+            <div class="presets">
+                @foreach (var hz in TunerSettings.Presets)
+                {
+                    var preset = hz;
+                    <button class="preset @(Vm.A4Hz == preset ? "selected" : "")" data-testid="preset-@preset" aria-label="A4 @preset Hz" @onclick="() => Vm.SetA4PresetCommand.Execute(preset)">@preset</button>
+                }
+            </div>
+            <button class="row" data-testid="key-row" aria-label="@AppStrings.TunerTransposeKey" @onclick="PickKeyAsync">
+                <span class="stack"><span class="row-title">@AppStrings.TunerTransposeKey</span></span>
+                <span class="value" data-testid="key-value">@KeyName(Vm.TransposeKey)</span>
+                <Icon G="E5CC" Class="s20 c-muted" />
+            </button>
+            <button class="row" data-testid="octave-row" aria-label="@AppStrings.TunerTransposeOctave" @onclick="PickOctaveAsync">
+                <span class="stack"><span class="row-title">@AppStrings.TunerTransposeOctave</span></span>
+                <span class="value" data-testid="octave-value">@OctaveName(Vm.OctaveShift)</span>
+                <Icon G="E5CC" Class="s20 c-muted" />
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _queued;
+
+    private bool Listening => Vm.State == TunerState.Listening;
+
+    private bool HasNote => Vm.NoteName.Length > 0;
+
+    private string Band => MathF.Abs(Vm.Cents) <= 5f ? "good" : MathF.Abs(Vm.Cents) <= 15f ? "near" : "far";
+
+    private static string Pos(int cents) => ((cents + 50) / 100.0).ToString("0.###", CultureInfo.InvariantCulture);
+
+    private string NeedlePos => ((Math.Clamp(Vm.Cents, -50f, 50f) + 50f) / 100f).ToString("0.###", CultureInfo.InvariantCulture);
+
+    private string StatusText => Vm.State switch
+    {
+        TunerState.NoPermission => AppStrings.TunerNoPermission,
+        TunerState.Unsupported => AppStrings.TunerUnsupported,
+        TunerState.Error => AppStrings.TunerError,
+        TunerState.Silent => AppStrings.TunerListening,
+        _ => ""
+    };
+
+    // The microphone is open only while this page is shown.
+    protected override async Task OnInitializedAsync()
+    {
+        Vm.PropertyChanged += OnChanged;
+        await Vm.AttachAsync();
+    }
+
+    private async Task RetryAsync() => await Vm.AttachAsync();
+
+    // Readings arrive up to every 50 ms; render at most once per ~60 ms.
+    private void OnChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_queued) return;
+        _queued = true;
+        _ = InvokeAsync(async () =>
+        {
+            await Task.Delay(60);
+            _queued = false;
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        Vm.PropertyChanged -= OnChanged;
+        Vm.Detach();
+    }
+
+    private static string KeyName(TransposeKey key) => key switch { TransposeKey.Bb => "B♭", TransposeKey.Eb => "E♭", _ => key.ToString() };
+
+    private static string OctaveName(int shift) => shift > 0 ? $"+{shift}" : shift.ToString(CultureInfo.InvariantCulture);
+
+    private static string NotationName(NoteNaming n) => n switch
+    {
+        NoteNaming.Letter => AppStrings.TunerNotationLetter,
+        NoteNaming.Solfege => AppStrings.TunerNotationSolfege,
+        _ => AppStrings.TunerNotationAuto
+    };
+
+    private async Task PickNotationAsync()
+    {
+        NoteNaming[] values = [NoteNaming.Auto, NoteNaming.Letter, NoteNaming.Solfege];
+        var options = values.Select(NotationName).ToList();
+        var i = Pick(await Ui.ChooseAsync(AppStrings.TunerNotation, options, AppStrings.Cancel), options);
+        if (i >= 0) Vm.NoteNaming = values[i];
+    }
+
+    private async Task PickKeyAsync()
+    {
+        TransposeKey[] values = [TransposeKey.C, TransposeKey.Bb, TransposeKey.A, TransposeKey.Eb, TransposeKey.F, TransposeKey.G];
+        var options = values.Select(KeyName).ToList();
+        var i = Pick(await Ui.ChooseAsync(AppStrings.TunerTransposeKey, options, AppStrings.Cancel), options);
+        if (i >= 0) Vm.TransposeKey = values[i];
+    }
+
+    private async Task PickOctaveAsync()
+    {
+        var values = Enumerable.Range(TunerSettings.MinOctaveShift, TunerSettings.MaxOctaveShift - TunerSettings.MinOctaveShift + 1).ToArray();
+        var options = values.Select(OctaveName).ToList();
+        var i = Pick(await Ui.ChooseAsync(AppStrings.TunerTransposeOctave, options, AppStrings.Cancel), options);
+        if (i >= 0) Vm.OctaveShift = values[i];
+    }
+
+    private static int Pick(string? pick, List<string> options) => pick is null ? -1 : options.IndexOf(pick);
+}

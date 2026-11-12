@@ -7,6 +7,15 @@
         <a class="tab @(Active("") ? "active" : "")" href="" data-testid="tab-library">
             <span class="pill"><Icon G="E2C7" /></span><span>@AppStrings.Library</span>
         </a>
+        <a class="tab @(Active("metronome") ? "active" : "")" href="metronome" data-testid="tab-metronome">
+            <span class="pill"><Icon G="E425" /></span><span>@AppStrings.Metronome</span>
+        </a>
+        <a class="tab @(Active("tuner") ? "active" : "")" href="tuner" data-testid="tab-tuner">
+            <span class="pill"><Icon G="E405" /></span><span>@AppStrings.Tuner</span>
+        </a>
+        <a class="tab @(Active("piano") ? "active" : "")" href="piano" data-testid="tab-piano">
+            <span class="pill"><Icon G="E521" /></span><span>@AppStrings.Piano</span>
+        </a>
         <a class="tab @(Active("settings") ? "active" : "")" href="settings" data-testid="tab-settings">
             <span class="pill"><Icon G="E429" /></span><span>@AppStrings.Settings</span>
         </a>

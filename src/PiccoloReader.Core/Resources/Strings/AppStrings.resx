@@ -286,6 +286,7 @@
   <data name="TunerListening" xml:space="preserve"><value>Play a note</value></data>
   <data name="TunerNoPermission" xml:space="preserve"><value>Microphone access is needed to tune. Allow it in the app settings.</value></data>
   <data name="TunerOpenSettings" xml:space="preserve"><value>Open settings</value></data>
+  <data name="TunerRetry" xml:space="preserve"><value>Try again</value></data>
   <data name="TunerUnsupported" xml:space="preserve"><value>The tuner is not available on this device.</value></data>
   <data name="TunerError" xml:space="preserve"><value>Could not start the microphone.</value></data>
   <data name="TunerNotation" xml:space="preserve"><value>Note names</value></data>

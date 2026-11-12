@@ -18,6 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The piano SoundFont is fetched lazily (and cached) when the piano or metronome first opens. -->
+    <Content Include="..\PiccoloReader\Resources\Raw\piano.sf2" Link="wwwroot\sf2\piano.sf2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\PiccoloReader.Core\PiccoloReader.Core.csproj" />
   </ItemGroup>
 
