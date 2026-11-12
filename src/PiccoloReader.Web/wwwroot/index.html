@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Piccolo Reader (web spike)</title>
+    <!-- "/" for local dev. The Pages workflow rewrites this to /PiccoloReader/app/ after publish. -->
+    <base href="/" />
+    <link rel="stylesheet" href="css/app.css" />
+    <script>
+        // GitHub Pages SPA fallback: 404.html stores the deep link here.
+        (function () { var r = sessionStorage.redirect; delete sessionStorage.redirect; if (r && r !== location.href) history.replaceState(null, null, r); })();
+    </script>
+</head>
+<body>
+    <div id="app">Loading...</div>
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+</html>

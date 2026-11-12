@@ -1,0 +1,71 @@
+@page "/"
+@inject AppDatabase Db
+@inject PersistentDatabase Persist
+@inject PdfCanvasRenderer Pdf
+
+<h1>Library</h1>
+
+<label class="btn">
+    Import PDF
+    <InputFile OnChange="ImportAsync" accept=".pdf" hidden />
+</label>
+@if (_status is not null) { <p class="status">@_status</p> }
+
+@if (_sheets is null)
+{
+    <p>Loading...</p>
+}
+else if (_sheets.Count == 0)
+{
+    <p>No sheets yet. Import a PDF.</p>
+}
+else
+{
+    <ul class="sheets">
+        @foreach (var s in _sheets)
+        {
+            <li><a href="viewer/@s.Id">@s.Title</a> <span class="meta">(@s.PageCount pages, last viewed page @(s.LastViewedPageIndex + 1))</span></li>
+        }
+    </ul>
+}
+
+@code {
+    private const long MaxPdfBytes = 200L * 1024 * 1024;
+    private List<Sheet>? _sheets;
+    private string? _status;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() => _sheets = await Db.Connection.Table<Sheet>().OrderBy(s => s.Title).ToListAsync();
+
+    private async Task ImportAsync(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles(20))
+        {
+            try
+            {
+                _status = $"Importing {file.Name}...";
+                StateHasChanged();
+                using var ms = new MemoryStream();
+                await file.OpenReadStream(MaxPdfBytes).CopyToAsync(ms);
+                // Unique stored name so two PDFs with the same name do not collide.
+                var stored = $"{Guid.NewGuid():N}.pdf";
+                var pages = await Pdf.ImportAsync(stored, ms.ToArray());
+                await Db.Connection.InsertAsync(new Sheet
+                {
+                    Title = Path.GetFileNameWithoutExtension(file.Name),
+                    FileName = stored,
+                    PageCount = pages,
+                    DateAdded = DateTime.UtcNow,
+                });
+                Persist.ScheduleSave();
+                _status = $"Imported {file.Name} ({pages} pages).";
+            }
+            catch (Exception ex)
+            {
+                _status = $"Import failed: {ex.Message}";
+            }
+        }
+        await LoadAsync();
+    }
+}

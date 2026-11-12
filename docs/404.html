@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Piccolo Reader</title>
+  <script>
+    // GitHub Pages serves this file for unknown URLs. Deep links into the web app
+    // (e.g. /PiccoloReader/app/viewer/3) are bounced to the app shell, which
+    // restores the original URL from sessionStorage before Blazor starts.
+    (function () {
+      var appBase = "/PiccoloReader/app/";
+      if (location.pathname.indexOf(appBase) === 0) {
+        try { sessionStorage.redirect = location.href; } catch (e) { }
+        location.replace(appBase);
+      }
+    })();
+  </script>
+</head>
+<body>
+  <h1>Page not found</h1>
+  <p><a href="/PiccoloReader/">Piccolo Reader</a></p>
+</body>
+</html>
