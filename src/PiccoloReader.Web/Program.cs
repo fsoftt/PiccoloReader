@@ -22,6 +22,7 @@ builder.Services.AddSingleton<BrowserInterop>();
 builder.Services.AddSingleton<IAppStorageProvider, WebStorageProvider>();
 builder.Services.AddSingleton<PdfCanvasRenderer>();
 builder.Services.AddSingleton<ViewerInterop>();
+builder.Services.AddSingleton<ReorderInterop>();
 builder.Services.AddSingleton<AnnotInterop>();
 builder.Services.AddSingleton<PersistentDatabase>();
 builder.Services.AddSingleton(sp => sp.GetRequiredService<PersistentDatabase>().Database);
@@ -66,7 +67,11 @@ builder.Services.AddSingleton<IPianoService>(sp =>
     {
         // Worklet first (Start needs it), then the SoundFont from the HTTP/Cache API cache.
         await audio.EnsureReadyAsync();
-        return new MemoryStream(await audio.FetchCachedAsync(baseUri + "sf2/piano.sf2"), writable: false);
+        var bytes = await audio.FetchCachedAsync(baseUri + "sf2/piano.sf2");
+        // Parsing the SoundFont is synchronous CPU work on the browser's one thread: yield to the
+        // event loop first so the loading indicator is painted before the parse starts.
+        await Task.Delay(60);
+        return new MemoryStream(bytes, writable: false);
     });
 });
 builder.Services.AddSingleton(sp => new MetronomeViewModel(sp.GetRequiredService<IMetronomePlayer>(), sp.GetRequiredService<IMetronomePreferenceService>()));

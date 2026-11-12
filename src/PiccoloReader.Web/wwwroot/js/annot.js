@@ -472,8 +472,10 @@ function onUp(e, canceled) {
         if (canceled || !l) return;
         // A pen tap without travel is a tap on the page, not a stroke.
         if (!g.moved && dt < 300 && !opts.editing) { owned.delete(g.id); return; }
+        if (tap) { host.ref.invokeMethodAsync("OnPageTap"); return; }
         if (l.p.length >= 4) host.ref.invokeMethodAsync("OnStroke", g.layer.page, l.p, g.kind);
     } else if (g.kind === "eraser") {
+        if (tap) host.ref.invokeMethodAsync("OnPageTap");
         sendErase(g);
         g.chain = g.chain.then(() => host && host.ref.invokeMethodAsync("OnEraseEnd", g.layer.page));
     } else if (g.kind === "text") {
@@ -482,7 +484,7 @@ function onUp(e, canceled) {
             host.ref.invokeMethodAsync("OnTextTap", g.layer.page, px, py);
         }
     } else if (g.kind === "select") {
-        if (tap) selectNone(true);
+        if (tap) { selectNone(true); host.ref.invokeMethodAsync("OnPageTap"); }
     } else if (g.kind === "move") {
         if (g.moved) endMove(canceled);
     }
@@ -760,5 +762,22 @@ export async function exportOriginal(name, fileName, share) {
 }
 
 export function shareLast() { return finishDelivery(true); }
+
+// Tool-sheet handle (Android ToolSheetHandleArea): drag up > 30 expands, drag down > 30
+// collapses, a tap toggles. Reported as +1 / -1 / 0 to OnSheetHandle.
+export function bindSheetHandle(el, ref) {
+    if (!el || el._bound) return;
+    el._bound = true;
+    let y0 = null, id = -1;
+    el.addEventListener("pointerdown", (e) => { y0 = e.clientY; id = e.pointerId; try { el.setPointerCapture(id); } catch { } });
+    const end = (e, ok) => {
+        if (y0 === null || e.pointerId !== id) return;
+        const dy = e.clientY - y0; y0 = null;
+        if (!ok) return;
+        ref.invokeMethodAsync("OnSheetHandle", dy < -30 ? 1 : dy > 30 ? -1 : Math.abs(dy) < 10 ? 0 : 2);
+    };
+    el.addEventListener("pointerup", (e) => end(e, true));
+    el.addEventListener("pointercancel", (e) => end(e, false));
+}
 
 export function paintTilesJson(container, json) { return paintTiles(container, JSON.parse(json)); }

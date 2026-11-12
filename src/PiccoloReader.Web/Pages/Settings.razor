@@ -231,6 +231,7 @@
         // Like the Android app (restart required): the new language applies on a fresh load,
         // when the matching AppStrings satellite resources are picked up.
         Culture.Set(code);
+        await Ui.AlertAsync(AppStrings.RestartRequiredTitle, AppStrings.RestartRequiredMessage, AppStrings.OK);
         Nav.NavigateTo(Nav.Uri, forceLoad: true);
     }
 

@@ -43,6 +43,17 @@
                 </div>
             </div>
             break;
+        case UiService.DialogKind.Alert:
+            <div class="scrim center" @onclick="() => Ui.Resolve(r.Accept)">
+                <div class="dialog" role="alertdialog" aria-label="@r.Title" @onclick:stopPropagation>
+                    <h2>@r.Title</h2>
+                    <p>@r.Message</p>
+                    <div class="buttons">
+                        <button class="btn" data-testid="alert-ok" @onclick="() => Ui.Resolve(r.Accept)">@r.Accept</button>
+                    </div>
+                </div>
+            </div>
+            break;
     }
 }
 @if (Ui.Toast is { } t)

@@ -8,6 +8,7 @@
 @inject ITutorialPreferenceService Tutorial
 @inject IConcertModePreferenceService ConcertPrefs
 @inject IConcertTutorialPreferenceService CoachPrefs
+@inject ReorderInterop Reorder
 
 <CoachMarks @ref="_coach" />
 <div class="page">
@@ -83,8 +84,7 @@
         {
             var sheet = s;
             <SheetRow @key="sheet.Id" Sheet="sheet" CanReorder="Vm.CanReorderSheets"
-                      OnOpen="() => OpenSheet(sheet)" OnMore="() => SheetMenuAsync(sheet)"
-                      OnMoveUp="() => MoveAsync(sheet, -1)" OnMoveDown="() => MoveAsync(sheet, 1)" />
+                      OnOpen="() => OpenSheet(sheet)" OnMore="() => SheetMenuAsync(sheet)" />
         }
     }
     @if (Vm.HasNoSheetResults)
@@ -107,6 +107,15 @@
 </div>
 
 @code {
+    private DotNetObjectReference<Library>? _self;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _self = DotNetObjectReference.Create(this);
+        await Reorder.InitAsync(_self);
+    }
+
     private bool _loaded;
 
     private string SheetSearch
@@ -137,6 +146,8 @@
 
     public void Dispose()
     {
+        _ = Reorder.DisposeAsync();
+        _self?.Dispose();
         Vm.PropertyChanged -= OnVmChanged;
         Importer.Imported -= OnImported;
     }
@@ -228,13 +239,12 @@
         Vm.ApplyFolderSort(field, dir);
     }
 
-    private async Task MoveAsync(Sheet s, int delta)
+    [JSInvokable]
+    public async Task OnSheetReordered(int from, int to)
     {
         var list = Vm.RootSheets;
-        var i = list.IndexOf(s);
-        var j = i + delta;
-        if (i < 0 || j < 0 || j >= list.Count) return;
-        list.Move(i, j);
+        if (from < 0 || to < 0 || from >= list.Count || to >= list.Count || from == to) return;
+        list.Move(from, to);
         await Vm.CommitSheetOrderAsync();
         await Lib.SetOrderAsync(null, list.Select(x => x.Id).ToList());
         await ReloadAsync();

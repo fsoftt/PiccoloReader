@@ -7,6 +7,7 @@
 @inject WebLibrary Lib
 @inject UiService Ui
 @inject NavigationManager Nav
+@inject ReorderInterop Reorder
 
 <div class="page">
     <div class="header back">
@@ -45,8 +46,7 @@
         {
             var sheet = s;
             <SheetRow @key="sheet.Id" Sheet="sheet" CanReorder="Vm.CanReorder"
-                      OnOpen="() => OpenSheet(sheet)" OnMore="() => SheetMenuAsync(sheet)"
-                      OnMoveUp="() => MoveAsync(sheet, -1)" OnMoveDown="() => MoveAsync(sheet, 1)" />
+                      OnOpen="() => OpenSheet(sheet)" OnMore="() => SheetMenuAsync(sheet)" />
         }
     }
     @if (Vm.HasNoSearchResults)
@@ -69,6 +69,15 @@
 </div>
 
 @code {
+    private DotNetObjectReference<FolderPage>? _self;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _self = DotNetObjectReference.Create(this);
+        await Reorder.InitAsync(_self);
+    }
+
     [Parameter] public int FolderId { get; set; }
 
     private bool _loaded;
@@ -95,6 +104,8 @@
 
     public void Dispose()
     {
+        _ = Reorder.DisposeAsync();
+        _self?.Dispose();
         Vm.PropertyChanged -= OnVmChanged;
         Importer.Imported -= OnImported;
     }
@@ -143,13 +154,12 @@
         Vm.PublishConcertQueue();
     }
 
-    private async Task MoveAsync(Sheet s, int delta)
+    [JSInvokable]
+    public async Task OnSheetReordered(int from, int to)
     {
         var list = Vm.Sheets;
-        var i = list.IndexOf(s);
-        var j = i + delta;
-        if (i < 0 || j < 0 || j >= list.Count) return;
-        list.Move(i, j);
+        if (from < 0 || to < 0 || from >= list.Count || to >= list.Count || from == to) return;
+        list.Move(from, to);
         await Vm.CommitSheetOrderAsync();
         await Lib.SetOrderAsync(FolderId, list.Select(x => x.Id).ToList());
         await ReloadAsync();

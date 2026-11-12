@@ -78,8 +78,54 @@ const streams = new Map(); // name -> { node, channels }
 let mic = null;            // { stream, source, node, mute }
 let micState = "unknown";  // unknown | prompt | granted | denied | unsupported
 
+const hasWorklet = () => typeof AudioWorkletNode !== "undefined" && typeof AudioContext !== "undefined" && "audioWorklet" in AudioContext.prototype;
+
 export function supported() {
-    return typeof AudioContext !== "undefined" && typeof AudioWorkletNode !== "undefined";
+    return typeof AudioContext !== "undefined" && (hasWorklet() || typeof AudioContext.prototype.createScriptProcessor === "function");
+}
+
+// Fallbacks when AudioWorklet is missing (old browsers, insecure contexts): the same queue and
+// capture logic on a ScriptProcessorNode, exposing the worklet node's `port` shape.
+let useWorklet = true;
+
+function fallbackSink(channels) {
+    const node = ctx.createScriptProcessor(2048, 0, 2);
+    const st = { queue: [], queued: 0, played: 0, tick: 0, started: false, under: 0 };
+    node.port = { onmessage: null, postMessage(m) {
+        if (m.flush) { st.queue.length = 0; st.queued = 0; return; }
+        if (m.pcm) { st.queue.push({ data: m.pcm, frames: m.frames, pos: 0 }); st.queued += m.frames; }
+    } };
+    node.onaudioprocess = (ev) => {
+        const out = ev.outputBuffer;
+        const o0 = out.getChannelData(0), o1 = out.getChannelData(1);
+        const n = o0.length;
+        o0.fill(0); o1.fill(0);
+        let done = 0;
+        while (done < n && st.queue.length) {
+            const c = st.queue[0];
+            const take = Math.min(n - done, c.frames - c.pos);
+            o0.set(c.data.subarray(c.pos, c.pos + take), done);
+            const off = channels > 1 ? c.frames : 0;
+            o1.set(c.data.subarray(off + c.pos, off + c.pos + take), done);
+            c.pos += take; done += take; st.queued -= take;
+            if (c.pos >= c.frames) st.queue.shift();
+        }
+        if (done < n && st.started) st.under++;
+        if (done > 0) st.started = true;
+        st.played += done;
+        if (node.port.onmessage) node.port.onmessage({ data: { played: st.played, queued: st.queued, under: st.under } });
+    };
+    return node;
+}
+
+function fallbackCapture() {
+    const node = ctx.createScriptProcessor(2048, 1, 1);
+    node.port = { onmessage: null };
+    node.onaudioprocess = (ev) => {
+        const copy = new Float32Array(ev.inputBuffer.getChannelData(0));
+        if (node.port.onmessage) node.port.onmessage({ data: copy });
+    };
+    return node;
 }
 
 // Creates the context and loads the worklet once. Safe to call repeatedly.
@@ -87,11 +133,15 @@ export function init(dotnet) {
     host = dotnet;
     if (!ready) {
         ready = (async () => {
-            if (!supported()) throw new Error("Web Audio worklets are not available");
+            if (!supported()) throw new Error("Web Audio is not available");
             ctx = new AudioContext({ latencyHint: "interactive" });
-            const url = URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" }));
-            await ctx.audioWorklet.addModule(url);
-            URL.revokeObjectURL(url);
+            useWorklet = hasWorklet() && !!ctx.audioWorklet;
+            if (useWorklet) {
+                const url = URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" }));
+                try { await ctx.audioWorklet.addModule(url); }
+                catch (e) { if (typeof ctx.createScriptProcessor !== "function") throw e; useWorklet = false; }
+                URL.revokeObjectURL(url);
+            }
             // iOS Safari and autoplay policies only start audio from a user gesture.
             const unlock = () => { resume(); };
             for (const ev of ["pointerdown", "touchend", "keydown", "click"]) {
@@ -120,10 +170,10 @@ export async function resume() {
 
 export function streamStart(name, channels) {
     streamStop(name);
-    const node = new AudioWorkletNode(ctx, "sink", {
+    const node = useWorklet ? new AudioWorkletNode(ctx, "sink", {
         numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
         processorOptions: { channels }
-    });
+    }) : fallbackSink(channels);
     node.port.onmessage = (e) => { stats.underruns[name] = e.data.under; stats.reports++; host.invokeMethod("OnStreamReport", name, e.data.played, e.data.queued); };
     node.connect(ctx.destination);
     streams.set(name, { node, channels });
@@ -152,6 +202,7 @@ export function streamStop(name) {
     const s = streams.get(name);
     if (!s) return;
     s.node.port.onmessage = null;
+    s.node.onaudioprocess = null;
     try { s.node.disconnect(); } catch { }
     streams.delete(name);
 }
@@ -220,7 +271,7 @@ export function micStart() {
     if (!mic || !ctx) return 0;
     micStop(false);
     mic.source = ctx.createMediaStreamSource(mic.stream);
-    mic.node = new AudioWorkletNode(ctx, "capture", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
+    mic.node = useWorklet ? new AudioWorkletNode(ctx, "capture", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] }) : fallbackCapture();
     mic.node.port.onmessage = (e) => {
         const f = e.data;
         host.invokeMethod("OnMicBlock", new Uint8Array(f.buffer, f.byteOffset, f.byteLength));

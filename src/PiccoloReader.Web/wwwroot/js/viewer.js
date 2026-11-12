@@ -37,6 +37,9 @@ export async function renderFit(name, i, canvas, box) {
     const pad = 40; // matches .crop-area padding
     const css = Math.max(40, Math.min(box.clientWidth - pad, (box.clientHeight - pad) * aspect));
     await renderPage(name, i, canvas, css, null);
+    // The Android crop overlay shows the page's annotations too.
+    const wrap = canvas.parentElement;
+    if (wrap) layerRendered(wrap, i, null);
 }
 
 export function resetScroll(stage, toBottom) {
@@ -68,18 +71,30 @@ export function attach(ref, stage, mode) {
     s.wheel = (e) => {
         if (!e.ctrlKey) return;
         e.preventDefault();
-        ref.invokeMethodAsync("OnZoomStep", e.deltaY < 0 ? 1.1 : 0.9);
+        // Debounced: accumulate the wheel steps and re-render once.
+        s.wheelFactor = (s.wheelFactor ?? 1) * (e.deltaY < 0 ? 1.1 : 0.9);
+        clearTimeout(s.wheelTimer);
+        s.wheelTimer = setTimeout(() => { const f = s.wheelFactor; s.wheelFactor = 1; ref.invokeMethodAsync("OnZoomStep", f); }, 120);
     };
     const pinchTarget = () => stage.querySelector(".pagewrap, .clist");
     s.down = (e) => {
         if (rejectTouch(e)) return;
         s.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (s.pointers.size === 1) {
-            s.start = { x: e.clientX, y: e.clientY, t: performance.now(), scrollLeft: stage.scrollLeft, scrollTop: stage.scrollTop };
+            // Like Android's SwipeTurn: a drag turns the page only when it STARTED at the pan limit in its direction.
+            s.start = { x: e.clientX, y: e.clientY, t: performance.now(), scrollLeft: stage.scrollLeft, scrollTop: stage.scrollTop,
+                atRight: stage.scrollLeft + stage.clientWidth >= stage.scrollWidth - 2, atLeft: stage.scrollLeft <= 2,
+                atBottom: stage.scrollTop + stage.clientHeight >= stage.scrollHeight - 2, atTop: stage.scrollTop <= 2 };
             s.moved = false;
         } else if (s.pointers.size === 2) {
             const [a, b] = [...s.pointers.values()];
-            s.pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y), ratio: 1 };
+            const w = pinchTarget();
+            const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+            const r = w ? w.getBoundingClientRect() : null;
+            // Content point under the fingers (fraction of the page box): it stays under them while zooming.
+            s.pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y), ratio: 1, mx, my,
+                fx: r && r.width ? (mx - r.left) / r.width : 0.5, fy: r && r.height ? (my - r.top) / r.height : 0 };
+            if (w) w.style.transformOrigin = (s.pinch.fx * 100) + "% " + (s.pinch.fy * 100) + "%";
         }
     };
     s.move = (e) => {
@@ -93,7 +108,8 @@ export function attach(ref, stage, mode) {
             if (stage.classList.contains("drawing") && s.pointers.size === 2) { stage.scrollLeft -= (e.clientX - px0) / 2; stage.scrollTop -= (e.clientY - py0) / 2; }
             s.pinch.ratio = Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, s.pinch.d0);
             const w = pinchTarget();
-            if (w) { w.style.transformOrigin = "center top"; w.style.transform = "scale(" + s.pinch.ratio + ")"; }
+            s.pinch.mx = (a.x + b.x) / 2; s.pinch.my = (a.y + b.y) / 2;
+            if (w) w.style.transform = "scale(" + s.pinch.ratio + ")";
         }
         if (s.start && Math.hypot(e.clientX - s.start.x, e.clientY - s.start.y) > 10) s.moved = true;
     };
@@ -104,10 +120,20 @@ export function attach(ref, stage, mode) {
         if (owns(e.pointerId) && !wasPinch) { s.start = null; return; }
         if (wasPinch) {
             const w = pinchTarget();
-            if (w) w.style.transform = "";
-            const ratio = s.pinch.ratio;
+            const pin = s.pinch;
             s.pinch = null; s.start = null; s.moved = true;
-            if (Math.abs(ratio - 1) > 0.05) ref.invokeMethodAsync("OnZoomStep", ratio);
+            if (Math.abs(pin.ratio - 1) > 0.05) {
+                // Re-render at the new zoom, then put the pinched point back under the fingers' midpoint.
+                ref.invokeMethodAsync("OnZoomStep", pin.ratio).then(() => {
+                    const w2 = pinchTarget();
+                    if (w2) {
+                        w2.style.transform = "";
+                        const r = w2.getBoundingClientRect();
+                        stage.scrollLeft += r.left + pin.fx * r.width - pin.mx;
+                        stage.scrollTop += r.top + pin.fy * r.height - pin.my;
+                    }
+                });
+            } else if (w) w.style.transform = "";
             return;
         }
         if (s.pinch || !s.start) return;
@@ -122,14 +148,10 @@ export function attach(ref, stage, mode) {
         const zoomedX = stage.scrollWidth > stage.clientWidth + 1;
         const zoomedY = stage.scrollHeight > stage.clientHeight + 1;
         if (s.mode === "h" && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-            const atEdge = !zoomedX || (dx < 0
-                ? stage.scrollLeft + stage.clientWidth >= stage.scrollWidth - 2
-                : stage.scrollLeft <= 2);
+            const atEdge = !zoomedX || (dx < 0 ? start.atRight : start.atLeft);
             if (atEdge) ref.invokeMethodAsync("OnSwipe", dx < 0 ? 1 : -1);
         } else if (s.mode === "v" && Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx) * 1.5) {
-            const atEdge = !zoomedY || (dy < 0
-                ? stage.scrollTop + stage.clientHeight >= stage.scrollHeight - 2
-                : stage.scrollTop <= 2);
+            const atEdge = !zoomedY || (dy < 0 ? start.atBottom : start.atTop);
             if (atEdge) ref.invokeMethodAsync("OnSwipe", dy < 0 ? 1 : -1);
         }
     };
@@ -312,4 +334,6 @@ export function cropStop() {
     c.layer.removeEventListener("pointerup", c.up);
     c.layer.removeEventListener("pointercancel", c.up);
     c.layer.innerHTML = "";
+    const wrap = c.layer.parentElement;
+    if (wrap) layerCleared(wrap);
 }
