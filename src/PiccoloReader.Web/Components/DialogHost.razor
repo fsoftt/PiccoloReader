@@ -43,6 +43,20 @@
                 </div>
             </div>
             break;
+        case UiService.DialogKind.IosInstall:
+            <div class="scrim" @onclick="() => Ui.Resolve(null)">
+                <div class="sheet ios-install" role="dialog" aria-label="@r.Title" data-testid="ios-install-sheet" @onclick:stopPropagation>
+                    <div class="handle"></div>
+                    <div class="sheet-title">@r.Title</div>
+                    <ol class="ios-steps">
+                        <li><span class="ios-n">1</span><span>@WebText.IosInstallStep1 <span class="ios-share"><Icon G="E6B8" Class="s20" /></span></span></li>
+                        <li><span class="ios-n">2</span><span>@WebText.IosInstallStep2 <span class="ios-share"><Icon G="E145" Class="s20" /></span></span></li>
+                        <li><span class="ios-n">3</span><span>@WebText.IosInstallStep3</span></li>
+                    </ol>
+                    <button class="btn" data-testid="ios-install-ok" @onclick="() => Ui.Resolve(r.Accept)">@r.Accept</button>
+                </div>
+            </div>
+            break;
         case UiService.DialogKind.Alert:
             <div class="scrim center" @onclick="() => Ui.Resolve(r.Accept)">
                 <div class="dialog" role="alertdialog" aria-label="@r.Title" @onclick:stopPropagation>

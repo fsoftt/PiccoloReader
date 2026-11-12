@@ -4,7 +4,7 @@ namespace PiccoloReader.Web.Services;
 // delete-confirm overlay. DialogHost renders whatever is pending.
 public sealed class UiService
 {
-    public enum DialogKind { Sheet, Prompt, Confirm, Alert }
+    public enum DialogKind { Sheet, Prompt, Confirm, Alert, IosInstall }
 
     public sealed record Request(DialogKind Kind, string Title, string? Message, IReadOnlyList<string> Options,
         string Initial, string Accept, string Cancel, TaskCompletionSource<string?> Result);
@@ -23,6 +23,9 @@ public sealed class UiService
 
     public async Task<bool> ConfirmAsync(string title, string message, string accept, string cancel)
         => await Show(new Request(DialogKind.Confirm, title, message, [], "", accept, cancel, new())) is not null;
+
+    public Task ShowIosInstallAsync(string title, string ok)
+        => Show(new Request(DialogKind.IosInstall, title, null, [], "", ok, ok, new()));
 
     // MAUI DisplayAlertAsync with a single button.
     public async Task AlertAsync(string title, string message, string ok)

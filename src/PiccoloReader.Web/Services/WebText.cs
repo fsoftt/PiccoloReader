@@ -12,6 +12,13 @@ public static class WebText
 
     public static string UpdateAvailable => T("A new version is available", "Hay una nueva versión disponible");
     public static string Reload => T("Reload", "Recargar");
+    public static string IosInstallTitle => T("Install on iPhone or iPad", "Instalar en iPhone o iPad");
+    public static string IosInstallStep1 => T("Tap the Share button in the Safari toolbar", "Toca el botón Compartir en la barra de Safari");
+    public static string IosInstallStep2 => T("Scroll down and choose Add to Home Screen", "Desplázate y elige Añadir a pantalla de inicio");
+    public static string IosInstallStep3 => T("Tap Add. Piccolo Reader opens full screen, like an app", "Toca Añadir. Piccolo Reader se abre a pantalla completa, como una app");
+    public static string IosInstallHint => T("Install Piccolo Reader: Share, then Add to Home Screen", "Instala Piccolo Reader: Compartir y Añadir a pantalla de inicio");
+    public static string IosInstallShow => T("Show me", "Cómo");
+    public static string GotIt => T("Got it", "Entendido");
     public static string InstallApp => T("Install app", "Instalar app");
     public static string InstallAppDescription => T("Add Piccolo Reader to your home screen or desktop", "Añade Piccolo Reader a tu pantalla de inicio o escritorio");
     public static string Installed => T("Installed", "Instalada");
