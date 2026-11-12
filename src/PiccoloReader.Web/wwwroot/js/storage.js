@@ -33,3 +33,28 @@ export async function readFile(name) {
         throw e;
     }
 }
+
+export async function deleteFile(name) {
+    try {
+        const parts = name.split("/");
+        const file = parts.pop();
+        const dir = await dirFor(parts, false);
+        await dir.removeEntry(file);
+    } catch (e) {
+        if (e.name !== "NotFoundError") throw e;
+    }
+}
+
+export function getLanguage() {
+    return (navigator.language || "en").toLowerCase();
+}
+
+// Flush pending writes when the page is hidden or closed, so the 300 ms
+// debounce cannot lose the last change. ref is a DotNetObjectReference.
+let flushRef = null;
+export function registerFlush(ref) {
+    flushRef = ref;
+    const flush = () => { try { flushRef?.invokeMethodAsync("FlushAsync"); } catch { } };
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+    window.addEventListener("pagehide", flush);
+}

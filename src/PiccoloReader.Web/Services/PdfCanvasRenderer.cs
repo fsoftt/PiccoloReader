@@ -1,10 +1,9 @@
-using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
 namespace PiccoloReader.Web.Services;
 
-// Web-specific renderer: Core's IPdfPageRenderer returns PNG bytes, but in the
-// browser pdf.js draws straight onto a <canvas>, which avoids the encode/copy.
+// Web-specific PDF access: pdf.js draws straight onto a <canvas> (see viewer.js),
+// so Core's PNG-returning IPdfPageRenderer is not used.
 public sealed class PdfCanvasRenderer(IJSRuntime js)
 {
     private readonly Lazy<Task<IJSObjectReference>> _module = new(() =>
@@ -19,12 +18,10 @@ public sealed class PdfCanvasRenderer(IJSRuntime js)
     public async Task<int> OpenAsync(string fileName)
         => await (await ModuleAsync()).InvokeAsync<int>("openPdf", fileName);
 
-    public async Task RenderPageAsync(string fileName, int pageIndex, ElementReference canvas, int maxWidth, int maxHeight)
-        => await (await ModuleAsync()).InvokeVoidAsync("renderPage", fileName, pageIndex, canvas, maxWidth, maxHeight);
+    // Object URL of the cached first-page thumbnail, or null when the PDF is unreadable.
+    public async Task<string?> ThumbnailUrlAsync(string fileName, int sheetId)
+        => await (await ModuleAsync()).InvokeAsync<string?>("thumbnailUrl", fileName, sheetId);
 
-    public async Task RegisterKeysAsync(DotNetObjectReference<Pages.Viewer> target)
-        => await (await ModuleAsync()).InvokeVoidAsync("registerKeys", target);
-
-    public async Task UnregisterKeysAsync()
-        => await (await ModuleAsync()).InvokeVoidAsync("unregisterKeys");
+    public async Task DeleteFilesAsync(string fileName, int sheetId)
+        => await (await ModuleAsync()).InvokeVoidAsync("deleteSheetFiles", fileName, sheetId);
 }
