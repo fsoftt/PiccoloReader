@@ -1,71 +1,236 @@
 @page "/"
-@inject AppDatabase Db
-@inject PersistentDatabase Persist
-@inject PdfCanvasRenderer Pdf
+@inject LibraryViewModel Vm
+@inject WebLibrary Lib
+@inject UiService Ui
+@inject NavigationManager Nav
 
-<h1>Library</h1>
+<div class="page">
+    <div class="header">
+        <div class="titles">
+            <h1 class="page-title">@AppStrings.Library</h1>
+            <span class="caption">@Vm.SummaryText</span>
+        </div>
+        <div class="actions">
+            <button class="icon-btn round" data-testid="new-folder" aria-label="@AppStrings.NewFolder" @onclick="CreateFolderAsync"><Icon G="E2CC" /></button>
+            <label class="icon-btn round file-btn" data-testid="import" aria-label="@AppStrings.ImportPdf">
+                <Icon G="E2C6" />
+                <InputFile OnChange="ImportAsync" accept=".pdf,application/pdf" multiple />
+            </label>
+        </div>
+    </div>
 
-<label class="btn">
-    Import PDF
-    <InputFile OnChange="ImportAsync" accept=".pdf" hidden />
-</label>
-@if (_status is not null) { <p class="status">@_status</p> }
+    @if (Vm.HasMultipleRootSheets)
+    {
+        <div class="searchrow">
+            <div class="searchbox">
+                <Icon G="E8B6" Class="s20 c-muted" />
+                <input data-testid="sheet-search" placeholder="@AppStrings.SearchSheetsPlaceholder" @bind="SheetSearch" @bind:event="oninput" />
+                @if (!string.IsNullOrEmpty(Vm.SheetSearchText))
+                {
+                    <button class="icon-btn" @onclick="ClearSearch"><Icon G="E5CD" Class="s20 c-muted" /></button>
+                }
+            </div>
+            <button class="icon-btn field" data-testid="sheet-sort" aria-label="@AppStrings.SortLabel" @onclick="SortSheetsAsync"><Icon G="E164" Class="s20" /></button>
+        </div>
+    }
 
-@if (_sheets is null)
-{
-    <p>Loading...</p>
-}
-else if (_sheets.Count == 0)
-{
-    <p>No sheets yet. Import a PDF.</p>
-}
-else
-{
-    <ul class="sheets">
-        @foreach (var s in _sheets)
+    @if (Vm.HasFolders)
+    {
+        <div class="section-row">
+            <span class="section-label">@AppStrings.Folders</span>
+            @if (Vm.HasMultipleFolders)
+            {
+                <button class="icon-btn" aria-label="@AppStrings.SearchFoldersPlaceholder" @onclick="ToggleFolderSearch"><Icon G="E8B6" Class="s20 c-muted" /></button>
+                <button class="icon-btn" data-testid="folder-sort" aria-label="@AppStrings.SortFoldersByTitle" @onclick="SortFoldersAsync"><Icon G="E164" Class="s20 c-muted" /></button>
+            }
+        </div>
+        @if (Vm.IsFolderSearchVisible)
         {
-            <li><a href="viewer/@s.Id">@s.Title</a> <span class="meta">(@s.PageCount pages, last viewed page @(s.LastViewedPageIndex + 1))</span></li>
+            <div class="searchrow" style="padding-top:0">
+                <div class="searchbox">
+                    <input placeholder="@AppStrings.SearchFoldersPlaceholder" value="@Vm.FolderSearchText" @oninput="OnFolderSearch" />
+                </div>
+            </div>
         }
-    </ul>
-}
+        <div class="folder-grid">
+            @foreach (var f in Vm.Folders)
+            {
+                var folder = f;
+                <div class="card folder-card" role="button" tabindex="0" data-testid="folder-card" @key="folder.Id"
+                     @onclick="() => OpenFolder(folder)" @oncontextmenu="() => FolderMenuAsync(folder)" @oncontextmenu:preventDefault
+                     @onkeydown="e => FolderKey(e, folder)">
+                    <Icon G="E2C7" Class="s20 c-primary" />
+                    <span class="stack">
+                        <span class="row-title name ellipsis" data-testid="folder-name">@folder.Name</span>
+                        <span class="caption ellipsis">@AppStrings.SheetCount(folder.SheetCount)</span>
+                    </span>
+                    <button class="icon-btn more" aria-label="@AppStrings.MoreOptions" @onclick="() => FolderMenuAsync(folder)" @onclick:stopPropagation><Icon G="E5D4" Class="s20 c-muted" /></button>
+                </div>
+            }
+        </div>
+    }
+
+    @if (Vm.HasSheetResults)
+    {
+        <span class="section-label section-pad">@AppStrings.Sheets</span>
+        @foreach (var s in Vm.RootSheets)
+        {
+            var sheet = s;
+            <SheetRow @key="sheet.Id" Sheet="sheet" CanReorder="Vm.CanReorderSheets"
+                      OnOpen="() => OpenSheet(sheet)" OnMore="() => SheetMenuAsync(sheet)"
+                      OnMoveUp="() => MoveAsync(sheet, -1)" OnMoveDown="() => MoveAsync(sheet, 1)" />
+        }
+    }
+    @if (Vm.HasNoSheetResults)
+    {
+        <div class="empty compact" data-testid="no-results">
+            <Icon G="E8B6" Class="s32 c-muted" />
+            <span class="row-title">@AppStrings.NoResultsTitle</span>
+            <span class="caption">@AppStrings.NoResultsMessage</span>
+        </div>
+    }
+    @if (Vm.IsEmpty && _loaded)
+    {
+        <div class="empty" data-testid="empty">
+            <Icon G="E873" Class="s48 c-primary" />
+            <span class="row-title" style="font-size:18px">@AppStrings.EmptyLibraryTitle</span>
+            <span class="caption">@AppStrings.EmptyLibraryMessage</span>
+            <label class="btn file-btn">@AppStrings.ImportPdf<InputFile OnChange="ImportAsync" accept=".pdf,application/pdf" multiple /></label>
+        </div>
+    }
+</div>
 
 @code {
-    private const long MaxPdfBytes = 200L * 1024 * 1024;
-    private List<Sheet>? _sheets;
-    private string? _status;
+    private bool _loaded;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private string SheetSearch
+    {
+        get => Vm.SheetSearchText;
+        set => Vm.SheetSearchText = value;
+    }
 
-    private async Task LoadAsync() => _sheets = await Db.Connection.Table<Sheet>().OrderBy(s => s.Title).ToListAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        Vm.PropertyChanged += (_, _) => InvokeAsync(StateHasChanged);
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        await Vm.LoadAsync();
+        Vm.PublishConcertQueue();
+        _loaded = true;
+        StateHasChanged();
+    }
+
+    private void ClearSearch() => Vm.SheetSearchText = string.Empty;
+
+    private void ToggleFolderSearch() => Vm.IsFolderSearchVisible = !Vm.IsFolderSearchVisible;
+
+    private void OnFolderSearch(ChangeEventArgs e) => Vm.FolderSearchText = e.Value?.ToString() ?? string.Empty;
+
+    private void OpenFolder(Folder f) => Nav.NavigateTo($"folder/{f.Id}");
+
+    private void FolderKey(KeyboardEventArgs e, Folder f)
+    {
+        if (e.Key is "Enter" or " ") OpenFolder(f);
+    }
+
+    private void OpenSheet(Sheet s)
+    {
+        Vm.PublishConcertQueue();
+        Nav.NavigateTo($"viewer/{s.Id}");
+    }
+
+    private async Task CreateFolderAsync()
+    {
+        var name = await Ui.PromptAsync(AppStrings.CreateFolderTitle, AppStrings.FolderNamePrompt, AppStrings.OK, AppStrings.Cancel);
+        if (name is null) return;
+        if (FolderNameNormalizer.Normalize(name) is null) { Ui.ShowToast(AppStrings.FolderNameEmptyMessage); return; }
+        await Lib.CreateFolderAsync(name);
+        await ReloadAsync();
+    }
 
     private async Task ImportAsync(InputFileChangeEventArgs e)
     {
-        foreach (var file in e.GetMultipleFiles(20))
+        foreach (var file in e.GetMultipleFiles(50))
         {
             try
             {
-                _status = $"Importing {file.Name}...";
-                StateHasChanged();
-                using var ms = new MemoryStream();
-                await file.OpenReadStream(MaxPdfBytes).CopyToAsync(ms);
-                // Unique stored name so two PDFs with the same name do not collide.
-                var stored = $"{Guid.NewGuid():N}.pdf";
-                var pages = await Pdf.ImportAsync(stored, ms.ToArray());
-                await Db.Connection.InsertAsync(new Sheet
-                {
-                    Title = Path.GetFileNameWithoutExtension(file.Name),
-                    FileName = stored,
-                    PageCount = pages,
-                    DateAdded = DateTime.UtcNow,
-                });
-                Persist.ScheduleSave();
-                _status = $"Imported {file.Name} ({pages} pages).";
+                await using var stream = file.OpenReadStream(WebLibrary.MaxPdfBytes);
+                await Lib.ImportAsync(file.Name, stream, null);
             }
             catch (Exception ex)
             {
-                _status = $"Import failed: {ex.Message}";
+                Ui.ShowToast($"{file.Name}: {ex.Message}");
             }
         }
-        await LoadAsync();
+        await ReloadAsync();
+    }
+
+    private async Task SortSheetsAsync()
+    {
+        var pick = await Ui.ChooseAsync(AppStrings.SortSheetsByTitle, SortChoices.SheetLabels, AppStrings.Cancel);
+        if (pick is null) return;
+        var (field, dir) = SortChoices.Parse(pick);
+        Vm.ApplySheetSort(field, dir);
+        Vm.PublishConcertQueue();
+    }
+
+    private async Task SortFoldersAsync()
+    {
+        var pick = await Ui.ChooseAsync(AppStrings.SortFoldersByTitle, SortChoices.FolderLabels, AppStrings.Cancel);
+        if (pick is null) return;
+        var (field, dir) = SortChoices.Parse(pick);
+        Vm.ApplyFolderSort(field, dir);
+    }
+
+    private async Task MoveAsync(Sheet s, int delta)
+    {
+        var list = Vm.RootSheets;
+        var i = list.IndexOf(s);
+        var j = i + delta;
+        if (i < 0 || j < 0 || j >= list.Count) return;
+        list.Move(i, j);
+        await Vm.CommitSheetOrderAsync();
+        await Lib.SetOrderAsync(null, list.Select(x => x.Id).ToList());
+        await ReloadAsync();
+    }
+
+    private async Task FolderMenuAsync(Folder f)
+    {
+        var pick = await Ui.ChooseAsync($"\"{f.Name}\"", [AppStrings.DeleteSheetsOption, AppStrings.KeepSheetsOption], AppStrings.Cancel);
+        if (pick is null) return;
+        var deleteSheets = pick == AppStrings.DeleteSheetsOption;
+        if (deleteSheets && !await Ui.ConfirmAsync(AppStrings.DeleteFolderTitle, string.Format(AppStrings.DeleteFolderMessageFormat, f.Name), AppStrings.Delete, AppStrings.Cancel)) return;
+        await Lib.DeleteFolderAsync(f, deleteSheets);
+        await ReloadAsync();
+    }
+
+    private async Task SheetMenuAsync(Sheet s)
+    {
+        var pick = await Ui.ChooseAsync($"\"{s.Title}\"", [AppStrings.Rename, AppStrings.Move, AppStrings.Delete], AppStrings.Cancel);
+        if (pick == AppStrings.Rename)
+        {
+            var title = await Ui.PromptAsync(AppStrings.RenameSheetTitle, AppStrings.SheetNamePrompt, AppStrings.OK, AppStrings.Cancel, s.Title);
+            if (title is null) return;
+            if (string.IsNullOrWhiteSpace(title)) { Ui.ShowToast(AppStrings.SheetNameEmptyMessage); return; }
+            await Lib.RenameSheetAsync(s, title);
+        }
+        else if (pick == AppStrings.Move)
+        {
+            var all = Vm.Folders.ToList();
+            if (all.Count == 0) { Ui.ShowToast(AppStrings.NoFoldersToMoveMessage); return; }
+            var target = await Ui.ChooseAsync(AppStrings.MoveToTitle, all.Select(x => x.Name).ToList(), AppStrings.Cancel);
+            if (target is null) return;
+            await Lib.MoveSheetAsync(s, all.First(x => x.Name == target).Id);
+        }
+        else if (pick == AppStrings.Delete)
+        {
+            if (!await Ui.ConfirmAsync(AppStrings.DeleteSheetTitle, string.Format(AppStrings.DeleteSheetMessageFormat, s.Title), AppStrings.Delete, AppStrings.Cancel)) return;
+            await Lib.DeleteSheetAsync(s);
+        }
+        else return;
+        await ReloadAsync();
     }
 }

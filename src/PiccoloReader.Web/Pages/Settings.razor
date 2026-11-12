@@ -1,0 +1,100 @@
+@page "/settings"
+@inject AppCulture Culture
+@inject UiService Ui
+@inject NavigationManager Nav
+@inject IConcertModePreferenceService Concert
+@inject IReadingPreferenceService Reading
+
+<div class="page">
+    <div class="header"><h1 class="page-title">@AppStrings.Settings</h1></div>
+
+    <div class="settings">
+        <span class="section-label">@AppStrings.SettingsGeneralSection</span>
+        <div class="card group">
+            <button class="row" data-testid="language-row" aria-label="@AppStrings.LanguageSectionHeader" @onclick="PickLanguageAsync">
+                <Icon G="E894" Class="s20 c-primary" />
+                <span class="stack"><span class="row-title">@AppStrings.LanguageSectionHeader</span></span>
+                <span class="value" data-testid="language-value">@(Culture.Code == "es" ? "Español" : "English")</span>
+                <Icon G="E5CC" Class="s20 c-muted" />
+            </button>
+            <button class="row" data-testid="reading-mode-row" @onclick="PickReadingModeAsync">
+                <Icon G="E8D4" Class="s20 c-primary" />
+                <span class="stack"><span class="row-title">@AppStrings.ReadingModeLabel</span></span>
+                <span class="value" data-testid="reading-mode-value">@ModeName(Reading.GetReadingMode())</span>
+                <Icon G="E5CC" Class="s20 c-muted" />
+            </button>
+            <button class="row" data-testid="concert-row" role="switch" aria-checked="@_concert.ToString().ToLowerInvariant()" @onclick="ToggleConcert">
+                <Icon G="E03D" Class="s20 c-primary" />
+                <span class="stack">
+                    <span class="row-title">@AppStrings.ConcertModeLabel</span>
+                    <span class="caption" style="font-size:12px">@AppStrings.ConcertModeDescription</span>
+                </span>
+                <span class="switch @(_concert ? "on" : "")"></span>
+            </button>
+        </div>
+
+        <span class="section-label">@AppStrings.LegalSectionHeader</span>
+        <div class="card group">
+            <a class="row" target="_blank" rel="noopener" href="@LegalLinks.GetPrivacyPolicyUrl(Culture.Code)">
+                <Icon G="E32A" Class="s20 c-primary" />
+                <span class="stack">
+                    <span class="row-title">@AppStrings.PrivacyPolicyLabel</span>
+                    <span class="caption" style="font-size:12px">@AppStrings.PrivacyPolicyDescription</span>
+                </span>
+                <Icon G="E89E" Class="s20 c-muted" />
+            </a>
+            <a class="row" target="_blank" rel="noopener" href="@LegalLinks.GetTermsOfServiceUrl(Culture.Code)">
+                <Icon G="E873" Class="s20 c-primary" />
+                <span class="stack">
+                    <span class="row-title">@AppStrings.TermsOfServiceLabel</span>
+                    <span class="caption" style="font-size:12px">@AppStrings.TermsOfServiceDescription</span>
+                </span>
+                <Icon G="E89E" Class="s20 c-muted" />
+            </a>
+        </div>
+
+        <div class="credits caption" style="font-size:12px">
+            <span>@AppStrings.MadeWithLoveBy <a href="https://github.com/fsoftt" target="_blank" rel="noopener">@@fsoftt</a></span>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _concert;
+
+    protected override void OnInitialized() => _concert = Concert.Enabled;
+
+    private static string ModeName(ReadingMode m) => m switch
+    {
+        ReadingMode.VerticalPaged => AppStrings.ReadingModeNameVerticalPaged,
+        ReadingMode.VerticalContinuous => AppStrings.ReadingModeNameVerticalContinuous,
+        _ => AppStrings.ReadingModeNameHorizontal,
+    };
+
+    private async Task PickLanguageAsync()
+    {
+        var pick = await Ui.ChooseAsync(AppStrings.LanguageSectionHeader, ["English", "Español"], AppStrings.Cancel);
+        if (pick is null) return;
+        var code = pick == "Español" ? "es" : "en";
+        if (code == Culture.Code) return;
+        // Like the Android app (restart required): the new language applies on a fresh load,
+        // when the matching AppStrings satellite resources are picked up.
+        Culture.Set(code);
+        Nav.NavigateTo(Nav.Uri, forceLoad: true);
+    }
+
+    private async Task PickReadingModeAsync()
+    {
+        var modes = new[] { ReadingMode.Horizontal, ReadingMode.VerticalPaged, ReadingMode.VerticalContinuous };
+        var pick = await Ui.ChooseAsync(AppStrings.ReadingModeLabel, modes.Select(ModeName).ToList(), AppStrings.Cancel);
+        var mode = modes.FirstOrDefault(m => ModeName(m) == pick);
+        if (pick is null) return;
+        Reading.SetReadingMode(mode);
+    }
+
+    private void ToggleConcert()
+    {
+        _concert = !_concert;
+        Concert.Enabled = _concert;
+    }
+}

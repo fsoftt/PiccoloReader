@@ -1,0 +1,22 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+
+<div class="app">
+    <div class="content">@Body</div>
+    <nav class="tabbar">
+        <a class="tab @(Active("") ? "active" : "")" href="" data-testid="tab-library">
+            <span class="pill"><Icon G="E2C7" /></span><span>@AppStrings.Library</span>
+        </a>
+        <a class="tab @(Active("settings") ? "active" : "")" href="settings" data-testid="tab-settings">
+            <span class="pill"><Icon G="E429" /></span><span>@AppStrings.Settings</span>
+        </a>
+    </nav>
+</div>
+<DialogHost />
+
+@code {
+    private bool Active(string route) =>
+        string.Equals(Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].TrimEnd('/'), route, StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnInitialized() => Nav.LocationChanged += (_, _) => InvokeAsync(StateHasChanged);
+}

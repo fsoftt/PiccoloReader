@@ -1,0 +1,6 @@
+<span class="mi @Class" aria-hidden="true">@char.ConvertFromUtf32(Convert.ToInt32(G, 16))</span>
+@code {
+    // G is the hex code point of the Material Symbols glyph (same codes as the MAUI XAML).
+    [Parameter, EditorRequired] public string G { get; set; } = "";
+    [Parameter] public string? Class { get; set; }
+}
