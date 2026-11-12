@@ -1,0 +1,66 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "src/PiccoloReader.Web/**"
+      - "src/PiccoloReader.Core/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Jekyll site
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
+      - name: Publish web app
+        run: dotnet publish src/PiccoloReader.Web -c Release -o publish
+
+      - name: Add web app to site under /app
+        run: |
+          mkdir -p _site/app
+          cp -r publish/wwwroot/. _site/app/
+          # The app is served from /PiccoloReader/app/ (local dev uses "/").
+          sed -i 's|<base href="/" />|<base href="/PiccoloReader/app/" />|' _site/app/index.html
+          grep -q '/PiccoloReader/app/' _site/app/index.html
+          # Pages compresses on the fly; precompressed copies would only add size.
+          find _site/app -name '*.br' -delete -o -name '*.gz' -delete
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
