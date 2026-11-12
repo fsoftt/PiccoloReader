@@ -33,8 +33,12 @@ public sealed class PersistentDatabase(IAppStorageProvider storage, BrowserInter
         await SaveAsync(CancellationToken.None);
     }
 
-    public void ScheduleSave()
+    // Raised for every library change (not for bookkeeping writes), so the linked folder can mirror it.
+    public event Action? Changed;
+
+    public void ScheduleSave(bool notify = true)
     {
+        if (notify) Changed?.Invoke();
         _debounce?.Cancel();
         var cts = _debounce = new CancellationTokenSource();
         _ = SaveAfterDelayAsync(cts.Token);

@@ -5,6 +5,7 @@ using Microsoft.JSInterop;
 using PiccoloReader.Core.Data;
 using PiccoloReader.Core.Services;
 using PiccoloReader.Core.Services.Concert;
+using PiccoloReader.Core.Services.ExternalLibrary;
 using PiccoloReader.Core.Services.Metronome;
 using PiccoloReader.Core.Services.Piano;
 using PiccoloReader.Core.Services.Tuner;
@@ -27,6 +28,18 @@ builder.Services.AddSingleton(sp => sp.GetRequiredService<PersistentDatabase>().
 builder.Services.AddSingleton<UiService>();
 builder.Services.AddSingleton<AppCulture>();
 builder.Services.AddSingleton<WebLibrary>();
+
+// PWA: offline shell, backup, linked folder, drag-drop / share / file-handler imports, tutorial
+builder.Services.AddSingleton<PwaService>();
+builder.Services.AddSingleton<ImportService>();
+builder.Services.AddSingleton<LibraryFiles>();
+builder.Services.AddSingleton<BackupService>();
+builder.Services.AddSingleton<LinkedFolderStore>();
+builder.Services.AddSingleton<IExternalLibraryState, LocalStorageExternalLibraryState>();
+builder.Services.AddSingleton<LinkedFolderService>();
+builder.Services.AddSingleton<ITutorialPreferenceService, LocalStorageTutorialPreferenceService>();
+builder.Services.AddSingleton<IConcertTutorialPreferenceService, LocalStorageConcertTutorialPreferenceService>();
+builder.Services.AddTransient<TutorialViewModel>();
 
 // Core preference interfaces over localStorage
 builder.Services.AddSingleton<ILanguagePreferenceService, LocalStorageLanguagePreferenceService>();
@@ -84,5 +97,12 @@ await persist.InitializeAsync();
 await host.Services.GetRequiredService<AppCulture>().InitializeAsync();
 // Write the DB at once when the tab is hidden or closed instead of waiting for the debounce.
 await interop.RegisterFlushAsync(DotNetObjectReference.Create(persist));
+
+// Service worker, install prompt, drag-drop/launch queue; then PDFs shared to the installed app.
+var pwa = host.Services.GetRequiredService<PwaService>();
+await pwa.InitializeAsync();
+host.Services.GetRequiredService<ImportService>().Start();
+await host.Services.GetRequiredService<LinkedFolderService>().InitializeAsync();
+await pwa.CollectSharedAsync();
 
 await host.RunAsync();

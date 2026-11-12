@@ -1,0 +1,55 @@
+@page "/tutorial"
+@layout FullLayout
+@inject TutorialViewModel Vm
+@inject NavigationManager Nav
+
+@* First-run guide: the six slides of the Android TutorialPage (Core TutorialViewModel). *@
+<div class="tutorial" data-testid="tutorial" @ontouchstart="OnTouchStart" @ontouchend="OnTouchEnd">
+    <div class="slides">
+        @for (var i = 0; i < Vm.Slides.Count; i++)
+        {
+            var slide = Vm.Slides[i];
+            <section class="slide @(i == Vm.CurrentIndex ? "current" : "")" aria-hidden="@(i != Vm.CurrentIndex ? "true" : "false")">
+                <span class="slide-icon"><Icon G="@Hex(slide.Glyph)" Class="s48" /></span>
+                <h1 class="page-title slide-title">@slide.Title</h1>
+                <p class="slide-text">@slide.Description</p>
+            </section>
+        }
+    </div>
+    <div class="dots" aria-hidden="true">
+        @for (var i = 0; i < Vm.Slides.Count; i++)
+        {
+            <span class="dot @(i == Vm.CurrentIndex ? "on" : "")"></span>
+        }
+    </div>
+    <div class="tutorial-actions">
+        @if (Vm.ShowSkip)
+        {
+            <button class="btn text skip" data-testid="tutorial-skip" @onclick="() => Vm.SkipCommand.Execute(null)">@AppStrings.TutorialSkip</button>
+        }
+        <span class="spacer"></span>
+        <button class="btn next" data-testid="tutorial-next" @onclick="() => Vm.NextCommand.Execute(null)">@Vm.PrimaryButtonText</button>
+    </div>
+</div>
+
+@code {
+    private double _touchX;
+
+    protected override void OnInitialized()
+    {
+        Vm.PropertyChanged += (_, _) => InvokeAsync(StateHasChanged);
+        Vm.Finished += (_, _) => Nav.NavigateTo("", replace: true);
+    }
+
+    private static string Hex(string glyph) => ((int)glyph[0]).ToString("X4");
+
+    private void OnTouchStart(TouchEventArgs e) => _touchX = e.ChangedTouches.Length > 0 ? e.ChangedTouches[0].ClientX : 0;
+
+    private void OnTouchEnd(TouchEventArgs e)
+    {
+        if (e.ChangedTouches.Length == 0) return;
+        var dx = e.ChangedTouches[0].ClientX - _touchX;
+        if (dx < -50 && !Vm.IsLastSlide) Vm.CurrentIndex++;
+        else if (dx > 50 && Vm.CurrentIndex > 0) Vm.CurrentIndex--;
+    }
+}

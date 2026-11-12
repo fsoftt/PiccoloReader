@@ -1,5 +1,7 @@
 @page "/folder/{FolderId:int}"
 @layout FullLayout
+@implements IDisposable
+@inject ImportService Importer
 @inject FolderViewModel Vm
 @inject LibraryService Library
 @inject WebLibrary Lib
@@ -83,8 +85,18 @@
         Vm.FolderId = FolderId;
         Vm.PropertyChanged -= OnVmChanged;
         Vm.PropertyChanged += OnVmChanged;
+        Importer.Imported -= OnImported;
+        Importer.Imported += OnImported;
         _title = (await Library.GetFoldersAsync()).FirstOrDefault(f => f.Id == FolderId)?.Name ?? "";
         await ReloadAsync();
+    }
+
+    private void OnImported() => InvokeAsync(ReloadAsync);
+
+    public void Dispose()
+    {
+        Vm.PropertyChanged -= OnVmChanged;
+        Importer.Imported -= OnImported;
     }
 
     private void OnVmChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);

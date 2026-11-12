@@ -1,0 +1,20 @@
+@implements IDisposable
+@inject PwaService Pwa
+
+@* New-version prompt: the waiting service worker takes over after the reload. *@
+@if (Pwa.UpdateReady)
+{
+    <div class="update-banner card" role="status" data-testid="update-banner">
+        <Icon G="E923" Class="s20 c-primary" />
+        <span class="msg">@WebText.UpdateAvailable</span>
+        <button class="btn" data-testid="update-reload" @onclick="() => Pwa.ApplyUpdateAsync()">@WebText.Reload</button>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized() => Pwa.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Pwa.Changed -= OnChanged;
+}

@@ -5,6 +5,7 @@
 @using PiccoloReader.Core.Services.Tuner
 @inject TunerViewModel Vm
 @inject UiService Ui
+@inject PwaService Pwa
 
 <div class="page">
     <div class="header"><h1 class="page-title">@AppStrings.Tuner</h1></div>
@@ -95,7 +96,15 @@
     protected override async Task OnInitializedAsync()
     {
         Vm.PropertyChanged += OnChanged;
+        Pwa.VisibilityChanged += OnVisibility;
         await Vm.AttachAsync();
+    }
+
+    // Stop the microphone while the tab/app is hidden, listen again when it is back.
+    private void OnVisibility(bool hidden)
+    {
+        if (hidden) Vm.Detach();
+        else _ = InvokeAsync(Vm.AttachAsync);
     }
 
     private async Task RetryAsync() => await Vm.AttachAsync();
@@ -116,6 +125,7 @@
     public void Dispose()
     {
         Vm.PropertyChanged -= OnChanged;
+        Pwa.VisibilityChanged -= OnVisibility;
         Vm.Detach();
     }
 

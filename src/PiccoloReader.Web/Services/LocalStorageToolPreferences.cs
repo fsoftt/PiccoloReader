@@ -1,4 +1,6 @@
 using System.Globalization;
+using PiccoloReader.Core.Services;
+using PiccoloReader.Core.Services.Concert;
 using PiccoloReader.Core.Services.Metronome;
 using PiccoloReader.Core.Services.Piano;
 using PiccoloReader.Core.Services.Tuner;
@@ -99,5 +101,34 @@ public sealed class LocalStorageTunerStripPreferenceService(BrowserInterop b) : 
     {
         get => Store.Enum(b, "piccolo.tunerStrip.position", TunerStripPosition.Right);
         set => b.SetLocalStorageSync("piccolo.tunerStrip.position", value.ToString());
+    }
+}
+
+// First-run tutorial (TutorialViewModel) and the concert mode coach marks, over localStorage.
+public sealed class LocalStorageTutorialPreferenceService(BrowserInterop b) : ITutorialPreferenceService
+{
+    public bool GetTutorialCompleted() => b.GetLocalStorageSync("piccolo.tutorialCompleted") == "1";
+
+    public void SetTutorialCompleted(bool completed) => b.SetLocalStorageSync("piccolo.tutorialCompleted", completed ? "1" : "0");
+}
+
+public sealed class LocalStorageConcertTutorialPreferenceService(BrowserInterop b) : IConcertTutorialPreferenceService
+{
+    public bool LibrarySeen
+    {
+        get => b.GetLocalStorageSync("piccolo.concertTutorial.library") == "1";
+        set => b.SetLocalStorageSync("piccolo.concertTutorial.library", value ? "1" : "0");
+    }
+
+    public bool ViewerSeen
+    {
+        get => b.GetLocalStorageSync("piccolo.concertTutorial.viewer") == "1";
+        set => b.SetLocalStorageSync("piccolo.concertTutorial.viewer", value ? "1" : "0");
+    }
+
+    public void Reset()
+    {
+        LibrarySeen = false;
+        ViewerSeen = false;
     }
 }

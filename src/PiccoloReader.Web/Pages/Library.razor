@@ -1,9 +1,15 @@
 @page "/"
+@implements IDisposable
 @inject LibraryViewModel Vm
 @inject WebLibrary Lib
 @inject UiService Ui
 @inject NavigationManager Nav
+@inject ImportService Importer
+@inject ITutorialPreferenceService Tutorial
+@inject IConcertModePreferenceService ConcertPrefs
+@inject IConcertTutorialPreferenceService CoachPrefs
 
+<CoachMarks @ref="_coach" />
 <div class="page">
     <div class="header">
         <div class="titles">
@@ -111,8 +117,45 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Vm.PropertyChanged += (_, _) => InvokeAsync(StateHasChanged);
+        // First launch: the tutorial comes first, like the Android app.
+        if (!Tutorial.GetTutorialCompleted())
+        {
+            Nav.NavigateTo("tutorial", replace: true);
+            return;
+        }
+        Vm.PropertyChanged += OnVmChanged;
+        Importer.Imported += OnImported;
         await ReloadAsync();
+        _ = ShowCoachMarksAsync();
+    }
+
+    private CoachMarks? _coach;
+
+    private void OnVmChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    private void OnImported() => InvokeAsync(ReloadAsync);
+
+    public void Dispose()
+    {
+        Vm.PropertyChanged -= OnVmChanged;
+        Importer.Imported -= OnImported;
+    }
+
+    // Concert mode coach marks (library stage): reorder handle, the ordered list, the sort button.
+    private bool CoachDue() => ConcertTutorialPolicy.ShouldShowLibraryStage(
+        ConcertPrefs.Enabled, CoachPrefs.LibrarySeen, pageVisible: true, handlesVisible: Vm.CanReorderSheets && Vm.RootSheets.Count >= 2);
+
+    private async Task ShowCoachMarksAsync()
+    {
+        if (!CoachDue()) return;
+        await Task.Delay(900);
+        if (_coach is null || !CoachDue()) return;
+        await _coach.ShowAsync([
+            new(AppStrings.CoachLibraryHandle, "[data-testid=sheet-row] .reorder .icon-btn"),
+            new(AppStrings.CoachLibraryList, "[data-testid=sheet-row]"),
+            new(AppStrings.CoachLibrarySort, "[data-testid=sheet-sort]"),
+        ]);
+        CoachPrefs.LibrarySeen = true;
     }
 
     private async Task ReloadAsync()

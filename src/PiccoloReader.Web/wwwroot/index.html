@@ -8,10 +8,13 @@
     <!-- "/" for local dev. The Pages workflow rewrites this to /PiccoloReader/app/ after publish. -->
     <base href="/" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
     <link rel="preload" href="fonts/MaterialSymbolsOutlined.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="stylesheet" href="css/tokens.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="css/tools.css" />
+    <link rel="stylesheet" href="css/pwa.css" />
     <script>
         // GitHub Pages SPA fallback: 404.html stores the deep link here.
         (function () { var r = sessionStorage.redirect; delete sessionStorage.redirect; if (r && r !== location.href) history.replaceState(null, null, r); })();
