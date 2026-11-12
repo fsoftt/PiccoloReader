@@ -1,0 +1,79 @@
+@implements IDisposable
+@inject UiService Ui
+
+@if (Ui.Current is { } r)
+{
+    @switch (r.Kind)
+    {
+        case UiService.DialogKind.Sheet:
+            <div class="scrim" @onclick="() => Ui.Resolve(null)">
+                <div class="sheet" role="dialog" aria-label="@r.Title" @onclick:stopPropagation>
+                    <div class="handle"></div>
+                    <div class="sheet-title">@r.Title</div>
+                    @foreach (var o in r.Options)
+                    {
+                        <button class="item" @onclick="() => Ui.Resolve(o)"><span class="label">@o</span></button>
+                    }
+                    <button class="item cancel" @onclick="() => Ui.Resolve(null)">@r.Cancel</button>
+                </div>
+            </div>
+            break;
+        case UiService.DialogKind.Prompt:
+            <div class="scrim center" @onclick="() => Ui.Resolve(null)">
+                <form class="dialog" role="dialog" aria-label="@r.Title" @onclick:stopPropagation @onsubmit="SubmitPrompt">
+                    <h2>@r.Title</h2>
+                    <p class="caption">@r.Message</p>
+                    <input class="field" @ref="_input" @bind="_text" @bind:event="oninput" autocomplete="off" />
+                    <div class="buttons">
+                        <button type="button" class="btn text" @onclick="() => Ui.Resolve(null)">@r.Cancel</button>
+                        <button type="submit" class="btn">@r.Accept</button>
+                    </div>
+                </form>
+            </div>
+            break;
+        case UiService.DialogKind.Confirm:
+            <div class="scrim center" @onclick="() => Ui.Resolve(null)">
+                <div class="dialog" role="alertdialog" aria-label="@r.Title" @onclick:stopPropagation>
+                    <h2>@r.Title</h2>
+                    <p>@r.Message</p>
+                    <div class="buttons">
+                        <button class="btn text" @onclick="() => Ui.Resolve(null)">@r.Cancel</button>
+                        <button class="btn" @onclick="() => Ui.Resolve(r.Accept)">@r.Accept</button>
+                    </div>
+                </div>
+            </div>
+            break;
+    }
+}
+@if (Ui.Toast is { } t)
+{
+    <div class="toast" role="status">@t</div>
+}
+
+@code {
+    private ElementReference _input;
+    private string _text = "";
+    private UiService.Request? _seen;
+
+    protected override void OnInitialized() => Ui.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    protected override void OnParametersSet() { }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Ui.Current is { Kind: UiService.DialogKind.Prompt } r && !ReferenceEquals(r, _seen))
+        {
+            _seen = r;
+            _text = r.Initial;
+            StateHasChanged();
+            await _input.FocusAsync();
+        }
+        else if (Ui.Current is null) _seen = null;
+    }
+
+    private void SubmitPrompt() => Ui.Resolve(_text);
+
+    public void Dispose() => Ui.Changed -= OnChanged;
+}

@@ -1,0 +1,52 @@
+@inject PdfCanvasRenderer Pdf
+
+<div class="sheet-row" data-testid="sheet-row">
+    <button class="sheet-open" @onclick="OnOpen" @oncontextmenu="OnMore" @oncontextmenu:preventDefault>
+        <span class="thumb"><i></i><i></i><i></i><i></i>@if (_thumb is not null) { <img src="@_thumb" alt="" /> }</span>
+        <span class="stack">
+            <span class="row-title ellipsis" data-testid="sheet-title">@Sheet.Title</span>
+            <span class="caption ellipsis">@Meta()</span>
+        </span>
+    </button>
+    @if (CanReorder)
+    {
+        <div class="reorder">
+            <button class="icon-btn" aria-label="@AppStrings.ReorderHandleLabel" @onclick="OnMoveUp"><Icon G="E316" Class="s20 c-muted" /></button>
+            <button class="icon-btn" aria-label="@AppStrings.ReorderHandleLabel" @onclick="OnMoveDown"><Icon G="E313" Class="s20 c-muted" /></button>
+        </div>
+    }
+    <button class="icon-btn" data-testid="sheet-more" aria-label="@AppStrings.MoreOptions" @onclick="OnMore"><Icon G="E5D4" Class="s20 c-muted" /></button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Sheet Sheet { get; set; } = default!;
+    [Parameter] public bool CanReorder { get; set; }
+    [Parameter] public EventCallback OnOpen { get; set; }
+    [Parameter] public EventCallback OnMore { get; set; }
+    [Parameter] public EventCallback OnMoveUp { get; set; }
+    [Parameter] public EventCallback OnMoveDown { get; set; }
+
+    private string? _thumb;
+    private int _thumbFor = -1;
+
+    private string Meta()
+    {
+        var date = Sheet.DateAdded.ToLocalTime().ToString("d");
+        return Sheet.PageCount > 0 ? $"{AppStrings.Pages(Sheet.PageCount)} · {date}" : date;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_thumbFor == Sheet.Id) return;
+        _thumbFor = Sheet.Id;
+        try
+        {
+            _thumb = await Pdf.ThumbnailUrlAsync(Sheet.FileName, Sheet.Id);
+            if (_thumb is not null) StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // A missing thumbnail only costs the placeholder.
+        }
+    }
+}

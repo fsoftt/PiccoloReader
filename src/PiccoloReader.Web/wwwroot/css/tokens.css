@@ -1,0 +1,74 @@
+/*
+ * Design tokens of the Android app.
+ * Source of truth: src/PiccoloReader/Resources/Styles/Colors.xaml and Styles.xaml
+ * (Light/Dark pairs of the semantic colors, font sizes, corner radii, sizes).
+ * Dark follows the system theme, like AppThemeBinding in the MAUI head.
+ */
+@font-face { font-family: "OpenSans"; src: url("../fonts/OpenSans-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "OpenSans"; src: url("../fonts/OpenSans-Semibold.ttf") format("truetype"); font-weight: 600 700; font-display: swap; }
+@font-face { font-family: "Pacifico"; src: url("../fonts/Pacifico-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "MaterialOutlined"; src: url("../fonts/MaterialSymbolsOutlined.ttf") format("truetype"); font-display: block; }
+
+:root {
+    color-scheme: light dark;
+
+    --background: #F6F6FA;
+    --surface: #FFFFFF;
+    --surface-raised: #FFFFFF;
+    --outline: #E3E3EC;
+    --primary: #5B3FD9;
+    --on-primary: #FFFFFF;
+    --primary-container: #ECE7FF;
+    --on-primary-container: #432BB0;
+    --text-primary: #15151F;
+    --text-secondary: #5C5C70;
+    --text-muted: #6B6B7E;
+    --bookmark: #C98A12;
+    --tab-bar: #FFFFFF;
+    --viewer-bg: #FFFFFF;
+    --thumb-bg: #FFFFFF;
+    --thumb-stroke: #E3E3EC;
+    --disabled-bg: #C8C8C8;
+    --disabled-text: #141414;
+    --scrim: rgba(0, 0, 0, .5);
+    --splash-title: #2B0B98;
+
+    /* Sizes and radii (Styles.xaml) */
+    --radius-button: 22px;
+    --radius-card: 18px;
+    --radius-folder: 16px;
+    --radius-field: 14px;
+    --radius-sheet: 24px;
+    --radius-pill: 28px;
+    --control: 44px;
+    --font: "OpenSans", system-ui, sans-serif;
+    --fs-page-title: 30px;
+    --fs-row-title: 15px;
+    --fs-caption: 13px;
+    --fs-section: 12px;
+    --fs-body: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --background: #0E0E16;
+        --surface: #181824;
+        --surface-raised: #22222F;
+        --outline: #2E2E3E;
+        --primary: #8B6CFF;
+        --on-primary: #0E0E16;
+        --primary-container: #2A2340;
+        --on-primary-container: #D3C8FF;
+        --text-primary: #F3F3F8;
+        --text-secondary: #A3A3B5;
+        --text-muted: #7A7A8C;
+        --bookmark: #F5B544;
+        --tab-bar: #14141E;
+        --viewer-bg: #000000;
+        --thumb-bg: #F3F3F8;
+        --thumb-stroke: transparent;
+        --disabled-bg: #404040;
+        --disabled-text: #C8C8C8;
+        --splash-title: #D3C8FF;
+    }
+}

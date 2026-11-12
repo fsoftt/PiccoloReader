@@ -19,6 +19,12 @@ public sealed class BrowserInterop(IJSRuntime js)
     public async Task<byte[]?> ReadFileAsync(string name)
         => await (await ModuleAsync()).InvokeAsync<byte[]?>("readFile", name);
 
+    public async Task<string> GetLanguageAsync()
+        => await (await ModuleAsync()).InvokeAsync<string>("getLanguage");
+
+    public async Task RegisterFlushAsync<T>(DotNetObjectReference<T> target) where T : class
+        => await (await ModuleAsync()).InvokeVoidAsync("registerFlush", target);
+
     // Synchronous localStorage access for the sync-shaped Core preference interfaces.
     // Safe here: Blazor WebAssembly runs in-process with the JS runtime.
     public string? GetLocalStorageSync(string key)

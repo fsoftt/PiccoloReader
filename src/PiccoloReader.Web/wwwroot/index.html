@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Piccolo Reader (web spike)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0E0E16" />
+    <title>Piccolo Reader</title>
     <!-- "/" for local dev. The Pages workflow rewrites this to /PiccoloReader/app/ after publish. -->
     <base href="/" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preload" href="fonts/MaterialSymbolsOutlined.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="stylesheet" href="css/tokens.css" />
     <link rel="stylesheet" href="css/app.css" />
     <script>
         // GitHub Pages SPA fallback: 404.html stores the deep link here.
@@ -13,7 +17,13 @@
     </script>
 </head>
 <body>
-    <div id="app">Loading...</div>
+    <div id="app">
+        <div class="splash">
+            <div class="logo"><img src="piccolo-mark.svg" alt="" /></div>
+            <div class="title">Piccolo</div>
+            <div class="sub">Music Reader</div>
+        </div>
+    </div>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 </html>

@@ -1,44 +1,227 @@
 @page "/viewer/{SheetId:int}"
+@layout FullLayout
 @implements IAsyncDisposable
 @inject AppDatabase Db
+@inject LibraryService Library
+@inject BookmarkService Bookmarks
+@inject PageCropService Crops
 @inject PersistentDatabase Persist
 @inject PdfCanvasRenderer Pdf
+@inject ViewerInterop Vw
+@inject IReadingPreferenceService Reading
+@inject IConcertModePreferenceService Concert
+@inject ISortPreferenceService SortPrefs
+@inject IConcertQueue Queue
+@inject UiService Ui
+@inject NavigationManager Nav
 
-<div class="viewer">
-    <div class="bar">
-        <a href="">Back</a>
-        <button @onclick="PrevAsync" disabled="@(_page <= 0)">Prev</button>
-        <span>@(_page + 1) / @_pageCount</span>
-        <button @onclick="NextAsync" disabled="@(_page >= _pageCount - 1)">Next</button>
-        <span class="meta">@_sheet?.Title</span>
-    </div>
-    @if (_error is not null) { <p class="status">@_error</p> }
-    <canvas @ref="_canvas"></canvas>
+<div class="viewer" data-testid="viewer">
+    @if (_error is not null)
+    {
+        <div class="error-msg" data-testid="viewer-error">@_error</div>
+    }
+    else if (_sheet is not null)
+    {
+        <div class="stage @(_mode == ReadingMode.VerticalContinuous ? "continuous" : "")" @ref="_stage" @key="_mode" data-testid="stage" data-mode="@_mode">
+            @if (_mode == ReadingMode.VerticalContinuous)
+            {
+                <div class="clist">
+                    @for (var i = 0; i < _pageCount; i++)
+                    {
+                        <div class="cpage" data-i="@i" data-crop="@CropAttr(i)" style="aspect-ratio:@Aspect(i)"><canvas></canvas></div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="pagewrap"><canvas @ref="_canvas" data-testid="page-canvas"></canvas></div>
+            }
+        </div>
+    }
+    @if (_loading && _error is null) { <div class="spinner"></div> }
+
+    @if (_sheet is not null && _error is null)
+    {
+        <div class="floating-bar chrome @(_chrome ? "" : "hidden")" data-testid="bar">
+            <button class="icon-btn" data-testid="back" aria-label="@AppStrings.BackLabel" @onclick="BackAsync"><Icon G="E5C4" /></button>
+            <div class="titles">
+                <span class="row-title ellipsis" data-testid="viewer-title">@_sheet.Title</span>
+                <span class="caption ellipsis">@ModeName(_mode)</span>
+            </div>
+            <button class="icon-btn" data-testid="mode" aria-label="@AppStrings.ReadingModeLabel" @onclick="PickModeAsync"><Icon G="@ModeGlyph(_mode)" /></button>
+            <button class="icon-btn" data-testid="bookmarks" aria-label="@AppStrings.BookmarksTitle" @onclick="OpenBookmarks">
+                <Icon G="@(Bookmarked ? "E866" : "E867")" Class="@(Bookmarked ? "c-bookmark" : "")" />
+            </button>
+            <button class="icon-btn" data-testid="more" aria-label="@AppStrings.MoreOptions" @onclick="MoreAsync"><Icon G="E5D4" /></button>
+        </div>
+        @if (_hint is not null) { <div class="hint-pill" data-testid="hint">@_hint</div> }
+        <button class="page-indicator chrome @(_chrome ? "" : "hidden")" data-testid="page-indicator" @onclick="GoToPromptAsync">
+            @string.Format(AppStrings.PageIndicatorFormat, _page + 1, _pageCount)
+        </button>
+        <div class="zoom-pill chrome @(_chrome ? "" : "hidden")">
+            <button class="icon-btn" data-testid="zoom-out" aria-label="-" @onclick="() => ZoomBy(0.8)"><Icon G="E900" Class="s20" /></button>
+            <button class="icon-btn" data-testid="zoom-in" aria-label="+" @onclick="() => ZoomBy(1.25)"><Icon G="E8FF" Class="s20" /></button>
+        </div>
+    }
+
+    @if (_showBookmarks)
+    {
+        <div class="scrim" @onclick="CloseBookmarks">
+            <div class="sheet" role="dialog" data-testid="bookmark-sheet" @onclick:stopPropagation>
+                <div class="handle"></div>
+                <div class="sheet-title">@AppStrings.BookmarksTitle</div>
+                @foreach (var b in _bookmarks)
+                {
+                    var bm = b;
+                    <div class="item" style="padding-right:0">
+                        <button class="item" style="flex:1;min-width:0" data-testid="bookmark-item" @onclick="() => JumpBookmarkAsync(bm)">
+                            <Icon G="E866" Class="s20 c-bookmark" /><span class="label">@BookmarkLabel(bm)</span>
+                        </button>
+                        <button class="icon-btn" aria-label="@AppStrings.Delete" data-testid="bookmark-delete" @onclick="() => DeleteBookmarkAsync(bm)"><Icon G="E5CD" Class="s20 c-muted" /></button>
+                    </div>
+                }
+                <button class="item" data-testid="bookmark-add" @onclick="ShowAddBookmark"><Icon G="E145" Class="s20 c-primary" /><span class="label">@AppStrings.AddBookmarkOption</span></button>
+                <button class="item cancel" @onclick="CloseBookmarks">@AppStrings.Cancel</button>
+            </div>
+        </div>
+    }
+    @if (_showAdd)
+    {
+        <div class="scrim center" @onclick="() => _showAdd = false">
+            <form class="dialog" data-testid="bookmark-dialog" @onclick:stopPropagation @onsubmit="AddBookmarkAsync">
+                <h2>@AppStrings.AddBookmarkOption</h2>
+                <label class="caption">@AppStrings.PageNumberLabel</label>
+                <input class="field" type="number" inputmode="numeric" min="1" max="@_pageCount" @bind="_addPage" data-testid="bookmark-page" />
+                <label class="caption">@AppStrings.NameOptionalLabel</label>
+                <input class="field" @bind="_addName" placeholder="@AppStrings.NamePlaceholderExample" data-testid="bookmark-name" />
+                <div class="buttons">
+                    <button type="button" class="btn text" @onclick="() => _showAdd = false">@AppStrings.Cancel</button>
+                    <button type="submit" class="btn" data-testid="bookmark-confirm">@AppStrings.Add</button>
+                </div>
+            </form>
+        </div>
+    }
+
+    @if (_cropEditing)
+    {
+        <div class="crop-overlay" data-testid="crop-overlay">
+            <div class="hint caption">@AppStrings.CropHint</div>
+            <div class="crop-area" @ref="_cropArea">
+                <div class="crop-wrap">
+                    <canvas @ref="_cropCanvas"></canvas>
+                    <div class="crop-layer" @ref="_cropLayer"></div>
+                </div>
+            </div>
+            <div class="crop-actions">
+                <button class="btn text" data-testid="crop-cancel" @onclick="CancelCropAsync">@AppStrings.Cancel</button>
+                <button class="btn text" data-testid="crop-reset" @onclick="Vw.CropResetAsync">@AppStrings.CropReset</button>
+                <button class="btn" data-testid="crop-apply" @onclick="ApplyCropAsync">@AppStrings.CropApply</button>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
     [Parameter] public int SheetId { get; set; }
 
     private Sheet? _sheet;
+    private int _loadedId = -1;
     private int _page;
     private int _pageCount;
+    private bool _loading = true;
     private string? _error;
-    private ElementReference _canvas;
+    private ReadingMode _mode;
+    private double _zoom = 1;
+    private bool _chrome = true;
+    private string? _hint;
+    private double[] _sizes = [];
+    private Dictionary<int, PageCrop> _crops = new();
+    private List<Bookmark> _bookmarks = new();
+    private bool _showBookmarks, _showAdd;
+    private int _addPage = 1;
+    private string? _addName;
+    private bool _initPending, _cropEditing, _cropInit;
+    private int _edgeDir;
+    private DateTime _edgeAt;
+
+    private ElementReference _stage, _canvas, _cropArea, _cropCanvas, _cropLayer;
     private DotNetObjectReference<Viewer>? _self;
+
+    private bool Bookmarked => _bookmarks.Any(b => b.PageIndex == _page);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedId == SheetId) return;
+        _loadedId = SheetId;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true; _error = null; _hint = null; _zoom = 1; _chrome = true;
+        try
+        {
+            _sheet = await Library.GetSheetAsync(SheetId);
+        }
+        catch (Exception)
+        {
+            _sheet = null; _error = AppStrings.NoResultsTitle; _loading = false; return;
+        }
+
+        try
+        {
+            _pageCount = await Pdf.OpenAsync(_sheet.FileName);
+            _sizes = await Vw.PageSizesAsync(_sheet.FileName);
+            if (_sheet.PageCount != _pageCount) await Library.UpdateSheetPageCountAsync(_sheet, _pageCount);
+            _crops = await Crops.GetCropsAsync(SheetId);
+            _bookmarks = await Bookmarks.GetBookmarksAsync(SheetId);
+            _mode = Reading.GetReadingMode();
+            _page = Math.Clamp(_sheet.LastViewedPageIndex, 0, Math.Max(0, _pageCount - 1));
+            await EnsureQueueAsync();
+            _loading = false;
+            _initPending = true;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _loading = false;
+        }
+    }
+
+    // A reload of the viewer URL has no queue from the library: rebuild it from the sheet's list.
+    private async Task EnsureQueueAsync()
+    {
+        if (_sheet is null || Queue.SheetIds.Contains(_sheet.Id)) return;
+        var sheets = await Library.GetSheetsAsync(_sheet.FolderId);
+        Queue.SetQueue(SheetSorter.Sort(sheets, SortPrefs.SheetSortField, SortPrefs.SheetSortDirection).Select(s => s.Id));
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
         try
         {
-            _sheet = await Db.Connection.FindAsync<Sheet>(SheetId);
-            if (_sheet is null) { _error = "Sheet not found."; StateHasChanged(); return; }
-            _pageCount = await Pdf.OpenAsync(_sheet.FileName);
-            _page = Math.Clamp(_sheet.LastViewedPageIndex, 0, Math.Max(0, _pageCount - 1));
-            _self = DotNetObjectReference.Create(this);
-            await Pdf.RegisterKeysAsync(_self);
-            StateHasChanged();
-            await RenderAsync();
+            if (_cropInit && _cropEditing && _sheet is not null)
+            {
+                _cropInit = false;
+                await Vw.RenderFitAsync(_sheet.FileName, _page, _cropCanvas, _cropArea);
+                var c = _crops.TryGetValue(_page, out var existing) ? existing : PageCrop.Full;
+                await Vw.CropStartAsync(_cropLayer, [c.Left, c.Top, c.Right, c.Bottom]);
+            }
+
+            if (!_initPending || _sheet is null || _error is not null) return;
+            _initPending = false;
+            _self ??= DotNetObjectReference.Create(this);
+            await Vw.AttachAsync(_self, _stage, ModeCode(_mode));
+            if (_mode == ReadingMode.VerticalContinuous)
+            {
+                await Vw.ObserveContinuousAsync(_stage, _self, _sheet.FileName);
+                await Vw.SetZoomAsync(_stage, _zoom);
+                await Vw.ScrollToPageAsync(_stage, _page);
+            }
+            else
+            {
+                await RenderPagedAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -47,30 +230,306 @@
         }
     }
 
-    private async Task RenderAsync()
+    private static string ModeCode(ReadingMode m) => m switch
     {
-        if (_sheet is null) return;
-        await Pdf.RenderPageAsync(_sheet.FileName, _page, _canvas, 1600, 2400);
+        ReadingMode.VerticalPaged => "v",
+        ReadingMode.VerticalContinuous => "c",
+        _ => "h",
+    };
+
+    private static string ModeName(ReadingMode m) => m switch
+    {
+        ReadingMode.VerticalPaged => AppStrings.ReadingModeNameVerticalPaged,
+        ReadingMode.VerticalContinuous => AppStrings.ReadingModeNameVerticalContinuous,
+        _ => AppStrings.ReadingModeNameHorizontal,
+    };
+
+    // swap_horiz / swap_vert / view_agenda, as in the Android reading bar.
+    private static string ModeGlyph(ReadingMode m) => m switch
+    {
+        ReadingMode.VerticalPaged => "E8D5",
+        ReadingMode.VerticalContinuous => "E8E9",
+        _ => "E8D4",
+    };
+
+    private double[]? CropArr(int i) =>
+        _crops.TryGetValue(i, out var c) ? [c.Left, c.Top, c.Right, c.Bottom] : null;
+
+    private string CropAttr(int i) =>
+        _crops.TryGetValue(i, out var c) ? string.Join(",", new[] { c.Left, c.Top, c.Right, c.Bottom }.Select(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture))) : "";
+
+    private string Aspect(int i)
+    {
+        var (l, t, r, b) = _crops.TryGetValue(i, out var c) ? (c.Left, c.Top, c.Right, c.Bottom) : (0d, 0d, 1d, 1d);
+        var w = _sizes[2 * i] * (r - l);
+        var h = _sizes[2 * i + 1] * (b - t);
+        return $"{w.ToString(System.Globalization.CultureInfo.InvariantCulture)} / {h.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
     }
 
-    [JSInvokable] public Task PrevAsync() => GoToAsync(_page - 1);
-
-    [JSInvokable] public Task NextAsync() => GoToAsync(_page + 1);
-
-    private async Task GoToAsync(int page)
+    private async Task RenderPagedAsync()
     {
-        if (_sheet is null || page < 0 || page >= _pageCount || page == _page) return;
-        _page = page;
+        if (_sheet is null || _mode == ReadingMode.VerticalContinuous) return;
+        await Vw.RenderPagedAsync(_sheet.FileName, _page, _canvas, _stage, _zoom, CropArr(_page));
+    }
+
+    // ---- navigation
+
+    private async Task GoToAsync(int page, bool toBottom = false)
+    {
+        if (_sheet is null || page < 0 || page >= _pageCount) return;
+        _hint = null;
+        if (_mode == ReadingMode.VerticalContinuous)
+        {
+            _page = page;
+            await Vw.ScrollToPageAsync(_stage, page);
+        }
+        else
+        {
+            if (page == _page) return;
+            _page = page;
+            StateHasChanged();
+            await RenderPagedAsync();
+            if (toBottom) await Vw.ResetScrollAsync(_stage, true);
+        }
+        await SavePageAsync();
         StateHasChanged();
-        await RenderAsync();
-        _sheet.LastViewedPageIndex = page;
-        await Db.Connection.UpdateAsync(_sheet);
+    }
+
+    private async Task SavePageAsync()
+    {
+        if (_sheet is null) return;
+        await Library.UpdateSheetLastViewedPageAsync(_sheet, _page);
         Persist.ScheduleSave();
+    }
+
+    private async Task TurnAsync(int dir, bool pedal)
+    {
+        if (_cropEditing || _sheet is null || _showAdd || _showBookmarks) return;
+        if (_mode == ReadingMode.VerticalContinuous)
+        {
+            if (await Vw.ScrollStepAsync(_stage, dir) == "edge") await EdgeAsync(dir);
+            return;
+        }
+        if (pedal && await Vw.StepAsync(_stage, dir) == "scrolled") return;
+        var target = _page + dir;
+        if (target < 0 || target >= _pageCount) { await EdgeAsync(dir); return; }
+        await GoToAsync(target, toBottom: dir < 0);
+    }
+
+    // Past the last/first page: with concert mode on, a second press within 3 s opens the next/previous sheet.
+    private async Task EdgeAsync(int dir)
+    {
+        if (_sheet is null || !Concert.Enabled) return;
+        var id = dir > 0 ? Queue.NextAfter(_sheet.Id) : Queue.PreviousBefore(_sheet.Id);
+        if (id is null) return;
+        if (_edgeDir == dir && (DateTime.UtcNow - _edgeAt).TotalSeconds < 3)
+        {
+            _edgeDir = 0;
+            await SavePageAsync();
+            Nav.NavigateTo($"viewer/{id}", replace: true);
+            return;
+        }
+        _edgeDir = dir; _edgeAt = DateTime.UtcNow;
+        var next = await Library.GetSheetAsync(id.Value);
+        _hint = string.Format(dir > 0 ? AppStrings.ConcertPullNext : AppStrings.ConcertPullPrevious, next.Title);
+        StateHasChanged();
+        _ = ClearHintAsync(_hint);
+    }
+
+    private async Task ClearHintAsync(string hint)
+    {
+        await Task.Delay(3000);
+        if (_hint == hint) { _hint = null; await InvokeAsync(StateHasChanged); }
+    }
+
+    private static PageTurnKey MapKey(string key) => key switch
+    {
+        "ArrowRight" => PageTurnKey.DpadRight,
+        "ArrowLeft" => PageTurnKey.DpadLeft,
+        "ArrowDown" => PageTurnKey.DpadDown,
+        "ArrowUp" => PageTurnKey.DpadUp,
+        "PageDown" => PageTurnKey.PageDown,
+        "PageUp" => PageTurnKey.PageUp,
+        " " => PageTurnKey.Space,
+        "Enter" => PageTurnKey.Enter,
+        "MediaTrackNext" => PageTurnKey.MediaNext,
+        "MediaTrackPrevious" => PageTurnKey.MediaPrevious,
+        _ => PageTurnKey.Other,
+    };
+
+    // ---- JS callbacks
+
+    [JSInvokable]
+    public async Task OnKey(string key, bool shift)
+    {
+        var intent = PedalKeyMap.Resolve(MapKey(key), shift);
+        if (intent == PageTurnIntent.None) return;
+        await TurnAsync(intent == PageTurnIntent.Next ? 1 : -1, pedal: true);
+    }
+
+    [JSInvokable]
+    public async Task OnTap(double x, double y)
+    {
+        if (_cropEditing) return;
+        if (_hint is not null) { _hint = null; StateHasChanged(); }
+        const double zone = 0.3; // side tap zones, as in the Android viewer
+        var pos = _mode switch { ReadingMode.Horizontal => x, ReadingMode.VerticalPaged => y, _ => 0.5 };
+        if (pos < zone) await TurnAsync(-1, pedal: false);
+        else if (pos > 1 - zone) await TurnAsync(1, pedal: false);
+        else { _chrome = !_chrome; StateHasChanged(); }
+    }
+
+    [JSInvokable]
+    public Task OnSwipe(int dir) => TurnAsync(dir, pedal: false);
+
+    [JSInvokable]
+    public async Task OnZoomStep(double factor)
+    {
+        if (_cropEditing) return;
+        _zoom = factor == 0 ? 1 : Math.Clamp(_zoom * factor, 1, 5);
+        if (_mode == ReadingMode.VerticalContinuous) await Vw.SetZoomAsync(_stage, _zoom);
+        else await RenderPagedAsync();
+    }
+
+    private Task ZoomBy(double f) => OnZoomStep(f);
+
+    [JSInvokable]
+    public async Task OnResize()
+    {
+        if (_mode != ReadingMode.VerticalContinuous && !_cropEditing) await RenderPagedAsync();
+    }
+
+    [JSInvokable]
+    public async Task OnEscape()
+    {
+        if (_cropEditing) await CancelCropAsync();
+        else if (_showAdd) { _showAdd = false; StateHasChanged(); }
+        else if (_showBookmarks) CloseBookmarks();
+    }
+
+    [JSInvokable]
+    public async Task OnScrolledToPage(int page)
+    {
+        if (page == _page || _mode != ReadingMode.VerticalContinuous) return;
+        _page = page;
+        await SavePageAsync();
+        StateHasChanged();
+    }
+
+    // ---- menus
+
+    private async Task BackAsync()
+    {
+        await SavePageAsync();
+        Nav.NavigateTo(_sheet?.FolderId is int f ? $"folder/{f}" : "");
+    }
+
+    private async Task PickModeAsync()
+    {
+        var modes = new[] { ReadingMode.Horizontal, ReadingMode.VerticalPaged, ReadingMode.VerticalContinuous };
+        var pick = await Ui.ChooseAsync(AppStrings.ReadingModeLabel, modes.Select(ModeName).ToList(), AppStrings.Cancel);
+        if (pick is null) return;
+        var mode = modes.First(m => ModeName(m) == pick);
+        if (mode == _mode) return;
+        _mode = mode;
+        Reading.SetReadingMode(mode);
+        _zoom = 1;
+        _initPending = true;
+        StateHasChanged();
+    }
+
+    private async Task MoreAsync()
+    {
+        var pick = await Ui.ChooseAsync(AppStrings.MoreOptions, [AppStrings.CropPage], AppStrings.Cancel);
+        if (pick != AppStrings.CropPage) return;
+        _cropEditing = true; _cropInit = true;
+        StateHasChanged();
+    }
+
+    private async Task GoToPromptAsync()
+    {
+        var text = await Ui.PromptAsync(AppStrings.GoToPageTitle, string.Format(AppStrings.GoToPageMessageFormat, _pageCount), AppStrings.OK, AppStrings.Cancel, (_page + 1).ToString());
+        if (text is not null && int.TryParse(text.Trim(), out var n) && n >= 1 && n <= _pageCount) await GoToAsync(n - 1);
+    }
+
+    // ---- bookmarks
+
+    private static string BookmarkLabel(Bookmark b) =>
+        string.IsNullOrWhiteSpace(b.Name)
+            ? string.Format(AppStrings.BookmarkPageLabelFormat, b.PageIndex + 1)
+            : string.Format(AppStrings.BookmarkNamedPageLabelFormat, b.Name, b.PageIndex + 1);
+
+    private void OpenBookmarks() => _showBookmarks = true;
+
+    private void CloseBookmarks() => _showBookmarks = false;
+
+    private async Task JumpBookmarkAsync(Bookmark b)
+    {
+        _showBookmarks = false;
+        await GoToAsync(b.PageIndex);
+    }
+
+    private async Task DeleteBookmarkAsync(Bookmark b)
+    {
+        await Db.Connection.DeleteAsync(b);
+        Persist.ScheduleSave();
+        _bookmarks = await Bookmarks.GetBookmarksAsync(SheetId);
+    }
+
+    private void ShowAddBookmark()
+    {
+        _showBookmarks = false;
+        _addPage = _page + 1;
+        _addName = null;
+        _showAdd = true;
+    }
+
+    private async Task AddBookmarkAsync()
+    {
+        _showAdd = false;
+        var page = Math.Clamp(_addPage, 1, Math.Max(1, _pageCount)) - 1;
+        var name = string.IsNullOrWhiteSpace(_addName) ? null : _addName.Trim();
+        await Bookmarks.AddBookmarkAsync(SheetId, page, name);
+        Persist.ScheduleSave();
+        _bookmarks = await Bookmarks.GetBookmarksAsync(SheetId);
+    }
+
+    // ---- crop editor
+
+    private async Task CloseCropAsync()
+    {
+        await Vw.CropStopAsync();
+        _cropEditing = false;
+        StateHasChanged();
+        await Task.Yield();
+        _initPending = true; // the stage may have been re-laid out
+        StateHasChanged();
+    }
+
+    private Task CancelCropAsync() => CloseCropAsync();
+
+    private async Task ApplyCropAsync()
+    {
+        var r = await Vw.CropGetAsync();
+        if (r is { Length: 4 })
+        {
+            var crop = new PageCrop(r[0], r[1], r[2], r[3]);
+            await Crops.SetCropAsync(SheetId, _page, crop);
+            Persist.ScheduleSave();
+            _crops = await Crops.GetCropsAsync(SheetId);
+        }
+        await CloseCropAsync();
     }
 
     public async ValueTask DisposeAsync()
     {
-        try { await Pdf.UnregisterKeysAsync(); } catch (JSDisconnectedException) { }
+        try
+        {
+            await SavePageAsync();
+            await Vw.DetachAsync();
+        }
+        catch (JSDisconnectedException) { }
+        catch (Exception) { }
         _self?.Dispose();
     }
 }
