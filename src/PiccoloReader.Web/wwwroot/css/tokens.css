@@ -7,6 +7,7 @@
 @font-face { font-family: "OpenSans"; src: url("../fonts/OpenSans-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "OpenSans"; src: url("../fonts/OpenSans-Semibold.ttf") format("truetype"); font-weight: 600 700; font-display: swap; }
 @font-face { font-family: "Pacifico"; src: url("../fonts/Pacifico-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Bravura"; src: url("../fonts/Bravura.otf") format("opentype"); font-display: block; }
 @font-face { font-family: "MaterialOutlined"; src: url("../fonts/MaterialSymbolsOutlined.ttf") format("truetype"); font-display: block; }
 
 :root {

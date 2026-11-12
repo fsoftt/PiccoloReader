@@ -4,6 +4,7 @@
 @inject NavigationManager Nav
 @inject IConcertModePreferenceService Concert
 @inject IReadingPreferenceService Reading
+@inject PiccoloReader.Core.Services.Stylus.IStylusPreferenceService Stylus
 
 <div class="page">
     <div class="header"><h1 class="page-title">@AppStrings.Settings</h1></div>
@@ -22,6 +23,22 @@
                 <span class="stack"><span class="row-title">@AppStrings.ReadingModeLabel</span></span>
                 <span class="value" data-testid="reading-mode-value">@ModeName(Reading.GetReadingMode())</span>
                 <Icon G="E5CC" Class="s20 c-muted" />
+            </button>
+            <button class="row" data-testid="stylus-row" role="switch" aria-checked="@_stylus.ToString().ToLowerInvariant()" @onclick="ToggleStylus">
+                <Icon G="E3C9" Class="s20 c-primary" />
+                <span class="stack">
+                    <span class="row-title">@AppStrings.StylusDrawsDirectlyLabel</span>
+                    <span class="caption" style="font-size:12px">@AppStrings.StylusDrawsDirectlyDescription</span>
+                </span>
+                <span class="switch @(_stylus ? "on" : "")"></span>
+            </button>
+            <button class="row" data-testid="shapes-row" role="switch" aria-checked="@_shapes.ToString().ToLowerInvariant()" @onclick="ToggleShapes">
+                <Icon G="E663" Class="s20 c-primary" />
+                <span class="stack">
+                    <span class="row-title">@AppStrings.RecognizeShapesLabel</span>
+                    <span class="caption" style="font-size:12px">@AppStrings.RecognizeShapesDescription</span>
+                </span>
+                <span class="switch @(_shapes ? "on" : "")"></span>
             </button>
             <button class="row" data-testid="concert-row" role="switch" aria-checked="@_concert.ToString().ToLowerInvariant()" @onclick="ToggleConcert">
                 <Icon G="E03D" Class="s20 c-primary" />
@@ -60,9 +77,13 @@
 </div>
 
 @code {
-    private bool _concert;
+    private bool _concert, _stylus, _shapes;
 
-    protected override void OnInitialized() => _concert = Concert.Enabled;
+    protected override void OnInitialized() { _concert = Concert.Enabled; _stylus = Stylus.DrawsDirectly; _shapes = Stylus.RecognizesShapes; }
+
+    private void ToggleStylus() { _stylus = !_stylus; Stylus.DrawsDirectly = _stylus; }
+
+    private void ToggleShapes() { _shapes = !_shapes; Stylus.RecognizesShapes = _shapes; }
 
     private static string ModeName(ReadingMode m) => m switch
     {

@@ -118,3 +118,19 @@ export async function deleteSheetFiles(name, id) {
     await deleteFile("sheets/" + name);
     await deleteFile("thumbs/" + id + ".png");
 }
+
+// Full page for the annotated export: ~200 DPI, at most 2400 px on the long side, white background.
+export async function renderForExport(name, pageIndex) {
+    const doc = docs.get(name);
+    const page = await doc.getPage(pageIndex + 1);
+    const base = page.getViewport({ scale: 1 });
+    const scale = Math.min(200 / 72, 2400 / Math.max(base.width, base.height));
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(viewport.width));
+    canvas.height = Math.max(1, Math.round(viewport.height));
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport, canvas, intent: "print" }).promise;
+    return { canvas, w: base.width, h: base.height };
+}

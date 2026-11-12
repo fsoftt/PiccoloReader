@@ -1,4 +1,5 @@
 import { renderPage, getPageSizes } from "./pdf.js";
+import { layerRendered, layerCleared, owns, rejectTouch } from "./annot.js";
 
 const sizeCache = new Map();
 async function sizesFor(name) {
@@ -22,7 +23,8 @@ export async function renderPaged(name, i, canvas, stage, zoom, crop) {
     // Like the Android app: in landscape the page spans the full width.
     const fit = W > H ? W : Math.min(W, H * aspect);
     const css = Math.max(40, fit * zoom);
-    await renderPage(name, i, canvas, css, crop);
+    const ok = await renderPage(name, i, canvas, css, crop);
+    if (ok) layerRendered(canvas.parentElement, i, crop ?? null);
     const zoomed = css > W + 1 || css / aspect > H + 1;
     stage.classList.toggle("zoomed", zoomed);
     if (!zoomed) { stage.scrollLeft = 0; stage.scrollTop = 0; }
@@ -70,6 +72,7 @@ export function attach(ref, stage, mode) {
     };
     const pinchTarget = () => stage.querySelector(".pagewrap, .clist");
     s.down = (e) => {
+        if (rejectTouch(e)) return;
         s.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (s.pointers.size === 1) {
             s.start = { x: e.clientX, y: e.clientY, t: performance.now(), scrollLeft: stage.scrollLeft, scrollTop: stage.scrollTop };
@@ -82,9 +85,12 @@ export function attach(ref, stage, mode) {
     s.move = (e) => {
         const p = s.pointers.get(e.pointerId);
         if (!p) return;
+        const px0 = p.x, py0 = p.y;
         p.x = e.clientX; p.y = e.clientY;
         if (s.pinch && s.pointers.size >= 2) {
             const [a, b] = [...s.pointers.values()];
+            // Two-finger pan while editing (the browser's own panning is off there).
+            if (stage.classList.contains("drawing") && s.pointers.size === 2) { stage.scrollLeft -= (e.clientX - px0) / 2; stage.scrollTop -= (e.clientY - py0) / 2; }
             s.pinch.ratio = Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, s.pinch.d0);
             const w = pinchTarget();
             if (w) { w.style.transformOrigin = "center top"; w.style.transform = "scale(" + s.pinch.ratio + ")"; }
@@ -95,6 +101,7 @@ export function attach(ref, stage, mode) {
         if (!s.pointers.has(e.pointerId)) return;
         const wasPinch = s.pinch && s.pointers.size >= 2;
         s.pointers.delete(e.pointerId);
+        if (owns(e.pointerId) && !wasPinch) { s.start = null; return; }
         if (wasPinch) {
             const w = pinchTarget();
             if (w) w.style.transform = "";
@@ -201,13 +208,13 @@ async function renderItem(c, el) {
     if (el._w === width) return;
     el._w = width;
     const crop = el.dataset.crop ? el.dataset.crop.split(",").map(Number) : null;
-    try { await renderPage(c.name, i, canvas, width, crop); }
+    try { if (await renderPage(c.name, i, canvas, width, crop)) layerRendered(el, i, crop); }
     catch (e) { console.error(e); el._w = 0; }
 }
 
 function clearItem(el) {
     const canvas = el.querySelector("canvas");
-    if (canvas && el._w) { canvas.width = 1; canvas.height = 1; el._w = 0; }
+    if (canvas && el._w) { canvas.width = 1; canvas.height = 1; el._w = 0; layerCleared(el); }
 }
 
 export function setZoom(stage, zoom) {
