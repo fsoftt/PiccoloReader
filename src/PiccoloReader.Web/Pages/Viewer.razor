@@ -13,6 +13,7 @@
 @inject ISortPreferenceService SortPrefs
 @inject IConcertQueue Queue
 @inject UiService Ui
+@inject AnnotationService Anns
 @inject NavigationManager Nav
 
 <div class="viewer" data-testid="viewer">
@@ -42,7 +43,7 @@
 
     @if (_sheet is not null && _error is null)
     {
-        <div class="floating-bar chrome @(_chrome ? "" : "hidden")" data-testid="bar">
+        <div class="floating-bar chrome @(_chrome && !_editing ? "" : "hidden")" data-testid="bar">
             <button class="icon-btn" data-testid="back" aria-label="@AppStrings.BackLabel" @onclick="BackAsync"><Icon G="E5C4" /></button>
             <div class="titles">
                 <span class="row-title ellipsis" data-testid="viewer-title">@_sheet.Title</span>
@@ -57,9 +58,10 @@
         </div>
         <ViewerTools Part="strip" />
         @if (_hint is not null) { <div class="hint-pill" data-testid="hint">@_hint</div> }
-        <button class="page-indicator chrome @(_chrome ? "" : "hidden")" data-testid="page-indicator" @onclick="GoToPromptAsync">
+        <button class="page-indicator chrome @(_chrome || _editing ? "" : "hidden")" data-testid="page-indicator" @onclick="GoToPromptAsync">
             @string.Format(AppStrings.PageIndicatorFormat, _page + 1, _pageCount)
         </button>
+        <AnnotationLayer @ref="_ann" SheetId="SheetId" Page="_page" PageCount="_pageCount" Sizes="_sizes" Crops="_crops" Chrome="_chrome" Mode="_mode" EditingChanged="OnEditingChanged" />
         <div class="zoom-pill chrome @(_chrome ? "" : "hidden")">
             <button class="icon-btn" data-testid="zoom-out" aria-label="-" @onclick="() => ZoomBy(0.8)"><Icon G="E900" Class="s20" /></button>
             <button class="icon-btn" data-testid="zoom-in" aria-label="+" @onclick="() => ZoomBy(1.25)"><Icon G="E8FF" Class="s20" /></button>
@@ -142,7 +144,8 @@
     private bool _showBookmarks, _showAdd;
     private int _addPage = 1;
     private string? _addName;
-    private bool _initPending, _cropEditing, _cropInit;
+    private bool _initPending, _cropEditing, _cropInit, _editing;
+    private AnnotationLayer? _ann;
     private int _edgeDir;
     private DateTime _edgeAt;
 
@@ -214,6 +217,7 @@
             _initPending = false;
             _self ??= DotNetObjectReference.Create(this);
             await Vw.AttachAsync(_self, _stage, ModeCode(_mode));
+            if (_ann is not null) await _ann.AttachAsync(_stage);
             if (_mode == ReadingMode.VerticalContinuous)
             {
                 await Vw.ObserveContinuousAsync(_stage, _self, _sheet.FileName);
@@ -372,7 +376,7 @@
     [JSInvokable]
     public async Task OnTap(double x, double y)
     {
-        if (_cropEditing) return;
+        if (_cropEditing || _editing) return;
         if (_hint is not null) { _hint = null; StateHasChanged(); }
         const double zone = 0.3; // side tap zones, as in the Android viewer
         var pos = _mode switch { ReadingMode.Horizontal => x, ReadingMode.VerticalPaged => y, _ => 0.5 };
@@ -442,10 +446,27 @@
 
     private async Task MoreAsync()
     {
-        var pick = await Ui.ChooseAsync(AppStrings.MoreOptions, [AppStrings.CropPage], AppStrings.Cancel);
-        if (pick != AppStrings.CropPage) return;
-        _cropEditing = true; _cropInit = true;
-        StateHasChanged();
+        var pick = await Ui.ChooseAsync(AppStrings.MoreOptions,
+            [AppStrings.UndoAction, AppStrings.RedoAction, AppStrings.CropPage, AppStrings.Share, AppStrings.DownloadPdf], AppStrings.Cancel);
+        if (pick == AppStrings.UndoAction) { if (_ann is not null) await _ann.UndoAsync(); }
+        else if (pick == AppStrings.RedoAction) { if (_ann is not null) await _ann.RedoAsync(); }
+        else if (pick == AppStrings.Share || pick == AppStrings.DownloadPdf)
+        {
+            if (_ann is not null && _sheet is not null)
+                await _ann.ExportAsync(pick == AppStrings.Share, SheetShareService.BuildFileName(_sheet.Title), _sheet.FileName);
+        }
+        else if (pick == AppStrings.CropPage)
+        {
+            _cropEditing = true; _cropInit = true;
+            StateHasChanged();
+        }
+    }
+
+    private Task OnEditingChanged(bool editing)
+    {
+        _editing = editing;
+        if (editing) _chrome = true;
+        return Task.CompletedTask;
     }
 
     private async Task GoToPromptAsync()

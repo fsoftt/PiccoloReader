@@ -172,6 +172,7 @@ public static class AppStrings
     public static string Share => Get(nameof(Share));
     public static string PreparingPdf => Get(nameof(PreparingPdf));
     public static string SharePdfFailed => Get(nameof(SharePdfFailed));
+    public static string DownloadPdf => Get(nameof(DownloadPdf));
     public static string CropPage => Get(nameof(CropPage));
     public static string CropApply => Get(nameof(CropApply));
     public static string CropReset => Get(nameof(CropReset));

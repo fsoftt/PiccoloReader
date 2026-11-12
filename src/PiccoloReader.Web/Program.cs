@@ -21,6 +21,7 @@ builder.Services.AddSingleton<BrowserInterop>();
 builder.Services.AddSingleton<IAppStorageProvider, WebStorageProvider>();
 builder.Services.AddSingleton<PdfCanvasRenderer>();
 builder.Services.AddSingleton<ViewerInterop>();
+builder.Services.AddSingleton<AnnotInterop>();
 builder.Services.AddSingleton<PersistentDatabase>();
 builder.Services.AddSingleton(sp => sp.GetRequiredService<PersistentDatabase>().Database);
 builder.Services.AddSingleton<UiService>();
@@ -60,6 +61,8 @@ builder.Services.AddSingleton(sp => new PianoViewModel(sp.GetRequiredService<IPi
 builder.Services.AddSingleton(sp => new TunerViewModel(sp.GetRequiredService<ITunerInput>(), sp.GetRequiredService<ITunerPreferenceService>(), sp.GetRequiredService<IMicrophonePermissionService>()));
 builder.Services.AddSingleton(sp => new TunerStripController(sp.GetRequiredService<ITunerInput>(), sp.GetRequiredService<ITunerPreferenceService>(),
     sp.GetRequiredService<ITunerStripPreferenceService>(), sp.GetRequiredService<IMicrophonePermissionService>(), a => a()));
+builder.Services.AddSingleton<IAnnotationToolPreferenceService, LocalStorageAnnotationToolPreferenceService>();
+builder.Services.AddSingleton<PiccoloReader.Core.Services.Stylus.IStylusPreferenceService, LocalStorageStylusPreferenceService>();
 
 // Core services and view models, reused as they are
 builder.Services.AddSingleton<IConcertQueue, ConcertQueue>();
@@ -67,6 +70,7 @@ builder.Services.AddSingleton(sp => new LibraryService(sp.GetRequiredService<App
 builder.Services.AddSingleton(sp => new PdfImportService(sp.GetRequiredService<AppDatabase>(), sp.GetRequiredService<IAppStorageProvider>()));
 builder.Services.AddSingleton(sp => new BookmarkService(sp.GetRequiredService<AppDatabase>()));
 builder.Services.AddSingleton(sp => new PageCropService(sp.GetRequiredService<AppDatabase>()));
+builder.Services.AddSingleton(sp => new AnnotationService(sp.GetRequiredService<AppDatabase>()));
 builder.Services.AddTransient<LibraryViewModel>();
 builder.Services.AddTransient<FolderViewModel>();
 

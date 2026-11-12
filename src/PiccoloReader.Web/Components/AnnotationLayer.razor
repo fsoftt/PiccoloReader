@@ -1,0 +1,690 @@
+@using System.Collections.ObjectModel
+@using System.Globalization
+@using PiccoloReader.Core.Services.Stylus
+@implements IAsyncDisposable
+@inject AnnotationService Anns
+@inject LibraryService Library
+@inject PersistentDatabase Persist
+@inject AnnotInterop Js
+@inject IAnnotationToolPreferenceService ToolPrefs
+@inject IStylusPreferenceService Stylus
+@inject UiService Ui
+
+@* Annotation tools of the viewer: speed-dial FAB, tool sheet, editing bar, selection trash target.
+   Mirrors the Android SheetViewerPage (FABs, ToolSheet, EditingBarContent). Drawing itself is in annot.js. *@
+
+@if (_editing)
+{
+    <div class="floating-bar editing-bar chrome" data-testid="edit-bar">
+        <button class="icon-btn" data-testid="undo" aria-label="@AppStrings.UndoAction" disabled="@(!CanUndo)" @onclick="UndoAsync"><Icon G="E166" /></button>
+        <button class="icon-btn" data-testid="redo" aria-label="@AppStrings.RedoAction" disabled="@(!CanRedo)" @onclick="RedoAsync"><Icon G="E15A" /></button>
+        <span class="editor-page" data-testid="editor-page">@string.Format(AppStrings.EditorPageFormat, ActivePage + 1)</span>
+        <button class="done-btn" data-testid="edit-done" aria-label="@AppStrings.EditorDoneLabel" @onclick="DoneAsync">
+            <Icon G="E876" Class="s20" /><span>@AppStrings.EditorDone</span>
+        </button>
+    </div>
+}
+
+@if (_selected is not null)
+{
+    <button class="trash-target" data-testid="trash" aria-label="@AppStrings.Delete" @onclick="DeleteSelectedAsync"><Icon G="E872" /></button>
+}
+
+@if (_editing && _sheetOpen)
+{
+    <div class="tool-sheet" data-testid="tool-sheet" role="dialog" aria-label="@AppStrings.AnnotationToolsLabel">
+        <button class="sheet-handle-area" aria-label="@AppStrings.Cancel" @onclick="CloseSheet"><span class="sheet-handle"></span></button>
+        <div class="segments">
+            @Segment(AnnotationTool.Pencil, "E3C9", AppStrings.Pencil, "pencil")
+            @Segment(AnnotationTool.Highlighter, "F82B", AppStrings.Highlighter, "highlighter")
+            @Segment(AnnotationTool.Eraser, "E6D0", AppStrings.Eraser, "eraser")
+            @Segment(AnnotationTool.MusicIcons, "E405", AppStrings.Symbols, "symbols")
+            @Segment(AnnotationTool.Text, "E264", AppStrings.TextTool, "text")
+        </div>
+        <div class="tool-options">
+            @switch (_tool)
+            {
+                case AnnotationTool.Pencil:
+                    <div class="section-label">@AppStrings.Color</div>
+                    <div class="swatches" data-testid="pencil-colors">
+                        @foreach (var (hex, name) in Palette)
+                        {
+                            var h = hex;
+                            <button class="swatch @(Same(_tools.PencilColorHex, h) ? "sel" : "")" aria-label="@name" data-testid="pencil-color" @onclick="() => SetPencilColor(h)"><i style="background:@h"></i></button>
+                        }
+                    </div>
+                    <div class="slider-head"><span class="section-label">@AppStrings.Width</span><span class="caption" data-testid="pencil-width-label">@Pt(_tools.PencilStrokeWidth)</span></div>
+                    <input type="range" class="slider" data-testid="pencil-width" min="@Inv(AnnotationToolSettings.MinPencilStrokeWidth)" max="@Inv(AnnotationToolSettings.MaxPencilStrokeWidth)" step="0.0005" value="@Inv(_tools.PencilStrokeWidth)" @oninput="OnPencilWidth" />
+                    break;
+                case AnnotationTool.Highlighter:
+                    <div class="section-label">@AppStrings.Color</div>
+                    <div class="swatches" data-testid="highlighter-colors">
+                        @for (var i = 0; i < HighlighterPalette.SwatchColors.Count; i++)
+                        {
+                            var stored = HighlighterPalette.Colors[i];
+                            var sw = HighlighterPalette.SwatchColors[i];
+                            <button class="swatch @(Same(_tools.HighlighterColorHex, stored) ? "sel" : "")" data-testid="highlighter-color" aria-label="@sw" @onclick="() => SetHighlighterColor(stored)"><i style="background:@sw"></i></button>
+                        }
+                    </div>
+                    <div class="slider-head"><span class="section-label">@AppStrings.Width</span><span class="caption">@Pt(_tools.HighlighterStrokeWidth)</span></div>
+                    <input type="range" class="slider" data-testid="highlighter-width" min="@Inv(HighlighterPalette.MinStrokeWidth)" max="@Inv(HighlighterPalette.MaxStrokeWidth)" step="0.0005" value="@Inv(_tools.HighlighterStrokeWidth)" @oninput="OnHighlighterWidth" />
+                    break;
+                case AnnotationTool.Eraser:
+                    <div class="slider-head"><span class="section-label">@AppStrings.Size</span><span class="caption">@((_tools.EraserRadius * 100).ToString("0.#"))</span></div>
+                    <input type="range" class="slider" data-testid="eraser-size" min="@Inv(AnnotationToolSettings.MinEraserRadius)" max="@Inv(AnnotationToolSettings.MaxEraserRadius)" step="0.0025" value="@Inv(_tools.EraserRadius)" @oninput="OnEraserSize" />
+                    break;
+                case AnnotationTool.Text:
+                    <div class="section-label">@AppStrings.Color</div>
+                    <div class="swatches" data-testid="text-colors">
+                        @foreach (var (hex, name) in Palette)
+                        {
+                            var h = hex;
+                            <button class="swatch @(Same(_tools.TextColorHex, h) ? "sel" : "")" aria-label="@name" data-testid="text-color" @onclick="() => SetTextColor(h)"><i style="background:@h"></i></button>
+                        }
+                    </div>
+                    <div class="caption" data-testid="text-hint">@AppStrings.TextToolHint</div>
+                    break;
+                default:
+                    <div class="cat-tabs" data-testid="symbol-tabs">
+                        @for (var i = 0; i < MusicIconCatalog.Categories.Count; i++)
+                        {
+                            var idx = i;
+                            <button class="cat-tab @(idx == _cat ? "sel" : "")" data-testid="symbol-tab" @onclick="() => SelectCategory(idx)">@MusicIconCatalog.Categories[idx].Name</button>
+                        }
+                    </div>
+                    <div class="tiles" @ref="_tiles" data-testid="symbol-grid">
+                        @{ var icons = MusicIconCatalog.Categories[_cat].Icons; }
+                        @for (var i = 0; i < icons.Count; i++)
+                        {
+                            var icon = icons[i];
+                            <button class="tile" data-testid="symbol-@icon.Key" aria-label="@icon.DisplayName" @onclick="() => PlaceIconAsync(icon.Key)"><canvas data-tile="@i" width="40" height="40"></canvas></button>
+                        }
+                    </div>
+                    break;
+            }
+        </div>
+    </div>
+}
+else if ((Chrome || _editing) && !_hideFab)
+{
+    @if (_fabOpen)
+    {
+        <button class="fab-mini" style="bottom:260px" data-testid="fab-highlighter" aria-label="@AppStrings.Highlighter" @onclick="() => EnterToolAsync(AnnotationTool.Highlighter)"><Icon G="F82B" /></button>
+        <button class="fab-mini" style="bottom:204px" data-testid="fab-symbols" aria-label="@AppStrings.Symbols" @onclick="() => EnterToolAsync(AnnotationTool.MusicIcons)"><Icon G="E405" /></button>
+        <button class="fab-mini" style="bottom:148px" data-testid="fab-pencil" aria-label="@AppStrings.Pencil" @onclick="() => EnterToolAsync(AnnotationTool.Pencil)"><Icon G="E3C9" /></button>
+        <button class="fab-mini" style="bottom:92px" data-testid="fab-eraser" aria-label="@AppStrings.Eraser" @onclick="() => EnterToolAsync(AnnotationTool.Eraser)"><Icon G="E6D0" /></button>
+    }
+    <button class="fab-main" data-testid="tools-fab" aria-label="@AppStrings.AnnotationToolsLabel" @onclick="OnMainFab"><Icon G="@(_fabOpen ? "E5CD" : "E3C9")" /></button>
+}
+
+@code {
+    [Parameter] public int SheetId { get; set; }
+    [Parameter] public int Page { get; set; }
+    [Parameter] public int PageCount { get; set; }
+    [Parameter] public double[] Sizes { get; set; } = [];
+    [Parameter] public Dictionary<int, PageCrop> Crops { get; set; } = new();
+    [Parameter] public bool Chrome { get; set; } = true;
+    [Parameter] public ReadingMode Mode { get; set; }
+    [Parameter] public EventCallback<bool> EditingChanged { get; set; }
+
+    private sealed class PageState
+    {
+        public ObservableCollection<Annotation> Items { get; } = new();
+        public Stack<IUndoableAction> Undo { get; } = new();
+        public Stack<IUndoableAction> Redo { get; } = new();
+        public List<IUndoableAction>? EraseBatch { get; set; }
+        public Task? Loading { get; set; }
+        public bool Loaded { get; set; }
+        public (Annotation Stroke, IReadOnlyList<StrokePoint> Points, DateTime At)? LastPlain { get; set; }
+    }
+
+    private static readonly (string Hex, string Name)[] Palette =
+        [("#000000", "Black"), ("#FF0000", "Red"), ("#0000FF", "Blue"), ("#008000", "Green"), ("#FFA500", "Orange")];
+
+    private static readonly TimeSpan TwoStrokeHairpinWindow = TimeSpan.FromMilliseconds(1500);
+
+    private readonly Dictionary<int, PageState> _pages = new();
+    private readonly SemaphoreSlim _strokeGate = new(1, 1);
+    private DotNetObjectReference<AnnotationLayer>? _self;
+    private ElementReference _stage, _tiles;
+    private bool _attached, _editing, _sheetOpen, _fabOpen, _hideFab, _tilesDirty;
+    private AnnotationTool _tool = AnnotationTool.MusicIcons;
+    private AnnotationToolSettings _tools = new();
+    private int _cat;
+    private int? _touched;
+    private int _lastPage = -1;
+    private Annotation? _selected;
+    private int _selectedPage;
+    private string? _sheetFileName;
+
+    public bool Editing => _editing;
+    public bool CanUndo => State(ActivePage).Undo.Count > 0;
+    public bool CanRedo => State(ActivePage).Redo.Count > 0;
+    private int ActivePage => Mode == ReadingMode.VerticalContinuous && _touched is int t ? t : Page;
+
+    protected override void OnInitialized() => _tools = ToolPrefs.Load().Sanitized();
+
+    protected override void OnParametersSet()
+    {
+        if (Page != _lastPage) { _lastPage = Page; _touched = null; }
+    }
+
+    private PageState State(int page)
+    {
+        if (!_pages.TryGetValue(page, out var s)) _pages[page] = s = new PageState();
+        return s;
+    }
+
+    private double Aspect(int page) => page * 2 + 1 < Sizes.Length && Sizes[page * 2] > 0 ? Sizes[page * 2 + 1] / Sizes[page * 2] : 0;
+
+    private PageCrop CropOf(int page) => Crops.TryGetValue(page, out var c) && c.IsValid ? c : PageCrop.Full;
+
+    private static string Inv(double v) => v.ToString(CultureInfo.InvariantCulture);
+
+    private static string Pt(double v) => $"{v * 1000:0.#} pt";
+
+    private static bool Same(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+
+    private string ToolCode => !_editing ? "none" : _tool switch
+    {
+        AnnotationTool.Pencil => "pencil",
+        AnnotationTool.Highlighter => "highlighter",
+        AnnotationTool.Eraser => "eraser",
+        AnnotationTool.Text => "text",
+        _ => "icons",
+    };
+
+    private async Task SyncAsync()
+    {
+        if (!_attached) return;
+        await Js.SetOptionsAsync(ToolCode, _editing, Stylus.DrawsDirectly,
+            AnnotationJson.Css(_tools.PencilColorHex), _tools.PencilStrokeWidth,
+            AnnotationJson.Css(_tools.HighlighterColorHex), _tools.HighlighterStrokeWidth, _tools.EraserRadius);
+    }
+
+    // Called by the viewer each time the stage was (re)built.
+    public async Task AttachAsync(ElementReference stage)
+    {
+        _stage = stage;
+        _self ??= DotNetObjectReference.Create(this);
+        await Js.AttachAsync(_self, stage);
+        _attached = true;
+        _selected = null;
+        await SyncAsync();
+        StateHasChanged();
+    }
+
+    private RenderFragment Segment(AnnotationTool tool, string glyph, string label, string id) => __builder =>
+    {
+        <button class="seg @(_tool == tool ? "sel" : "")" data-testid="seg-@id" @onclick="() => SelectToolAsync(tool)">
+            <Icon G="@glyph" Class="s20" /><span>@label</span>
+        </button>
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_editing && _sheetOpen && _tool == AnnotationTool.MusicIcons && _tilesDirty)
+        {
+            _tilesDirty = false;
+            await Js.PaintTilesAsync(_tiles, AnnotationJson.Tiles(MusicIconCatalog.Categories[_cat].Icons));
+        }
+    }
+
+    // ---- editing mode
+
+    private async Task OnMainFab()
+    {
+        if (_editing && _tool != AnnotationTool.MusicIcons && !_sheetOpen) { _fabOpen = false; OpenSheet(); return; }
+        _fabOpen = !_fabOpen;
+    }
+
+    private async Task EnterToolAsync(AnnotationTool tool)
+    {
+        var wasEditing = _editing;
+        _editing = true; _fabOpen = false; _tool = tool;
+        OpenSheet();
+        await SyncAsync();
+        if (!wasEditing) await EditingChanged.InvokeAsync(true);
+    }
+
+    private async Task SelectToolAsync(AnnotationTool tool)
+    {
+        _tool = tool;
+        _tilesDirty = true;
+        await SyncAsync();
+    }
+
+    private void OpenSheet() { _sheetOpen = true; _tilesDirty = true; }
+
+    private void CloseSheet() => _sheetOpen = false;
+
+    private async Task DoneAsync()
+    {
+        _editing = false; _sheetOpen = false; _fabOpen = false; _tool = AnnotationTool.MusicIcons; _selected = null;
+        await SyncAsync();
+        await EditingChanged.InvokeAsync(false);
+    }
+
+    private void SelectCategory(int i) { _cat = i; _tilesDirty = true; }
+
+    // ---- tool settings
+
+    private async Task SaveToolsAsync()
+    {
+        ToolPrefs.Save(_tools);
+        await SyncAsync();
+    }
+
+    private Task SetPencilColor(string hex) { _tools = _tools with { PencilColorHex = hex }; return SaveToolsAsync(); }
+
+    private Task SetHighlighterColor(string hex) { _tools = _tools with { HighlighterColorHex = hex }; return SaveToolsAsync(); }
+
+    private async Task SetTextColor(string hex)
+    {
+        _tools = _tools with { TextColorHex = hex };
+        await SaveToolsAsync();
+        if (_selected is { IsText: true } t)
+        {
+            await RecolorAsync(t, hex);
+        }
+    }
+
+    private static double Val(ChangeEventArgs e) => double.TryParse(e.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0;
+
+    private Task OnPencilWidth(ChangeEventArgs e) { _tools = _tools with { PencilStrokeWidth = Val(e) }; _tools = _tools.Sanitized(); return SaveToolsAsync(); }
+
+    private Task OnHighlighterWidth(ChangeEventArgs e) { _tools = _tools with { HighlighterStrokeWidth = Val(e) }; _tools = _tools.Sanitized(); return SaveToolsAsync(); }
+
+    private Task OnEraserSize(ChangeEventArgs e) { _tools = _tools with { EraserRadius = Val(e) }; _tools = _tools.Sanitized(); return SaveToolsAsync(); }
+
+    // ---- loading and pushing
+
+    private async Task PushAsync(int page)
+    {
+        if (!_attached) return;
+        await Js.SetPageAsync(page, AnnotationJson.Build(State(page).Items));
+    }
+
+    private async Task Changed(int page)
+    {
+        Persist.ScheduleSave();
+        await PushAsync(page);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnNeedPage(int page)
+    {
+        var st = State(page);
+        if (!st.Loaded)
+        {
+            st.Loading ??= LoadAsync(page, st);
+            await st.Loading;
+        }
+
+        await PushAsync(page);
+    }
+
+    private async Task LoadAsync(int page, PageState st)
+    {
+        var list = await Anns.GetAnnotationsAsync(SheetId, page);
+        st.Items.Clear();
+        foreach (var a in list) st.Items.Add(a);
+        st.Loaded = true;
+    }
+
+    private void Record(int page, IUndoableAction action)
+    {
+        var st = State(page);
+        st.Undo.Push(action);
+        st.Redo.Clear();
+    }
+
+    // ---- JS callbacks
+
+    [JSInvokable]
+    public async Task OnDrawStart()
+    {
+        if (_sheetOpen) { _sheetOpen = false; await InvokeAsync(StateHasChanged); }
+    }
+
+    [JSInvokable]
+    public async Task OnStroke(int page, double[] pts, string kind)
+    {
+        _touched = page;
+        var points = new List<StrokePoint>(pts.Length / 2);
+        for (var i = 0; i + 1 < pts.Length; i += 2) points.Add(new StrokePoint(pts[i], pts[i + 1]));
+        await _strokeGate.WaitAsync();
+        try
+        {
+            var st = State(page);
+            if (!st.Loaded) { st.Loading ??= LoadAsync(page, st); await st.Loading; }
+            var highlighter = kind == "highlighter";
+            var color = highlighter ? _tools.HighlighterColorHex : _tools.PencilColorHex;
+            var width = highlighter ? _tools.HighlighterStrokeWidth : _tools.PencilStrokeWidth;
+            var crop = CropOf(page);
+            var aspect = Aspect(page);
+
+            if (!highlighter && Stylus.RecognizesShapes && aspect > 0 && await TryRecognizeAsync(page, st, points, color, width, crop, aspect))
+            {
+                await Changed(page);
+                return;
+            }
+
+            var added = new List<Annotation>();
+            var actions = new List<IUndoableAction>();
+            foreach (var piece in StrokeClipper.Clip(points, crop))
+            {
+                var a = await Anns.AddStrokeAsync(SheetId, page, color, width, piece);
+                st.Items.Add(a);
+                actions.Add(new AddAnnotationAction(Anns, st.Items, a));
+                added.Add(a);
+            }
+
+            if (actions.Count == 1) Record(page, actions[0]);
+            else if (actions.Count > 1) Record(page, new CompositeUndoAction(actions));
+            st.LastPlain = added.Count == 1 ? (added[0], points, DateTime.UtcNow) : null;
+            await Changed(page);
+        }
+        finally
+        {
+            _strokeGate.Release();
+        }
+    }
+
+    // A slur or hairpin (alone, or a hairpin with the stroke just before it) is saved as that figure.
+    private async Task<bool> TryRecognizeAsync(int page, PageState st, List<StrokePoint> points, string color, double width, PageCrop crop, double aspect)
+    {
+        var previous = st.LastPlain;
+        if (previous is { } last && (DateTime.UtcNow - last.At > TwoStrokeHairpinWindow || !st.Items.Contains(last.Stroke))) previous = null;
+
+        var shape = ShapeRecognizer.Recognize(points, aspect);
+        var usesPrevious = false;
+        if (shape.Kind == RecognizedShapeKind.None && previous is { } p)
+        {
+            shape = ShapeRecognizer.RecognizeTwoStrokeHairpin(p.Points, points, aspect);
+            usesPrevious = shape.Kind != RecognizedShapeKind.None;
+        }
+
+        if (shape.Kind == RecognizedShapeKind.None || RecognizedFigure.Create(shape, SheetId, page, color, crop) is not { } figure) return false;
+
+        await Anns.InsertAnnotationAsync(figure);
+        st.Items.Add(figure);
+        var removed = new List<Annotation>();
+        if (usesPrevious && previous is { } joined && st.Items.Contains(joined.Stroke))
+        {
+            await Anns.DeleteAnnotationAsync(joined.Stroke);
+            st.Items.Remove(joined.Stroke);
+            removed.Add(joined.Stroke);
+        }
+
+        foreach (var piece in StrokeClipper.Clip(points, crop))
+            removed.Add(RecognizedFigure.UnsavedStroke(SheetId, page, color, width, piece));
+
+        Record(page, new ReplaceAnnotationsAction(Anns, st.Items, removed, new[] { figure }));
+        st.LastPlain = null;
+        if (Stylus.ShapeHintsShown < 3)
+        {
+            Stylus.ShapeHintsShown++;
+            Ui.ShowToast(SlurGeometry.IsSlur(figure.IconKey) ? AppStrings.ShapeConvertedSlur : AppStrings.ShapeConvertedHairpin);
+        }
+
+        return true;
+    }
+
+    [JSInvokable]
+    public async Task OnErase(int page, double[] pts)
+    {
+        _touched = page;
+        var st = State(page);
+        if (!st.Loaded) { st.Loading ??= LoadAsync(page, st); await st.Loading; }
+        var aspect = Aspect(page);
+        var any = false;
+        for (var i = 0; i + 1 < pts.Length; i += 2)
+        {
+            while (AnnotationHitTester.FindErasable(st.Items, pts[i], pts[i + 1], aspect > 0 ? aspect : 1, _tools.EraserRadius) is { } hit)
+            {
+                st.Items.Remove(hit);
+                await Anns.DeleteAnnotationAsync(hit);
+                (st.EraseBatch ??= new()).Add(new DeleteAnnotationAction(Anns, st.Items, hit));
+                if (ReferenceEquals(_selected, hit)) _selected = null;
+                any = true;
+            }
+        }
+
+        if (any) await Changed(page);
+    }
+
+    [JSInvokable]
+    public async Task OnEraseEnd(int page)
+    {
+        var st = State(page);
+        var batch = st.EraseBatch;
+        st.EraseBatch = null;
+        if (batch is { Count: 1 }) Record(page, batch[0]);
+        else if (batch is { Count: > 1 }) Record(page, new CompositeUndoAction(batch));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnSelect(int page, int id)
+    {
+        _selected = page >= 0 ? State(page).Items.FirstOrDefault(a => a.Id == id) : null;
+        _selectedPage = page;
+        if (page >= 0) _touched = page;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnMoved(int page, int id, double x, double y)
+    {
+        var st = State(page);
+        if (st.Items.FirstOrDefault(a => a.Id == id) is not { } a) return;
+        var before = (a.X, a.Y, a.Width, a.Height);
+        if (before.X == x && before.Y == y) return;
+        a.X = x; a.Y = y;
+        await Anns.UpdateAnnotationAsync(a);
+        Record(page, new UpdateAnnotationAction(Anns, a, before, (a.X, a.Y, a.Width, a.Height)));
+        await Changed(page);
+    }
+
+    [JSInvokable]
+    public async Task OnResized(int page, int id, double startX, double w, double h, double oldW, double oldH)
+    {
+        var st = State(page);
+        if (st.Items.FirstOrDefault(a => a.Id == id) is not { } a) return;
+        var before = (a.X, a.Y, a.Width, a.Height);
+        var aspect = Aspect(page);
+        var crop = CropOf(page);
+        a.Width = w; a.Height = h;
+        if (HairpinGeometry.IsHairpin(a.IconKey))
+            (a.X, a.Width, a.Height) = HairpinGeometry.ClampBox(startX, a.Width, a.Height, aspect, crop.Right);
+        else if (SlurGeometry.IsSlur(a.IconKey))
+            (a.X, a.Width, a.Height) = SlurGeometry.ClampBox(startX, a.Width, a.Height, aspect, crop.Right);
+        if (before.Width == a.Width && before.Height == a.Height && before.X == a.X) { await PushAsync(page); return; }
+        await Anns.UpdateAnnotationAsync(a);
+        Record(page, new UpdateAnnotationAction(Anns, a, before, (a.X, a.Y, a.Width, a.Height)));
+        await Changed(page);
+    }
+
+    [JSInvokable]
+    public async Task OnTextTap(int page, double x, double y)
+    {
+        _touched = page;
+        var text = TextFigure.Normalize(await Ui.PromptAsync(AppStrings.AddTextTitle, AppStrings.TextTool, AppStrings.OK, AppStrings.Cancel, ""));
+        if (text is null) return;
+        var st = State(page);
+        if (!st.Loaded) { st.Loading ??= LoadAsync(page, st); await st.Loading; }
+        var aspect = await Js.TextAspectAsync(text);
+        var (w, h) = TextFigure.Size(aspect, TextFigure.DefaultHeight, Aspect(page));
+        var (px, py) = TextFigure.Place(x, y, w, h, CropOf(page));
+        var a = await Anns.AddTextAsync(SheetId, page, text, _tools.TextColorHex, px, py, w, h);
+        st.Items.Add(a);
+        Record(page, new AddAnnotationAction(Anns, st.Items, a));
+        await SelectNewAsync(page, a);
+    }
+
+    [JSInvokable]
+    public async Task OnLongPress(int page, int id)
+    {
+        var st = State(page);
+        if (st.Items.FirstOrDefault(a => a.Id == id) is not { } fig || fig.IsStroke) return;
+        var edit = AppStrings.EditText;
+        var copy = AppStrings.CopyFigure;
+        var pick = await Ui.ChooseAsync("", fig.IsText ? [edit, copy] : [copy], AppStrings.Cancel);
+        if (!st.Items.Contains(fig)) return;
+        if (pick == copy)
+        {
+            var crop = CropOf(page);
+            var dup = FigureCopy.Copy(fig, crop.Left, crop.Top, crop.Right, crop.Bottom);
+            await Anns.InsertAnnotationAsync(dup);
+            st.Items.Add(dup);
+            Record(page, new AddAnnotationAction(Anns, st.Items, dup));
+            await SelectNewAsync(page, dup);
+        }
+        else if (pick == edit)
+        {
+            var text = TextFigure.Normalize(await Ui.PromptAsync(AppStrings.AddTextTitle, AppStrings.TextTool, AppStrings.OK, AppStrings.Cancel, fig.Text ?? ""));
+            if (text is null || text == fig.Text || !st.Items.Contains(fig)) return;
+            var aspect = await Js.TextAspectAsync(text);
+            var (w, _) = TextFigure.Size(aspect, fig.Height, Aspect(page));
+            var crop = CropOf(page);
+            var x = Math.Clamp(fig.X, crop.Left, Math.Max(crop.Left, crop.Right - w));
+            var before = (fig.X, fig.Y, fig.Width, fig.Height);
+            var beforeText = fig.Text ?? "";
+            fig.Text = text; fig.X = x; fig.Width = w;
+            await Anns.UpdateAnnotationAsync(fig);
+            Record(page, new UpdateAnnotationAction(Anns, fig, before, (fig.X, fig.Y, fig.Width, fig.Height), beforeText, text));
+            await Changed(page);
+        }
+    }
+
+    private async Task SelectNewAsync(int page, Annotation a)
+    {
+        _selected = a; _selectedPage = page;
+        await Changed(page);
+        await Js.SelectAsync(page, a.Id);
+    }
+
+    private async Task RecolorAsync(Annotation a, string hex)
+    {
+        var box = (a.X, a.Y, a.Width, a.Height);
+        var before = a.ColorHex;
+        if (Same(before ?? "", hex)) return;
+        a.ColorHex = hex;
+        await Anns.UpdateAnnotationAsync(a);
+        Record(_selectedPage, new UpdateAnnotationAction(Anns, a, box, box, beforeColor: before ?? "#000000", afterColor: hex));
+        await Changed(_selectedPage);
+    }
+
+    // ---- symbols
+
+    private async Task PlaceIconAsync(string key)
+    {
+        var page = Page;
+        _touched = page;
+        var st = State(page);
+        if (!st.Loaded) { st.Loading ??= LoadAsync(page, st); await st.Loading; }
+        var icon = MusicIconCatalog.FindByKey(key);
+        var aspectRatio = icon?.AspectRatio ?? 1.0;
+        var pageAspect = Aspect(page);
+        var width = 0.12;
+        var height = width / aspectRatio;
+        if (pageAspect > 0) height /= pageAspect;
+        var crop = CropOf(page);
+        width *= crop.Width;
+        height *= crop.Width;
+        var v = await Js.VisibleAreaAsync(page);
+        var area = v is { Length: 4 } ? new PageCrop(v[0], v[1], v[2], v[3]) : crop;
+        var x = Math.Clamp(area.ToPageX(0.5) - width / 2, crop.Left, Math.Max(crop.Left, crop.Right - width));
+        var y = Math.Clamp(area.ToPageY(0.5) - height / 2, crop.Top, Math.Max(crop.Top, crop.Bottom - height));
+        var a = await Anns.AddIconAsync(SheetId, page, key, x, y, width, height);
+        st.Items.Add(a);
+        Record(page, new AddAnnotationAction(Anns, st.Items, a));
+        _sheetOpen = false;
+        await SelectNewAsync(page, a);
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        if (_selected is not { } a) return;
+        var page = _selectedPage;
+        var st = State(page);
+        await Anns.DeleteAnnotationAsync(a);
+        st.Items.Remove(a);
+        Record(page, new DeleteAnnotationAction(Anns, st.Items, a));
+        _selected = null;
+        await Changed(page);
+    }
+
+    // ---- undo / redo (the active page's own history, like the Android editor)
+
+    public async Task UndoAsync()
+    {
+        var page = ActivePage;
+        var st = State(page);
+        if (st.Undo.Count == 0) return;
+        var action = st.Undo.Pop();
+        await action.UndoAsync();
+        st.Redo.Push(action);
+        if (_selected is not null && !st.Items.Contains(_selected)) _selected = null;
+        await Changed(page);
+    }
+
+    public async Task RedoAsync()
+    {
+        var page = ActivePage;
+        var st = State(page);
+        if (st.Redo.Count == 0) return;
+        var action = st.Redo.Pop();
+        await action.RedoAsync();
+        st.Undo.Push(action);
+        if (_selected is not null && !st.Items.Contains(_selected)) _selected = null;
+        await Changed(page);
+    }
+
+    // ---- export
+
+    // Downloads (or shares) the PDF with the annotations drawn in; the original when there are none.
+    public async Task ExportAsync(bool share, string fileName, string storedName)
+    {
+        Ui.ShowToast(AppStrings.PreparingPdf);
+        try
+        {
+            string result;
+            if (!await Anns.HasAnnotationsAsync(SheetId))
+            {
+                result = await Js.ExportOriginalAsync(storedName, fileName, share);
+            }
+            else
+            {
+                await Js.ExportBeginAsync();
+                for (var i = 0; i < PageCount; i++)
+                {
+                    var list = await Anns.GetAnnotationsAsync(SheetId, i);
+                    await Js.ExportPageAsync(storedName, i, AnnotationJson.Build(list));
+                }
+
+                result = await Js.ExportFinishAsync(fileName, share);
+            }
+
+            // The browser only shares from a fresh tap: ask for one when preparing took too long.
+            if (result == "needs-gesture" && await Ui.ConfirmAsync(AppStrings.Share, fileName, AppStrings.Share, AppStrings.Cancel))
+            {
+                await Js.ShareLastAsync();
+            }
+        }
+        catch (Exception)
+        {
+            Ui.ShowToast(AppStrings.SharePdfFailed);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await Js.DetachAsync(); }
+        catch (JSDisconnectedException) { }
+        catch (Exception) { }
+        _self?.Dispose();
+    }
+}
