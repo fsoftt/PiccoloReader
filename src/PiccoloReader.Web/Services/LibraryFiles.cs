@@ -14,11 +14,13 @@ public sealed class LibraryFiles(AppDatabase db, IAppStorageProvider storage, Br
     public async Task AdoptStagedFilesAsync()
     {
         if (!Directory.Exists(storage.SheetsDirectory)) return;
-        var sheets = await db.Connection.Table<Sheet>().ToListAsync();
-        foreach (var sheet in sheets)
+        // Only the files staged right now; their sheets are looked up one by one, so calling
+        // this after every imported PDF stays cheap.
+        foreach (var path in Directory.GetFiles(storage.SheetsDirectory))
         {
-            var path = Path.Combine(storage.SheetsDirectory, sheet.FileName);
-            if (!File.Exists(path)) continue;
+            var fileName = Path.GetFileName(path);
+            var sheet = await db.Connection.Table<Sheet>().Where(s => s.FileName == fileName).FirstOrDefaultAsync();
+            if (sheet is null) continue;
             try
             {
                 var bytes = await File.ReadAllBytesAsync(path);

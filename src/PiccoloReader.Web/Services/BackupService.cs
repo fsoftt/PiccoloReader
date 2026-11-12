@@ -17,7 +17,7 @@ public sealed class BackupService(AppDatabase db, IAppStorageProvider storage, B
     PwaService pwa, PersistentDatabase persist, LibraryFiles files)
 {
     private const string PreferencesEntry = "piccolo-settings.json";
-    private const string TempZip = "/backup-import.zip";
+    private const string TempZip = "tmp/backup-import.zip";
     private static readonly Regex SnapshotName = new(@"^piccolo-library(?: \(\d+\))?\.json$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     // False when there is nothing to export.
@@ -69,51 +69,58 @@ public sealed class BackupService(AppDatabase db, IAppStorageProvider storage, B
         return true;
     }
 
-    // Returns null when the file is not a zip.
+    // Returns null when the file is not a zip. The upload is streamed into OPFS in chunks and the
+    // archive is read entry by entry by byte range, so neither the zip nor the recovered PDFs are
+    // ever held in memory whole (one entry at a time).
     public async Task<RecoveryResult?> ImportAsync(Stream zipContent, IProgress<string> progress)
     {
         progress.Report(WebText.Reading);
-        // ZipArchive needs a seekable stream: stage the upload in the in-memory file system.
-        await using (var temp = File.Create(TempZip))
+        await browser.StageBeginAsync(TempZip);
+        try
         {
             var buffer = new byte[256 * 1024];
             int read, total = 0;
             while ((read = await zipContent.ReadAsync(buffer)) > 0)
             {
-                await temp.WriteAsync(buffer.AsMemory(0, read));
+                await browser.StageAppendAsync(read == buffer.Length ? buffer : buffer[..read]);
                 if (++total % 16 == 0) await Task.Delay(1);
-            }
-        }
-
-        try
-        {
-            ZipArchive archive;
-            try { archive = ZipFile.OpenRead(TempZip); }
-            catch (InvalidDataException) { return null; }
-
-            using (archive)
-            {
-                var store = new ZipLibraryStore(archive);
-                await files.EnsureHashesAsync();
-                await RemapSnapshotsAsync(archive, store);
-
-                var result = await new LibraryRecovery(db, storage).RecoverAsync(
-                    store, new Progress<SyncProgress>(p => progress.Report(WebText.Importing(p.Current, p.Total))));
-                await files.AdoptStagedFilesAsync();
-                await ApplyPreferencesAsync(store);
-                await persist.FlushAsync();
-                return result;
             }
         }
         finally
         {
-            File.Delete(TempZip);
+            await browser.StageEndAsync();
+        }
+
+        try
+        {
+            var archive = await OpfsZip.OpenAsync(browser, TempZip);
+            if (archive is null) return null;
+
+            var store = new ZipLibraryStore(archive)
+            {
+                // Each PDF recovery copied into the in-memory sheets folder moves on to OPFS before the next entry is read.
+                BeforeOpen = files.AdoptStagedFilesAsync,
+            };
+            await files.EnsureHashesAsync();
+            await RemapSnapshotsAsync(store);
+
+            var result = await new LibraryRecovery(db, storage).RecoverAsync(
+                store, new Progress<SyncProgress>(p => progress.Report(WebText.Importing(p.Current, p.Total))));
+            store.BeforeOpen = null;
+            await files.AdoptStagedFilesAsync();
+            await ApplyPreferencesAsync(store);
+            await persist.FlushAsync();
+            return result;
+        }
+        finally
+        {
+            await browser.DeleteFileAsync(TempZip);
         }
     }
 
     // Sheets of the backup whose content already exists here are pointed at the existing sheet, so
     // recovery treats them as present (and still adds their annotations and bookmarks).
-    private async Task RemapSnapshotsAsync(ZipArchive archive, ZipLibraryStore store)
+    private async Task RemapSnapshotsAsync(ZipLibraryStore store)
     {
         var existing = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var s in await db.Connection.Table<Sheet>().ToListAsync())
@@ -121,7 +128,7 @@ public sealed class BackupService(AppDatabase db, IAppStorageProvider storage, B
             if (s.ContentHash is not null) existing.TryAdd(s.ContentHash, s.FileName);
         }
 
-        foreach (var name in archive.Entries.Select(e => e.FullName).Where(n => SnapshotName.IsMatch(n)).ToList())
+        foreach (var name in store.Names.Where(n => SnapshotName.IsMatch(n)).ToList())
         {
             await using var stream = await store.OpenReadAsync(name);
             if (stream is null) continue;
@@ -181,43 +188,6 @@ public sealed class BackupService(AppDatabase db, IAppStorageProvider storage, B
         }
         await Task.Delay(1);
     }
-}
-
-// Read-only IExternalLibraryStore over a zip (what LibraryRecovery reads), with replaceable entries.
-public sealed class ZipLibraryStore(ZipArchive archive) : IExternalLibraryStore
-{
-    private readonly Dictionary<string, ZipArchiveEntry> _entries = archive.Entries
-        .Where(e => !e.FullName.EndsWith('/') && e.Name.Length > 0)
-        .ToDictionary(e => e.FullName.Replace('\\', '/'), StringComparer.OrdinalIgnoreCase);
-
-    public Dictionary<string, byte[]> Overrides { get; } = new(StringComparer.OrdinalIgnoreCase);
-
-    public Task<bool> EnsureAccessAsync(bool requestIfNeeded) => Task.FromResult(true);
-
-    public Task<IReadOnlyList<string>> ListAsync() => Task.FromResult<IReadOnlyList<string>>(_entries.Keys.ToList());
-
-    public Task<bool> ExistsAsync(string relativePath) => Task.FromResult(_entries.ContainsKey(relativePath));
-
-    public async Task<Stream?> OpenReadAsync(string relativePath, CancellationToken cancellationToken = default)
-    {
-        if (Overrides.TryGetValue(relativePath, out var bytes)) return new MemoryStream(bytes, writable: false);
-        if (!_entries.TryGetValue(relativePath, out var entry)) return null;
-        var ms = new MemoryStream();
-        await using (var s = await entry.OpenAsync(cancellationToken))
-        {
-            await s.CopyToAsync(ms, cancellationToken);
-        }
-        ms.Position = 0;
-        return ms;
-    }
-
-    public Task<string> WriteAsync(string relativePath, Stream content, string mimeType, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-    public Task<bool> DeleteAsync(string relativePath) => throw new NotSupportedException();
-
-    public Task<bool> DeleteEmptyDirectoryAsync(string relativeDirectory) => throw new NotSupportedException();
-
-    public Task<string> MoveAsync(string fromPath, string toPath) => throw new NotSupportedException();
 }
 
 // Write-only stream that hands the zip to the page in 1 MB chunks (collected as a Blob).
