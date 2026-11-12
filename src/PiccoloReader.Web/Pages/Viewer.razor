@@ -1,0 +1,76 @@
+@page "/viewer/{SheetId:int}"
+@implements IAsyncDisposable
+@inject AppDatabase Db
+@inject PersistentDatabase Persist
+@inject PdfCanvasRenderer Pdf
+
+<div class="viewer">
+    <div class="bar">
+        <a href="">Back</a>
+        <button @onclick="PrevAsync" disabled="@(_page <= 0)">Prev</button>
+        <span>@(_page + 1) / @_pageCount</span>
+        <button @onclick="NextAsync" disabled="@(_page >= _pageCount - 1)">Next</button>
+        <span class="meta">@_sheet?.Title</span>
+    </div>
+    @if (_error is not null) { <p class="status">@_error</p> }
+    <canvas @ref="_canvas"></canvas>
+</div>
+
+@code {
+    [Parameter] public int SheetId { get; set; }
+
+    private Sheet? _sheet;
+    private int _page;
+    private int _pageCount;
+    private string? _error;
+    private ElementReference _canvas;
+    private DotNetObjectReference<Viewer>? _self;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _sheet = await Db.Connection.FindAsync<Sheet>(SheetId);
+            if (_sheet is null) { _error = "Sheet not found."; StateHasChanged(); return; }
+            _pageCount = await Pdf.OpenAsync(_sheet.FileName);
+            _page = Math.Clamp(_sheet.LastViewedPageIndex, 0, Math.Max(0, _pageCount - 1));
+            _self = DotNetObjectReference.Create(this);
+            await Pdf.RegisterKeysAsync(_self);
+            StateHasChanged();
+            await RenderAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RenderAsync()
+    {
+        if (_sheet is null) return;
+        await Pdf.RenderPageAsync(_sheet.FileName, _page, _canvas, 1600, 2400);
+    }
+
+    [JSInvokable] public Task PrevAsync() => GoToAsync(_page - 1);
+
+    [JSInvokable] public Task NextAsync() => GoToAsync(_page + 1);
+
+    private async Task GoToAsync(int page)
+    {
+        if (_sheet is null || page < 0 || page >= _pageCount || page == _page) return;
+        _page = page;
+        StateHasChanged();
+        await RenderAsync();
+        _sheet.LastViewedPageIndex = page;
+        await Db.Connection.UpdateAsync(_sheet);
+        Persist.ScheduleSave();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await Pdf.UnregisterKeysAsync(); } catch (JSDisconnectedException) { }
+        _self?.Dispose();
+    }
+}

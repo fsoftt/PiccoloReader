@@ -6,6 +6,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/PiccoloReader.Core/PiccoloReader.Core.csproj" />
+    <Project Path="src/PiccoloReader.Web/PiccoloReader.Web.csproj" />
     <Project Path="src/PiccoloReader/PiccoloReader.csproj">
       <Deploy Solution="Debug|*" />
     </Project>

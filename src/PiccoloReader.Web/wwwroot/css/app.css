@@ -1,0 +1,11 @@
+body { font-family: system-ui, sans-serif; margin: 0; background: #f4f4f4; color: #222; }
+.top { background: #222; padding: .6rem 1rem; }
+.top a { color: #fff; text-decoration: none; }
+main { padding: 1rem; }
+.btn { display: inline-block; background: #2b6cb0; color: #fff; padding: .5rem 1rem; border-radius: 4px; cursor: pointer; }
+.sheets li { margin: .4rem 0; }
+.meta { color: #777; font-size: .85em; }
+.status { color: #a33; }
+.bar { display: flex; gap: .8rem; align-items: center; margin-bottom: .5rem; }
+.bar button { padding: .4rem 1rem; }
+canvas { max-width: 100%; max-height: 85vh; background: #fff; box-shadow: 0 0 6px #0003; display: block; margin: 0 auto; }
