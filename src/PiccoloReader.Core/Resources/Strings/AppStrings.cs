@@ -351,6 +351,7 @@ public static class AppStrings
     public static string TunerListening => Get(nameof(TunerListening));
     public static string TunerNoPermission => Get(nameof(TunerNoPermission));
     public static string TunerOpenSettings => Get(nameof(TunerOpenSettings));
+    public static string TunerRetry => Get(nameof(TunerRetry));
     public static string TunerUnsupported => Get(nameof(TunerUnsupported));
     public static string TunerError => Get(nameof(TunerError));
     public static string TunerNotation => Get(nameof(TunerNotation));

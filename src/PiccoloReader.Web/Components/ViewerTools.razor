@@ -1,0 +1,113 @@
+@implements IDisposable
+@using System.ComponentModel
+@using System.Globalization
+@using PiccoloReader.Core.Services.Tuner
+@inject TunerStripController Strip
+@inject MetronomeViewModel Metro
+@inject ITunerStripPreferenceService StripPrefs
+@inject WebAudio Audio
+
+@* Part "buttons": metronome and tuner-strip toggles of the reading bar (MetronomeButton, TunerStripButton).
+   Part "strip": the thin tuner strip on the chosen edge (TunerStripHost). *@
+@if (Part == "buttons")
+{
+    <button class="icon-btn" data-testid="viewer-metronome" aria-label="@AppStrings.Metronome" @onclick="ToggleMetronome">
+        <Icon G="@(Metro.IsPlaying ? "E426" : "E425")" Class="@(Metro.IsPlaying ? "c-primary" : "")" />
+    </button>
+    <button class="icon-btn" data-testid="viewer-tuner-strip" aria-label="@AppStrings.TunerStrip" @onclick="ToggleStripAsync">
+        <Icon G="E405" Class="@(Strip.IsOn ? "c-primary" : "")" />
+    </button>
+}
+else
+{
+    <div class="tuner-strip @Position @(_active ? "on" : "")" data-testid="tuner-strip" aria-hidden="true">
+        <span class="ts-tick"></span>
+        @if (_visible)
+        {
+            <span class="ts-fill @_bucket.ToString().ToLowerInvariant()" data-testid="tuner-strip-fill" style="@FillStyle()"></span>
+        }
+    </div>
+}
+
+@code {
+    private const float Half = 1000f;   // fill pixels at +-50 cents; rendered as a share of the half track
+    private bool _active, _visible;
+    private int _fillPx;
+    private TunerStripBucket _bucket;
+    private StripSurface? _surface;
+
+    [Parameter, EditorRequired] public string Part { get; set; } = "buttons";
+
+    private string Position => StripPrefs.Position.ToString().ToLowerInvariant();
+
+    private bool Vertical => StripPrefs.Position is TunerStripPosition.Left or TunerStripPosition.Right;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Metro.PropertyChanged += OnMetro;
+        Strip.StateChanged += OnStripState;
+        if (Part != "strip") return;
+
+        _surface = new StripSurface(this);
+        Strip.Bind(_surface);
+        Strip.SetHalfTrack(Half);
+        // The strip only starts by itself when the permission is already granted (it never prompts).
+        await Audio.RefreshMicPermissionAsync();
+        await Strip.AttachAsync();
+    }
+
+    private void OnMetro(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MetronomeViewModel.IsPlaying)) _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void OnStripState(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    private void ToggleMetronome() => Metro.TogglePlayCommand.Execute(null);
+
+    private async Task ToggleStripAsync()
+    {
+        await Strip.ToggleAsync();
+        StateHasChanged();
+    }
+
+    private string FillStyle()
+    {
+        var v = Vertical;
+        var segment = "32px";
+        if (_fillPx == 0)
+        {
+            return v ? $"top:calc(50% - {segment}/2);height:{segment}" : $"left:calc(50% - {segment}/2);width:{segment}";
+        }
+
+        var pct = (Math.Abs(_fillPx) / Half * 50f).ToString("0.###", CultureInfo.InvariantCulture) + "%";
+        var sharp = _fillPx > 0;
+        if (v) return sharp ? $"bottom:50%;height:{pct}" : $"top:50%;height:{pct}";
+        return sharp ? $"left:50%;width:{pct}" : $"right:50%;width:{pct}";
+    }
+
+    private void Set(bool? active, bool? visible, int fill, TunerStripBucket bucket)
+    {
+        if (active is { } a) _active = a;
+        if (visible is { } vis) { _visible = vis; _fillPx = fill; _bucket = bucket; }
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Metro.PropertyChanged -= OnMetro;
+        Strip.StateChanged -= OnStripState;
+        if (Part == "strip")
+        {
+            Strip.Detach();
+            Strip.Bind(null);
+        }
+    }
+
+    private sealed class StripSurface(ViewerTools owner) : ITunerStripView
+    {
+        public void SetActive(bool active) => owner.Set(active, null, 0, TunerStripBucket.Far);
+
+        public void Apply(bool visible, int fillPx, TunerStripBucket bucket) => owner.Set(null, visible, fillPx, bucket);
+    }
+}

@@ -1,0 +1,99 @@
+@page "/metronome"
+@implements IDisposable
+@using System.ComponentModel
+@using PiccoloReader.Core.Services.Metronome
+@inject MetronomeViewModel Vm
+@inject WebAudio Audio
+@inject UiService Ui
+
+<div class="page">
+    <div class="header"><h1 class="page-title">@AppStrings.Metronome</h1></div>
+
+    <div class="tool-stack">
+        <div class="card tool-card">
+            <div class="bpm" data-testid="bpm">@Vm.Bpm</div>
+            <div class="section-label bpm-unit">@AppStrings.MetronomeBpmUnit</div>
+
+            <div class="slider-row">
+                <button class="icon-btn" data-testid="bpm-minus" aria-label="@AppStrings.MetronomeDecreaseBpm" @onclick="() => Vm.DecrementBpmCommand.Execute(null)"><Icon G="E15B" /></button>
+                <input type="range" min="30" max="250" step="1" value="@Vm.Bpm" data-testid="bpm-slider" aria-label="@AppStrings.MetronomeBpmUnit"
+                       @oninput="e => Vm.BpmSlider = double.Parse((string)e.Value!, System.Globalization.CultureInfo.InvariantCulture)" />
+                <button class="icon-btn" data-testid="bpm-plus" aria-label="@AppStrings.MetronomeIncreaseBpm" @onclick="() => Vm.IncrementBpmCommand.Execute(null)"><Icon G="E145" /></button>
+            </div>
+
+            <div class="dots" data-testid="beat-dots">
+                @for (var i = 0; i < Vm.BeatsPerBar; i++)
+                {
+                    var accent = i == 0 && Vm.AccentFirstBeat;
+                    <span class="dot @(accent ? "accent" : "") @(Vm.CurrentBeat == i ? "lit" : "")"></span>
+                }
+            </div>
+
+            <div class="play-row">
+                <button class="tap-btn" data-testid="tap" aria-label="@AppStrings.MetronomeTap" @onpointerdown="() => Vm.TapCommand.Execute(null)">@AppStrings.MetronomeTap</button>
+                <button class="play-btn" data-testid="play" aria-label="@(Vm.IsPlaying ? AppStrings.MetronomeStop : AppStrings.MetronomeStart)" @onclick="() => Vm.TogglePlayCommand.Execute(null)">
+                    <Icon G="@(Vm.IsPlaying ? "E047" : "E037")" Class="s40" />
+                </button>
+                <span></span>
+            </div>
+        </div>
+
+        <div class="card group">
+            <button class="row" data-testid="beats-row" aria-label="@AppStrings.MetronomeBeatsPerBar" @onclick="PickBeatsAsync">
+                <span class="stack"><span class="row-title">@AppStrings.MetronomeBeatsPerBar</span></span>
+                <span class="value" data-testid="beats-value">@Vm.BeatsPerBar</span>
+                <Icon G="E5CC" Class="s20 c-muted" />
+            </button>
+            <button class="row" data-testid="subdivision-row" aria-label="@AppStrings.MetronomeSubdivision" @onclick="PickSubdivisionAsync">
+                <span class="stack"><span class="row-title">@AppStrings.MetronomeSubdivision</span></span>
+                <span class="value" data-testid="subdivision-value">@SubdivisionName(Vm.Subdivision)</span>
+                <Icon G="E5CC" Class="s20 c-muted" />
+            </button>
+            <button class="row" data-testid="accent-row" role="switch" aria-checked="@Vm.AccentFirstBeat.ToString().ToLowerInvariant()" @onclick="() => Vm.AccentFirstBeat = !Vm.AccentFirstBeat">
+                <span class="stack"><span class="row-title">@AppStrings.MetronomeAccentFirstBeat</span></span>
+                <span class="switch @(Vm.AccentFirstBeat ? "on" : "")"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Vm.PropertyChanged += OnChanged;
+        Vm.Attach();
+        // Load the worklet ahead so the first Start is immediate (no sound is made until then).
+        _ = Audio.EnsureReadyAsync();
+    }
+
+    private void OnChanged(object? sender, PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Vm.PropertyChanged -= OnChanged;
+        Vm.Detach();
+    }
+
+    private static string SubdivisionName(int n) => n switch
+    {
+        2 => AppStrings.SubdivisionEighths,
+        3 => AppStrings.SubdivisionTriplets,
+        4 => AppStrings.SubdivisionSixteenths,
+        _ => AppStrings.SubdivisionNone
+    };
+
+    private async Task PickBeatsAsync()
+    {
+        var options = Enumerable.Range(MetronomeSettings.MinBeatsPerBar, MetronomeSettings.MaxBeatsPerBar).Select(n => n.ToString()).ToList();
+        var pick = await Ui.ChooseAsync(AppStrings.MetronomeBeatsPerBar, options, AppStrings.Cancel);
+        if (int.TryParse(pick, out var beats)) Vm.BeatsPerBar = beats;
+    }
+
+    private async Task PickSubdivisionAsync()
+    {
+        var options = Enumerable.Range(MetronomeSettings.MinSubdivision, MetronomeSettings.MaxSubdivision).Select(SubdivisionName).ToList();
+        var pick = await Ui.ChooseAsync(AppStrings.MetronomeSubdivision, options, AppStrings.Cancel);
+        var i = pick is null ? -1 : options.IndexOf(pick);
+        if (i >= 0) Vm.Subdivision = MetronomeSettings.MinSubdivision + i;
+    }
+}

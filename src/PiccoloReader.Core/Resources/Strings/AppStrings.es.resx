@@ -286,6 +286,7 @@
   <data name="TunerListening" xml:space="preserve"><value>Toca una nota</value></data>
   <data name="TunerNoPermission" xml:space="preserve"><value>Se necesita acceso al micrófono para afinar. Actívalo en los ajustes de la app.</value></data>
   <data name="TunerOpenSettings" xml:space="preserve"><value>Abrir ajustes</value></data>
+  <data name="TunerRetry" xml:space="preserve"><value>Reintentar</value></data>
   <data name="TunerUnsupported" xml:space="preserve"><value>El afinador no está disponible en este dispositivo.</value></data>
   <data name="TunerError" xml:space="preserve"><value>No se pudo iniciar el micrófono.</value></data>
   <data name="TunerNotation" xml:space="preserve"><value>Nombres de notas</value></data>
