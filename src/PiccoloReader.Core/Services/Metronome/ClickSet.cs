@@ -3,15 +3,16 @@ namespace PiccoloReader.Core.Services.Metronome;
 /// <summary>The three PCM16 click waveforms for one sample rate.</summary>
 public sealed class ClickSet
 {
-    public const double NormalFrequencyHz = 1000;
-    public const double AccentFrequencyHz = 1500;
-    private const double NormalAmplitude = 0.8;
-    private const double SubdivisionAmplitude = 0.4;
+    public const double NormalFrequencyHz = 1600;
+    public const double AccentFrequencyHz = 2400;
+    private const double NormalAmplitude = 0.95;
+    private const double AccentAmplitude = 1.0;
+    private const double SubdivisionAmplitude = 0.5;
 
     public ClickSet(int sampleRate)
     {
         Normal = ClickSynth.Create(sampleRate, NormalFrequencyHz, NormalAmplitude);
-        Accent = ClickSynth.Create(sampleRate, AccentFrequencyHz, NormalAmplitude);
+        Accent = ClickSynth.Create(sampleRate, AccentFrequencyHz, AccentAmplitude);
         Subdivision = ClickSynth.Create(sampleRate, NormalFrequencyHz, SubdivisionAmplitude);
     }
 

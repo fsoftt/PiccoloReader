@@ -16,8 +16,8 @@ public class ClickSynthTests
     }
 
     [Theory]
-    [InlineData(48000, 1200)]
-    [InlineData(44100, 1102)]
+    [InlineData(48000, 2400)]
+    [InlineData(44100, 2205)]
     public void Create_LengthMatchesDuration(int sampleRate, int expected) =>
         Assert.Equal(expected, ClickSynth.Create(sampleRate, 1000, 0.8).Length);
 
@@ -27,7 +27,7 @@ public class ClickSynthTests
         var click = ClickSynth.Create(48000, 1000, 0.8);
         var peak = click.Max(s => Math.Abs((int)s));
 
-        Assert.InRange(peak, 0.7 * short.MaxValue, 0.8 * short.MaxValue + 1);
+        Assert.InRange(peak, 0.8 * short.MaxValue - 1, 0.8 * short.MaxValue + 1);
     }
 
     [Fact]
@@ -55,5 +55,41 @@ public class ClickSynthTests
         var ratio = (double)set.Subdivision.Max(s => Math.Abs((int)s)) / set.Normal.Max(s => Math.Abs((int)s));
 
         Assert.InRange(ratio, 0.45, 0.55);
+    }
+
+    [Fact]
+    public void Create_FullAmplitudeNeverOverflows()
+    {
+        var click = ClickSynth.Create(48000, 2400, 1.0);
+
+        Assert.All(click, s => Assert.True(s > short.MinValue));
+        Assert.Equal(short.MaxValue, click.Max(s => Math.Abs((int)s)));
+    }
+
+    [Fact]
+    public void Create_IsShorterThanShortestClickInterval()
+    {
+        // 250 BPM with 4 subdivisions: 60 ms between clicks.
+        var shortestMs = 60000.0 / MetronomeSettings.MaxBpm / MetronomeSettings.MaxSubdivision;
+
+        Assert.True(ClickSynth.DefaultDurationMs < shortestMs);
+    }
+
+    [Fact]
+    public void ClickSet_NormalClickHasAtLeastFourTimesTheEnergyOfTheOldDesign()
+    {
+        // Old design: pure 1 kHz sine, 0.8 amplitude, 25 ms, exp decay over 6 time constants.
+        const int rate = 48000;
+        var oldLength = (int)(rate * 0.025);
+        double oldEnergy = 0;
+        for (var i = 0; i < oldLength; i++)
+        {
+            var v = 0.8 * short.MaxValue * Math.Sin(2 * Math.PI * 1000 * i / rate) * Math.Exp(-6.0 * i / oldLength);
+            oldEnergy += Math.Round(v) * Math.Round(v);
+        }
+
+        var newEnergy = new ClickSet(rate).Normal.Sum(s => (double)s * s);
+
+        Assert.True(newEnergy >= 4 * oldEnergy, $"new {newEnergy:E3} vs old {oldEnergy:E3}");
     }
 }
